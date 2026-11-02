@@ -17,6 +17,7 @@ import urllib.request
 import pandas  # noqa: F401
 import openpyxl  # noqa: F401
 import xlrd  # noqa: F401  (bank statements in .xls)
+import pypdf  # noqa: F401  (GSTR-3B PDF reader)
 import reco_core  # noqa: F401
 import gst_phase1  # noqa: F401
 import gstr9  # noqa: F401
@@ -27,6 +28,8 @@ import gstr1_report  # noqa: F401
 import bank_reco  # noqa: F401
 import tds_reco  # noqa: F401
 import stock_reco  # noqa: F401
+import stock_movement  # noqa: F401
+import gstr3b_pdf  # noqa: F401
 import branding  # noqa: F401
 import i18n  # noqa: F401  (used by gst_suite_app.py; must be bundled)
 
