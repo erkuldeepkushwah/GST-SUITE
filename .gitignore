@@ -1,0 +1,31 @@
+# Client / accounting data — never commit
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.json
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.bak
+*.backup
+manual_note_types.csv
+uploads/
+data/
+# Python / build artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.spec
+# Streamlit secrets
+.streamlit/secrets.toml
+# Keep safe examples and app requirements
+!manual_note_types.example.csv
+!requirements.txt
+!requirements-desktop.txt
+.venv_recovery/
