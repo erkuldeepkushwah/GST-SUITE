@@ -13,6 +13,8 @@ import gstr1_multi as gm
 import bank_reco as br
 import tds_reco as tr
 import stock_reco as sr
+import stock_movement as sm
+import gstr3b_pdf as g3
 import period_manager as pm
 from branding import FIRM_LOCATION, FIRM_NAME, FIRM_TAGLINE, logo_path, sidebar_banner_path
 from i18n import LANGUAGES, t as _t
@@ -263,9 +265,22 @@ elif module == "gstr1":
     if bounds:
         st.caption(T("selected_period", label=bounds.label, start=bounds.start, end=bounds.end))
 
+    pdfs = st.file_uploader(T("upload_3b_pdf"), type=["pdf"], accept_multiple_files=True, key="g1_3bp")
+    grid3b = pd.DataFrame(columns=["Return Period", "Taxable", "IGST", "CGST", "SGST"])
+    parsed3b = pd.DataFrame(columns=g3.EMPTY_COLUMNS)
+    if pdfs:
+        grid3b, warn3b, parsed3b = g3.parse_3b_files([(f.name, f.getvalue()) for f in pdfs])
+        for w in warn3b:
+            st.warning(w)
+        if len(grid3b):
+            st.caption(T("three_b_from_pdf", n=len(grid3b),
+                         periods=", ".join(grid3b["Return Period"].astype(str))))
+        sig = tuple((f.name, f.size) for f in pdfs)
+        if sig != st.session_state.get("g1_3b_sig"):
+            st.session_state["g1_3b_sig"] = sig
+            st.session_state.pop("g1_3b", None)  # let the grid pick up the freshly read rows
     st.markdown(f"**{T('gstr1_3b_header')}**")
-    default3b = pd.DataFrame(columns=["Return Period", "Taxable", "IGST", "CGST", "SGST"])
-    three_b = st.data_editor(default3b, num_rows="dynamic", width="stretch", hide_index=True, key="g1_3b",
+    three_b = st.data_editor(grid3b, num_rows="dynamic", width="stretch", hide_index=True, key="g1_3b",
                              column_config={c: st.column_config.NumberColumn(format="%.2f") for c in ["Taxable", "IGST", "CGST", "SGST"]})
 
     if st.button(T("run_gstr1"), type="primary"):
@@ -318,6 +333,8 @@ elif module == "gstr1":
             pack_res = {"Dashboard": dash, "Month-wise (portal)": res["Month-wise (portal)"], "3B tie-out": tie,
                         "Portal files": res["Portal files"], "B2B Reco": res["B2B Reco"],
                         "CDNR Reco": res["CDNR Reco"] if len(res["CDNR Reco"]) else pd.DataFrame({"Info": [T("no_cdnr_rows")]})}
+            if len(parsed3b):
+                pack_res["3B (from PDF)"] = parsed3b
             st.download_button(T("download_gstr1"),
                                data=rc.to_excel_bytes(pack_res, gstin=pack["gstin"], period=pack["label"]),
                                file_name=f"GSTR1_Reco_{pack['label'].replace(' ', '_')}.xlsx", type="primary",
@@ -421,21 +438,55 @@ elif module == "stock":
                           horizontal=True, key="stock_mode")
     if active_period:
         st.caption(T("selected_period", label=active_period.label, start=active_period.start, end=active_period.end))
-    if stock_mode == "snapshot":
+    if stock_mode == "movement":
+        st.info(T("stock_movement_info"))
+        m1, m2 = st.columns(2)
+        mv = m1.file_uploader(T("upload_stock_movement"), type=["xlsx", "xlsm"], key="st_mv")
+        cs = m2.file_uploader(T("upload_stock_closing"), type=["xlsx", "xlsm"], key="st_cs")
+        if st.button(T("run_stock_movement"), type="primary"):
+            if need((T("upload_stock_movement"), mv)):
+                try:
+                    with st.spinner(T("checking")):
+                        mlabel = f"Stock movement {active_period.label}" if active_period else "Stock movement"
+                        st.session_state["res_stm"] = sm.build(buf(mv), buf(cs) if cs else None,
+                                                              gstin=gstin, period_label=mlabel)
+                except ValueError as e:
+                    st.error(str(e))
+        if "res_stm" in st.session_state:
+            data, summary, exc, items = st.session_state["res_stm"]
+            tally = int(items["Flags"].str.contains("MOVEMENT DOES NOT TALLY").sum())
+            neg = int(items["Closing"].lt(0).sum())
+            cross = summary[summary["Check"].str.contains("closing stock summary")]
+            k1, k2, k3, k4 = st.columns(4)
+            kpi(k1, T("kpi_stock_items"), f"{len(items):,}", T("sub_stock_movement"), "blue")
+            kpi(k2, T("kpi_movement_errors"), f"{tally:,}", T("sub_opening_inward_outward"),
+                "green" if not tally else "red")
+            kpi(k3, T("kpi_neg_closing"), f"{neg:,}", T("sub_neg_closing"), "amber" if neg else "green")
+            kpi(k4, T("kpi_crosscheck_diff"),
+                f"{int(cross.iloc[0]['Per items']):,}" if len(cross) else "—",
+                T("sub_crosscheck"), "green" if len(cross) and not int(cross.iloc[0]["Per items"]) else "blue")
+            st.write("")
+            mt1, mt2, mt3 = st.tabs([T("tab_summary"), T("tab_stock_exceptions"), T("tab_download")])
+            with mt1:
+                st.dataframe(summary, width="stretch", hide_index=True)
+            with mt2:
+                st.dataframe(exc if len(exc) else pd.DataFrame({"Info": [T("info_no_exceptions")]}),
+                             width="stretch", hide_index=True, height=480)
+            with mt3:
+                st.download_button(T("download_stock_movement"), data=data, file_name="Stock_Movement.xlsx",
+                                   type="primary",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    else:
         if active_period:
             st.info(T("stock_snapshot_info", date=_d(active_period.end)))
-    else:
-        st.info(T("stock_movement_info"))
-    sf = st.file_uploader(T("upload_tally_stock"), type=["xlsx", "xlsm"], key="st_f")
-    if st.button(T("run_stock"), type="primary"):
-        if stock_mode == "movement":
-            st.warning(T("stock_movement_warn"))
-        elif need((T("upload_tally_stock"), sf)):
+    sf = st.file_uploader(T("upload_tally_stock"), type=["xlsx", "xlsm"], key="st_f") if stock_mode == "snapshot" else None
+    if stock_mode == "snapshot" and st.button(T("run_stock"), type="primary"):
+        if need((T("upload_tally_stock"), sf)):
             with st.spinner(T("checking")):
                 label = f"Stock summary {active_period.label}" if active_period else "Stock summary"
                 data, summary, neg, noval = sr.build(buf(sf), gstin=gstin, period_label=label)
                 st.session_state["res_st"] = (data, summary, neg, noval)
-    if "res_st" in st.session_state:
+    if stock_mode == "snapshot" and "res_st" in st.session_state:
         data, summary, neg, noval = st.session_state["res_st"]
         k1, k2, k3, k4 = st.columns(4)
         kpi(k1, T("kpi_neg_stock"), f"{len(neg):,}", T("sub_value", amount=lakh(neg["StockValue"].sum())), "red")
