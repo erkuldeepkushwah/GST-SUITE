@@ -23,8 +23,22 @@ export function fyLabelFromDate(d: Date): string {
 }
 
 export async function parseGstr1JsonFile(file: File): Promise<Gstr1PortalFile> {
-  const text = await file.text();
-  const d = JSON.parse(text);
+  if (!file.name.toLowerCase().endsWith('.json')) {
+    throw new Error(`File format error: "${file.name}" is not a JSON file. GSTR-1 Portal returns must be .json files downloaded directly from the GST Portal. (फ़ाइल त्रुटि: GSTR-1 पोर्टल रिटर्न .json फ़ाइल में होना चाहिए)।`);
+  }
+
+  let text: string;
+  let d: any;
+  try {
+    text = await file.text();
+    d = JSON.parse(text);
+  } catch {
+    throw new Error(`File corrupted: "${file.name}" is not valid JSON. Please re-download the return from the GST Portal. (फ़ाइल त्रुटि: अमान्य JSON फ़ाइल)।`);
+  }
+
+  if (!d || (!d.b2b && !d.cdnr && !d.b2cs && !d.hsn && !d.fp)) {
+    throw new Error(`Invalid GSTR-1 file: "${file.name}" does not contain GSTR-1 portal return structures. Please upload official GSTR-1 JSON files. (फ़ाइल त्रुटि: यह मान्य GSTR-1 रिटर्न नहीं है)।`);
+  }
 
   const fp = String(d.fp || '');
   let returnPeriod = fp;
@@ -187,6 +201,10 @@ export async function parseBooksGstr1File(file: File): Promise<{ b2b: any[]; cdn
         });
       }
     }
+  }
+
+  if (b2b.length === 0 && cdnr.length === 0 && b2cs.length === 0) {
+    throw new Error(`No sales or B2B/CDNR sheets recognized in Books file "${file.name}". Please ensure standard Tally/ERP GSTR-1 sales sheets (e.g. B2B, CDNR) with Invoice Number and Recipient GSTIN are present. (फ़ाइल त्रुटि: मान्य सेल्स / B2B शीट नहीं मिली)।`);
   }
 
   return { b2b, cdnr, b2cs, hsn };

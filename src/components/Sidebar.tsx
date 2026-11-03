@@ -4,9 +4,11 @@ import { t } from '../i18n/translations';
 import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
 import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION, SIDEBAR_BANNER_PATH, LOGO_PATH } from '../services/branding';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ChevronLeft, X } from 'lucide-react';
 
 interface Props {
+  isOpen: boolean;
+  onClose: () => void;
   lang: LanguageCode;
   onLanguageChange: (lang: LanguageCode) => void;
   activeModule: ModuleKey;
@@ -20,6 +22,8 @@ interface Props {
 const MODULE_KEYS: ModuleKey[] = ['gst2a', 'gstr1', 'bank', 'tds', 'stock'];
 
 export const Sidebar: React.FC<Props> = ({
+  isOpen,
+  onClose,
   lang,
   onLanguageChange,
   activeModule,
@@ -31,11 +35,15 @@ export const Sidebar: React.FC<Props> = ({
 }) => {
   const isGstinValid = gstin.length === 15;
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <aside className="w-72 sm:w-80 bg-[#f0f2f6] border-r border-[#d5dae2] flex flex-col justify-between p-5 min-h-screen text-[#31333f] shrink-0">
+    <aside className="w-72 sm:w-80 bg-[#f0f2f6] border-r border-[#d5dae2] flex flex-col justify-between p-5 min-h-screen text-[#31333f] shrink-0 fixed inset-y-0 left-0 z-50 md:static md:z-auto shadow-2xl md:shadow-none overflow-y-auto">
       <div className="space-y-6">
-        {/* Logo / Banner */}
-        <div className="pt-1">
+        {/* Logo / Banner + Close Button */}
+        <div className="flex items-center justify-between pt-1">
           <img
             src={SIDEBAR_BANNER_PATH}
             onError={(e) => {
@@ -44,6 +52,16 @@ export const Sidebar: React.FC<Props> = ({
             alt={FIRM_NAME}
             className="h-9 w-auto object-contain"
           />
+          <button
+            onClick={onClose}
+            type="button"
+            title="Close sidebar"
+            aria-label="Close sidebar"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-5 h-5 hidden md:block" />
+            <X className="w-5 h-5 md:hidden" />
+          </button>
         </div>
 
 

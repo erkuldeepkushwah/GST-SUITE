@@ -105,9 +105,15 @@ export async function runBankReconciliation(
     }
   }
 
-  if (stmtParsed.length > 0) {
-    stmtOpening = stmtParsed[0].closing - stmtParsed[0].amount;
+  if (stmtParsed.length === 0) {
+    const sNames = wbStmt.SheetNames.map(s => s.toLowerCase());
+    if (sNames.some(s => s.includes('b2b') || s.includes('cdnr') || s.includes('gstr'))) {
+      throw new Error("File Mismatch: You uploaded a GST return file into the Bank Statement slot. Please upload the official Bank Statement (.xlsx, .xls or .csv). (फ़ाइल त्रुटि: बैंक स्टेटमेंट की जगह GST फ़ाइल अपलोड हो गई है)।");
+    }
+    throw new Error(`No valid transactions found in Bank Statement "${stmtFile.name}". Please ensure the file has Date, Debit/Withdrawal, and Credit/Deposit columns.`);
   }
+
+  stmtOpening = stmtParsed[0].closing - stmtParsed[0].amount;
 
   // 2. Parse Ledger
   const wbLedger = await readExcelFile(ledgerFile);
@@ -158,6 +164,14 @@ export async function runBankReconciliation(
         amount,
       });
     }
+  }
+
+  if (ledgerParsed.length === 0) {
+    const sNames = wbLedger.SheetNames.map(s => s.toLowerCase());
+    if (sNames.some(s => s.includes('b2b') || s.includes('cdnr') || s.includes('gstr'))) {
+      throw new Error("File Mismatch: You uploaded a GST file into the Tally Bank Ledger slot. Please upload the Tally Bank Ledger. (फ़ाइल त्रुटि: टैली बैंक लेज़र की जगह GST फ़ाइल अपलोड हो गई है)।");
+    }
+    throw new Error(`No valid entries found in Tally Bank Ledger "${ledgerFile.name}". Please ensure it contains Date, Particulars, and Debit/Credit columns.`);
   }
 
   // Filter within selected period

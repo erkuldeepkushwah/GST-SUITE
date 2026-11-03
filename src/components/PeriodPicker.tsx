@@ -16,8 +16,13 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
 
   const handleModeChange = (newMode: PeriodMode) => {
     try {
-      const p = periodBounds(newMode);
-      onChange(p);
+      if (newMode === 'custom') {
+        const p = periodBounds('custom', { start: value.start, end: value.end });
+        onChange(p);
+      } else {
+        const p = periodBounds(newMode);
+        onChange(p);
+      }
     } catch (e) {
       console.error(e);
     }

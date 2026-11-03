@@ -138,13 +138,15 @@ export function periodBounds(
   }
 
   if (modeKey === 'custom') {
-    if (!options.start || !options.end) {
-      throw new Error("Custom period requires both From and To dates.");
-    }
-    const first = asDate(options.start);
-    const last = asDate(options.end);
+    let first = options.start ? asDate(options.start) : new Date(ref.getFullYear(), ref.getMonth(), 1);
+    let last = options.end ? asDate(options.end) : new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+    if (isNaN(first.getTime())) first = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    if (isNaN(last.getTime())) last = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
     if (first > last) {
-      throw new Error("From date cannot be after To date.");
+      // Auto-swap if start is after end instead of failing
+      const tmp = first;
+      first = last;
+      last = tmp;
     }
     return {
       start: formatDateIso(first),

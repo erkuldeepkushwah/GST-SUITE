@@ -259,6 +259,47 @@ export async function parseWorkbookSheets(file: File, targetSource: 'GSTR-2A' | 
     }
   }
 
+  if (rows.length === 0) {
+    // Check if the uploaded file has the opposite source or is a bank/other file
+    let foundOpposite = false;
+    let foundBank = false;
+    const oppSource = targetSource === 'GSTR-2A' ? 'BOOKS-PURCHASE' : 'GSTR-2A';
+
+    for (const sheetName of wb.SheetNames) {
+      const table = getRawSheetRows(wb, sheetName);
+      for (let i = 0; i < Math.min(10, table.length); i++) {
+        const line = table[i];
+        if (!Array.isArray(line)) continue;
+        const headers = line.map(String);
+        const res = detectSheet(headers);
+        if (res.source === oppSource) {
+          foundOpposite = true;
+          break;
+        }
+        const norm = headers.map(normalizeHeader);
+        if (norm.some(c => c.includes('withdrawal') || c.includes('deposit') || c.includes('particulars') || c.includes('balance'))) {
+          foundBank = true;
+          break;
+        }
+      }
+      if (foundOpposite || foundBank) break;
+    }
+
+    if (foundOpposite) {
+      if (targetSource === 'GSTR-2A') {
+        throw new Error("File Mismatch: You uploaded the Books Purchase register into the GSTR-2A/2B Portal slot. Please select the Portal file in this slot and Books Purchase in the Books slot (or swap them). (फ़ाइल त्रुटि: GSTR-2A पोर्टल फ़ाइल की जगह बुक्स परचेज़ फ़ाइल अपलोड हो गई है, कृपया फ़ाइलें बदलें)।");
+      } else {
+        throw new Error("File Mismatch: You uploaded the GSTR-2A/2B Portal file into the Books Purchase slot. Please select your Tally/ERP Purchase register in this slot (or swap them). (फ़ाइल त्रुटि: बुक्स परचेज़ की जगह पोर्टल फ़ाइल अपलोड हो गई है, कृपया फ़ाइलें बदलें)।");
+      }
+    }
+
+    if (foundBank) {
+      throw new Error("File Mismatch: The uploaded file appears to be a Bank Statement or Cash Book, not a GST register. Please select the correct GSTR-2A or Books Purchase file. (फ़ाइल त्रुटि: यह बैंक स्टेटमेंट फ़ाइल प्रतीत होती है, कृपया GST फ़ाइल चुनें)।");
+    }
+
+    throw new Error(`No valid ${targetSource === 'GSTR-2A' ? 'GSTR-2A/2B (B2B, CDNR)' : 'Books Purchase'} sheets found in "${file.name}". Please ensure headers like Supplier GSTIN, Invoice No, and Taxable Value are present.`);
+  }
+
   return rows;
 }
 

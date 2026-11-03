@@ -12,7 +12,7 @@ import {
 } from '../../services/gstr1Engine';
 import { exportToExcel } from '../../services/excelEngine';
 import { getSampleGstr1Pack, SAMPLE_GSTIN } from '../../services/sampleData';
-import { Upload, Play, Download, Sparkles, Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Upload, Play, Download, Sparkles, Check, AlertCircle, Plus, Trash2, Lock } from 'lucide-react';
 
 interface Props {
   commonPeriod: Period;
@@ -436,9 +436,13 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
               {activeTab === 'download' && (
                 <div className="p-8 text-center space-y-4">
                   <div className="max-w-md mx-auto space-y-2">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
+                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Security Protected (Read-Only Sheet Lock Active)</span>
+                    </div>
                     <h4 className="text-sm font-bold text-slate-800">Export GSTR-1 & 3B Reconciliation Workbook</h4>
                     <p className="text-xs text-slate-500">
-                      Generates full Excel workbook with Dashboard, Month-wise, 3B Tie-out, B2B Reco and CDNR Reco sheets.
+                      Generates full Excel workbook with Dashboard, Month-wise, 3B Tie-out, B2B Reco and CDNR Reco sheets with audit protection enabled.
                     </p>
                   </div>
                   <button

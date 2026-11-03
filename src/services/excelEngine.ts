@@ -25,7 +25,7 @@ export function getRawSheetRows(wb: XLSX.WorkBook, sheetName: string): any[][] {
 export function exportToExcel(
   sheets: Record<string, any[]>,
   fileName: string,
-  meta?: { gstin?: string; period?: string; title?: string }
+  meta?: { gstin?: string; period?: string; title?: string; password?: string }
 ) {
   const wb = XLSX.utils.book_new();
 
@@ -36,14 +36,16 @@ export function exportToExcel(
       ws = XLSX.utils.aoa_to_sheet([
         [`${FIRM_NAME} - ${FIRM_TAGLINE}`],
         [meta?.title || 'Reconciliation Report', `GSTIN: ${meta?.gstin || '-'}`, `Period: ${meta?.period || '-'}`],
+        ['Security: Protected Audit Document (Read-Only)'],
         [],
         ['Info: No records found for this section.']
       ]);
     } else {
-      // Build header rows
+      // Build header rows with firm branding and protected audit stamp
       const headerRows: any[][] = [
         [`${FIRM_NAME} | ${FIRM_LOCATION}`],
         [`Report: ${sheetName}`, `Company GSTIN: ${meta?.gstin || '-'}`, `Period: ${meta?.period || '-'}`],
+        ['Status: Official Protected Audit Report (Read-Only to prevent accidental modification)'],
         []
       ];
 
@@ -55,9 +57,27 @@ export function exportToExcel(
     }
 
     // Auto-fit column widths
-    const maxCols = 25;
-    const colWidths = Array(maxCols).fill({ wch: 16 });
+    const maxCols = 30;
+    const colWidths = Array(maxCols).fill({ wch: 18 });
     ws['!cols'] = colWidths;
+
+    // Apply worksheet security / protection (Excel read-only audit lock)
+    ws['!protect'] = {
+      password: meta?.password || '',
+      selectLockedCells: true,
+      selectUnlockedCells: true,
+      formatCells: false,
+      formatColumns: false,
+      formatRows: false,
+      insertColumns: false,
+      insertRows: false,
+      insertHyperlinks: false,
+      deleteColumns: false,
+      deleteRows: false,
+      sort: false,
+      autoFilter: false,
+      pivotTables: false
+    };
 
     // Truncate sheet name to 31 chars (Excel limit)
     const validSheetName = sheetName.slice(0, 31).replace(/[:\\\/\?\*\[\]]/g, '_');
