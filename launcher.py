@@ -30,6 +30,7 @@ import tds_reco  # noqa: F401
 import stock_reco  # noqa: F401
 import stock_movement  # noqa: F401
 import gstr3b_pdf  # noqa: F401
+import notes_store  # noqa: F401
 import branding  # noqa: F401
 import i18n  # noqa: F401  (used by gst_suite_app.py; must be bundled)
 
