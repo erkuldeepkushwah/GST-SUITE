@@ -14,6 +14,7 @@ import bank_reco as br
 import tds_reco as tr
 import stock_reco as sr
 import stock_movement as sm
+import notes_store as ns
 import gstr3b_pdf as g3
 import period_manager as pm
 from branding import FIRM_LOCATION, FIRM_NAME, FIRM_TAGLINE, logo_path, sidebar_banner_path
@@ -116,9 +117,8 @@ def buf(upl):
 
 
 def load_manual():
-    if os.path.exists(MANUAL_FILE):
-        return pd.read_csv(MANUAL_FILE, dtype=str)
-    return pd.DataFrame(columns=["GSTIN", "Note No", "Type", "Basis"])
+    """Confirmed note types: the CSV on disk merged with anything saved in this session."""
+    return ns.merge(ns.load(MANUAL_FILE), st.session_state.get("manual_rows"))
 
 
 def lakh(x):
@@ -243,11 +243,29 @@ if module == "gst2a":
                     chosen = edited[edited["Type (CN / DN)"].isin(["CN", "DN"])]
                     new = pd.DataFrame({"GSTIN": chosen["GSTIN"], "Note No": chosen["Note No"],
                                         "Type": chosen["Type (CN / DN)"], "Basis": "User confirmed in app"})
-                    merged = pd.concat([load_manual(), new], ignore_index=True).drop_duplicates(["GSTIN", "Note No"], keep="last")
-                    merged.to_csv(MANUAL_FILE, index=False)
+                    merged = ns.merge(load_manual(), new)
+                    saved, err = ns.save(merged, MANUAL_FILE)
+                    st.session_state["manual_rows"] = merged
                     st.success(T("notes_saved", n=len(new)))
+                    if not saved:
+                        st.warning(T("notes_session_only", error=err))
             else:
                 st.success(T("notes_all_confirmed"))
+            confirmed = load_manual()
+            if len(confirmed):
+                st.download_button(T("btn_download_notes"), data=ns.to_csv_bytes(confirmed),
+                                   file_name="manual_note_types.csv", mime="text/csv",
+                                   key="dl_notes")
+            up_notes = st.file_uploader(T("upload_notes_csv"), type=["csv"], key="up_notes")
+            if up_notes is not None:
+                incoming = ns.from_csv_bytes(up_notes.getvalue())
+                if len(incoming):
+                    merged = ns.merge(load_manual(), incoming)
+                    ns.save(merged, MANUAL_FILE)
+                    st.session_state["manual_rows"] = merged
+                    st.info(T("notes_loaded", n=len(incoming), name=up_notes.name))
+                else:
+                    st.error(T("err_notes_csv"))
         with t_dl:
             st.download_button(T("download_gst2a"),
                                data=rc.to_excel_bytes(res, gstin=st.session_state["gstin_2a"], period=st.session_state.get("label_2a", "")),
