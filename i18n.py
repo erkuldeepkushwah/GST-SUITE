@@ -301,6 +301,32 @@ _RAW = {
     "tab_stock_exceptions": ("Exceptions", "अपवाद", "异常", "Excepciones", "Exceptions"),
     "info_no_exceptions": ("No exceptions found.", "कोई अपवाद नहीं मिला।", "未发现异常。",
                            "No se encontraron excepciones.", "Aucune exception trouvée."),
+    # ---- confirmed note types (works on desktop and on Streamlit Cloud) ----
+    "btn_download_notes": ("⬇️ Download confirmed types (.csv)", "⬇️ कन्फर्म किए गए टाइप डाउनलोड करें (.csv)",
+                           "⬇️ 下载已确认的类型 (.csv)", "⬇️ Descargar tipos confirmados (.csv)",
+                           "⬇️ Télécharger les types confirmés (.csv)"),
+    "upload_notes_csv": ("Load a saved confirmed-types CSV (optional)",
+                         "सेव की गई कन्फर्म्ड-टाइप CSV लोड करें (वैकल्पिक)",
+                         "加载已保存的确认类型 CSV（可选）",
+                         "Cargar un CSV de tipos confirmados (opcional)",
+                         "Charger un CSV de types confirmés (facultatif)"),
+    "notes_loaded": ("{n} rows loaded from {name}", "{name} से {n} पंक्तियाँ लोड हुईं",
+                     "已从 {name} 加载 {n} 行", "Se cargaron {n} filas de {name}",
+                     "{n} lignes chargées depuis {name}"),
+    "notes_session_only": ("Saved for this session only: this folder is not writable here ({error}). "
+                           "Download the CSV to keep these confirmations.",
+                           "सिर्फ़ इस सत्र के लिए सेव हुआ: यहाँ यह फ़ोल्डर लिखने योग्य नहीं है ({error})। "
+                           "इन कन्फर्मेशन को रखने के लिए CSV डाउनलोड करें।",
+                           "仅在本次会话中保存：此处该文件夹不可写（{error}）。请下载 CSV 以保留这些确认。",
+                           "Guardado solo para esta sesión: esta carpeta no es escribible aquí ({error}). "
+                           "Descargue el CSV para conservar las confirmaciones.",
+                           "Enregistré pour cette session uniquement : ce dossier n'est pas accessible en écriture ({error}). "
+                           "Téléchargez le CSV pour conserver ces confirmations."),
+    "err_notes_csv": ("That file is not a confirmed-types CSV (needs GSTIN, Note No, Type, Basis).",
+                      "यह फ़ाइल कन्फर्म्ड-टाइप CSV नहीं है (GSTIN, Note No, Type, Basis चाहिए)।",
+                      "该文件不是确认类型 CSV（需要 GSTIN、Note No、Type、Basis）。",
+                      "Ese archivo no es un CSV de tipos confirmados (requiere GSTIN, Note No, Type, Basis).",
+                      "Ce fichier n'est pas un CSV de types confirmés (GSTIN, Note No, Type, Basis requis)."),
 }
 
 
