@@ -56,6 +56,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     });
     setResults(res);
     setReviewRows(res.cdnReview);
+    setResultsPeriod(activePeriod.label);
     setErrorMsg(null);
     setSuccessMsg("Loaded sample reconciliation dataset!");
   };

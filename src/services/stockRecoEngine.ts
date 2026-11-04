@@ -20,6 +20,16 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
   let hasGrand = false;
   const unitTotals: Record<string, number> = {};
 
+  // Every cell comes back as text from the sheet reader, so numbers are spotted
+  // by their content, not by typeof. The old typeof check never matched, which
+  // is why the unit-wise tie-out always reported "tied".
+  const isNumCell = (v: any): boolean => {
+    if (v === null || v === undefined) return false;
+    const s = String(v).trim();
+    return s !== '' && /^-?[\d,]+(\.\d+)?$/.test(s);
+  };
+  const HEADER_WORDS = ['s.no', 's no', 'sr', 'sr no', 'sn', 'item id', 'item', 'item name', 'particulars', 'product', 'brand', 'description', 'unit', 'unt'];
+
   for (let i = 0; i < rows.length; i++) {
     const line = rows[i];
     if (!Array.isArray(line) || line.length === 0) continue;
@@ -36,11 +46,25 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       continue;
     }
 
-    // Check unit summary row (e.g. "PCS", "NOS", "KGS" with quantity)
-    if (/^[A-Z]{2,4}$/.test(col0) && line[1] !== undefined && typeof line[1] === 'number') {
-      unitTotals[col0] = toNum(line[1]);
+    // Unit summary row (e.g. "PCS", "NOS", "KGS" with the unit's quantity next
+    // to it and no item identity columns). Its value column is a subtotal of the
+    // items above, so it must never be counted as an item a second time.
+    const unitCode = col0.toUpperCase();
+    if (
+      /^[A-Z]{2,5}$/.test(unitCode) &&
+      isNumCell(line[1]) &&
+      !String(line[2] ?? '').trim() &&
+      !String(line[3] ?? '').trim() &&
+      !String(line[4] ?? '').trim()
+    ) {
+      unitTotals[unitCode] = round((unitTotals[unitCode] || 0) + toNum(line[1]));
       continue;
     }
+
+    // Title, header, blank and footer rows carry no quantity or value at all
+    if (!isNumCell(line[5]) && !isNumCell(line[6]) && !isNumCell(line[7])) continue;
+    if (HEADER_WORDS.includes(col0.toLowerCase()) || HEADER_WORDS.includes(col1.toLowerCase())) continue;
+    if (!col1) continue;
 
     // Normal item line
     if (/^\d+\)?$/.test(col0) || (col1 && !col0.toLowerCase().includes('particulars') && line.length >= 6)) {
@@ -115,8 +139,25 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
 
   const unitTieOut: any[] = [];
   let unitOk = true;
-  for (const [u, qty] of Object.entries(unitGroups)) {
-    const reportQty = unitTotals[u] ?? qty;
+  const allUnits = Array.from(new Set([...Object.keys(unitGroups), ...Object.keys(unitTotals)])).sort();
+  for (const u of allUnits) {
+    const qty = unitGroups[u];
+    const reportQty = unitTotals[u];
+
+    // Comparing a unit against itself (the old `unitTotals[u] ?? qty` fallback)
+    // reported "tied" even when the report had no subtotal for that unit at all.
+    if (reportQty === undefined || qty === undefined) {
+      unitOk = false;
+      unitTieOut.push({
+        UNT: u,
+        'Per items': qty ?? '',
+        'Per report': reportQty ?? '',
+        Difference: '',
+        Status: qty === undefined ? 'Unit in report, no item lines' : 'No unit subtotal in file',
+      });
+      continue;
+    }
+
     const diff = round(qty - reportQty);
     if (Math.abs(diff) > TIE_TOL) unitOk = false;
 
@@ -125,6 +166,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per items': qty,
       'Per report': reportQty,
       Difference: diff,
+      Status: Math.abs(diff) <= TIE_TOL ? 'Tied' : 'NOT TIED - check',
     });
   }
 

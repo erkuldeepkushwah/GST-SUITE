@@ -113,7 +113,11 @@ export async function runBankReconciliation(
     throw new Error(`No valid transactions found in Bank Statement "${stmtFile.name}". Please ensure the file has Date, Debit/Withdrawal, and Credit/Deposit columns.`);
   }
 
-  stmtOpening = stmtParsed[0].closing - stmtParsed[0].amount;
+  // Banks hand out statements newest-first as often as oldest-first, so the
+  // opening balance has to come from the earliest dated line, not from row 1.
+  const stmtByDate = [...stmtParsed].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const hasBalanceColumn = stmtByDate.some(s => s.closing !== 0);
+  stmtOpening = hasBalanceColumn ? stmtByDate[0].closing - stmtByDate[0].amount : 0;
 
   // 2. Parse Ledger
   const wbLedger = await readExcelFile(ledgerFile);
@@ -129,8 +133,11 @@ export async function runBankReconciliation(
         ledgerHeaderIdx = i;
       }
       if (rowNorm.some(c => c.includes('opening balance'))) {
-        const amtCell = row.find(c => typeof c === 'number' || (!isNaN(parseFloat(String(c))) && parseFloat(String(c)) !== 0));
-        if (amtCell !== undefined) ledgerOpening = toNum(amtCell);
+        // Take the right-most pure number in the row: the first numeric cell is
+        // often the date (20-04-2026 parses as 20), which made the opening
+        // balance of the ledger wrong by exactly that date.
+        const amountCells = row.filter(c => /^-?[\d,]+(\.\d+)?$/.test(String(c ?? '').trim()));
+        if (amountCells.length > 0) ledgerOpening = toNum(amountCells[amountCells.length - 1]);
       }
     }
   }
@@ -259,7 +266,12 @@ export async function runBankReconciliation(
   const inBooksNotBankAmt = round(allEntries.filter(r => r.Status === 'In Books, not in Bank').reduce((s, r) => s + (r['Amount (Book)'] || 0), 0));
   const inBankNotBooksAmt = round(allEntries.filter(r => r.Status === 'In Bank, not in Books').reduce((s, r) => s + (r['Amount (Bank)'] || 0), 0));
 
-  const totalBankClose = stmtInPeriod.length > 0 ? stmtInPeriod[stmtInPeriod.length - 1].closing : stmtOpening;
+  // Same ordering trap on the closing side: use the latest dated line in the
+  // period, and fall back to opening + movement when the file has no balance column.
+  const stmtInPeriodByDate = [...stmtInPeriod].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const totalBankClose = hasBalanceColumn
+    ? (stmtInPeriodByDate.length > 0 ? stmtInPeriodByDate[stmtInPeriodByDate.length - 1].closing : bankOpeningBefore)
+    : round(bankOpeningBefore + stmtInPeriod.reduce((s, r) => s + r.amount, 0));
   const totalLedgerNet = round(ledgerInPeriod.reduce((s, r) => s + r.amount, 0));
   const ledgerClose = round(ledgerOpeningBefore + totalLedgerNet);
 

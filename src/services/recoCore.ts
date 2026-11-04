@@ -88,10 +88,18 @@ export function parseReturnMonth(val: any): { year: number; month: number } | nu
     year = year < 100 ? year + 2000 : year;
     return { year, month: months[m1[1].toLowerCase()] };
   }
-  const m2 = text.match(/^(\d{2})(\d{4})$/); // MMYYYY
+  const m2 = text.match(/^(\d{2})[-/.\s]?(\d{4})$/); // MMYYYY, 04-2026, 04/2026
   if (m2) {
     const mo = parseInt(m2[1], 10);
     const yr = parseInt(m2[2], 10);
+    if (mo >= 1 && mo <= 12 && yr >= 2000 && yr <= 2100) {
+      return { year: yr, month: mo };
+    }
+  }
+  const m3 = text.match(/^(\d{4})[-/.\s](\d{1,2})$/); // 2026-04
+  if (m3) {
+    const yr = parseInt(m3[1], 10);
+    const mo = parseInt(m3[2], 10);
     if (mo >= 1 && mo <= 12 && yr >= 2000 && yr <= 2100) {
       return { year: yr, month: mo };
     }
@@ -151,11 +159,23 @@ export async function parseWorkbookSheets(file: File, targetSource: 'GSTR-2A' | 
     }
 
     const headers = table[headerIdx].map(normalizeHeader);
+    // Loose header matching, but never against an empty header: `"anything".includes('')`
+    // is true, so a blank trailing column used to swallow the value for whatever
+    // column was being looked up. Exact match wins, then a header that starts with
+    // the wanted name, and only then a contains check on a long enough header.
+    const findCol = (name: string): number => {
+      const norm = normalizeHeader(name);
+      if (!norm) return -1;
+      let idx = headers.findIndex(h => h === norm);
+      if (idx !== -1) return idx;
+      idx = headers.findIndex(h => h.length >= 3 && h.startsWith(norm));
+      if (idx !== -1) return idx;
+      return headers.findIndex(h => h.length >= 4 && h.includes(norm));
+    };
     const getColVal = (row: any[], ...candidateNames: string[]) => {
       for (const name of candidateNames) {
-        const norm = normalizeHeader(name);
-        const idx = headers.findIndex(h => h.includes(norm) || norm.includes(h));
-        if (idx !== -1 && row[idx] !== undefined) return row[idx];
+        const idx = findCol(name);
+        if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') return row[idx];
       }
       return '';
     };
@@ -393,8 +413,11 @@ export function runGst2aReconciliation(
     }
   }
 
-  // GSTR-9 ITC Summary (from all books rows, annual)
-  const gstr9Itc = buildGstr9Summary(booksRows, pB2b.reduce((s, r) => s + r.totalTax, 0));
+  // GSTR-9 ITC Summary. The books side is the whole purchase register (annual),
+  // so the portal reference has to be the whole 2A/2B B2B tax as well; using the
+  // period-filtered total compared a year of books with one month of portal.
+  const pB2bAllTax = portalRows.filter(r => r.type === 'B2B').reduce((s, r) => s + r.totalTax, 0);
+  const gstr9Itc = buildGstr9Summary(booksRows, pB2bAllTax);
 
   // Dashboard table
   const dashboard = buildGst2aDashboard(b2bReco, cdnReco);

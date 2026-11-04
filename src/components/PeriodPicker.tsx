@@ -16,12 +16,22 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
 
   const handleModeChange = (newMode: PeriodMode) => {
     try {
+      // Switch mode around the period already on screen. Calling periodBounds()
+      // with no anchor threw the selection back to today, so a user on FY 2025-26
+      // who flipped to Monthly silently started looking at the current month.
+      const anchor = new Date(value.start);
+      const safe = isNaN(anchor.getTime()) ? new Date() : anchor;
+      const fyStart = safe.getMonth() >= 3 ? safe.getFullYear() : safe.getFullYear() - 1;
+      const quarter = Math.floor(((safe.getMonth() - 3 + 12) % 12) / 3) + 1;
+
       if (newMode === 'custom') {
-        const p = periodBounds('custom', { start: value.start, end: value.end });
-        onChange(p);
+        onChange(periodBounds('custom', { start: value.start, end: value.end }));
+      } else if (newMode === 'monthly') {
+        onChange(periodBounds('monthly', { month: safe }));
+      } else if (newMode === 'quarterly') {
+        onChange(periodBounds('quarterly', { fyStartYear: fyStart, quarter }));
       } else {
-        const p = periodBounds(newMode);
-        onChange(p);
+        onChange(periodBounds('fy', { fyStartYear: fyStart }));
       }
     } catch (e) {
       console.error(e);

@@ -1,6 +1,6 @@
 import { Gstr1RecoResult } from '../types';
 import { asDate, tryDate } from './periodManager';
-import { readExcelFile, getSheetData } from './excelEngine';
+import { readExcelFile, getSheetData, getRawSheetRows } from './excelEngine';
 
 export interface Gstr1PortalFile {
   name: string;
@@ -9,6 +9,7 @@ export interface Gstr1PortalFile {
   b2b: any[];
   cdnr: any[];
   b2cs: any[];
+  b2cl?: any[];
   hsn: any[];
   netTaxable: number;
   igst: number;
@@ -91,10 +92,13 @@ export async function parseGstr1JsonFile(file: File): Promise<Gstr1PortalFile> {
       const camt = itms.reduce((s: number, it: any) => s + (parseFloat(it.itm_det?.camt) || 0), 0);
       const samt = itms.reduce((s: number, it: any) => s + (parseFloat(it.itm_det?.samt) || 0), 0);
 
-      igst -= iamt;
-      cgst -= camt;
-      sgst -= samt;
-      cdnTaxable += txval;
+      // A credit note (C) reduces the outward liability, a debit note (D) adds to
+      // it. Netting both with a minus sign understated every DN in the return.
+      const noteSign = String(n.ntty || '').toUpperCase() === 'D' ? 1 : -1;
+      igst += noteSign * iamt;
+      cgst += noteSign * camt;
+      sgst += noteSign * samt;
+      cdnTaxable += noteSign * txval;
 
       cdnr.push({
         GSTIN: String(r.ctin || '').toUpperCase(),
@@ -129,19 +133,63 @@ export async function parseGstr1JsonFile(file: File): Promise<Gstr1PortalFile> {
     });
   }
 
-  const hsnList = [...(d.hsn?.hsn_b2b || []), ...(d.hsn?.hsn_b2c || [])];
-  for (const h of hsnList) {
+  // B2C large (inter-state invoices above the threshold) lives in its own
+  // section of the return. It was never read, so the taxable value and tax on
+  // the dashboard and the 3B tie-out were short by the whole B2CL turnover.
+  const b2cl: any[] = [];
+  let b2clTaxable = 0;
+  for (const r of d.b2cl || []) {
+    for (const inv of r.inv || []) {
+      const itms = inv.itms || [];
+      const txval = itms.reduce((s: number, it: any) => s + (parseFloat(it.itm_det?.txval) || 0), 0);
+      const iamt = itms.reduce((s: number, it: any) => s + (parseFloat(it.itm_det?.iamt) || 0), 0);
+      const camt = itms.reduce((s: number, it: any) => s + (parseFloat(it.itm_det?.camt) || 0), 0);
+      const samt = itms.reduce((s: number, it: any) => s + (parseFloat(it.itm_det?.samt) || 0), 0);
+
+      igst += iamt;
+      cgst += camt;
+      sgst += samt;
+      b2clTaxable += txval;
+
+      const row = {
+        POS: String(inv.pos || r.pos || ''),
+        Rate: itms.map((it: any) => it.itm_det?.rt || 0).join(','),
+        Type: 'B2CL',
+        Taxable: txval,
+        Tax: iamt + camt + samt,
+        ReturnPeriod: returnPeriod,
+      };
+      b2cl.push(row);
+    }
+  }
+
+  // The HSN summary is "hsn": {"data": [...]} in the portal JSON; the older
+  // hsn_b2b / hsn_b2c split is kept as a fallback, and a bare array is accepted
+  // too. Reading only the old keys left the HSN tab empty for every portal file.
+  const hsnSource: any[] = Array.isArray(d.hsn)
+    ? d.hsn
+    : [
+        ...(Array.isArray(d.hsn?.data) ? d.hsn.data : []),
+        ...(Array.isArray(d.hsn?.hsn_b2b) ? d.hsn.hsn_b2b : []),
+        ...(Array.isArray(d.hsn?.hsn_b2c) ? d.hsn.hsn_b2c : []),
+      ];
+  for (const h of hsnSource) {
+    const txval = parseFloat(h.txval) || 0;
+    const tax = (parseFloat(h.iamt) || 0) + (parseFloat(h.camt) || 0) + (parseFloat(h.samt) || 0) + (parseFloat(h.csamt) || 0);
+    if (txval === 0 && tax === 0) continue;
     hsn.push({
       HSN: String(h.hsn_sc || '').trim(),
       UQC: String(h.uqc || ''),
-      Qty: parseFloat(h.qty || 0),
-      Rate: parseFloat(h.rt || 0),
-      Taxable: parseFloat(h.txval || 0),
-      Tax: (parseFloat(h.iamt) || 0) + (parseFloat(h.camt) || 0) + (parseFloat(h.samt) || 0),
+      Qty: parseFloat(h.qty) || 0,
+      Rate: parseFloat(h.rt) || 0,
+      Taxable: txval,
+      Tax: tax,
     });
   }
 
-  const netTaxable = b2bTaxable - cdnTaxable + b2cs.reduce((s, x) => s + (parseFloat(x.Taxable) || 0), 0);
+  const b2csTaxable = b2cs.reduce((s, x) => s + (parseFloat(x.Taxable) || 0), 0);
+  // b2csTaxable covers the B2C small bucket only; B2CL is added separately.
+  const netTaxable = b2bTaxable + b2csTaxable + b2clTaxable + cdnTaxable;
 
   return {
     name: file.name,
@@ -150,6 +198,7 @@ export async function parseGstr1JsonFile(file: File): Promise<Gstr1PortalFile> {
     b2b,
     cdnr,
     b2cs,
+    b2cl,
     hsn,
     netTaxable: Math.round(netTaxable * 100) / 100,
     igst: Math.round(igst * 100) / 100,
@@ -166,56 +215,110 @@ export async function parseBooksGstr1File(file: File): Promise<{ b2b: any[]; cdn
   const b2cs: any[] = [];
   const hsn: any[] = [];
 
+  // The header row of a Tally/ERP GSTR-1 export is not always the fourth row:
+  // every template has its own title block. Reading a fixed row 3 turned a good
+  // file into "no B2B/CDNR sheets recognized", so the header is now located by
+  // its own column names.
+  const readTable = (sheetName: string, keywords: string[]): any[] => {
+    const raw = getRawSheetRows(wb, sheetName);
+    for (let i = 0; i < Math.min(20, raw.length); i++) {
+      const line = raw[i];
+      if (!Array.isArray(line)) continue;
+      const cells = line.map(c => String(c ?? '').trim().toLowerCase());
+      // A title row such as "Tally HSN" must not be mistaken for the header:
+      // require a real header (several filled cells) that carries every keyword.
+      const filled = cells.filter(c => c !== '').length;
+      const hit = filled >= 3 && keywords.every(k => cells.some(c => c !== '' && (c === k || c.includes(k))));
+      if (hit) return getSheetData(wb, sheetName, i);
+    }
+    return [];
+  };
+
+  // Column names differ between Tally, Busy and ERP exports ("Invoice Number"
+  // vs "Invoice No."), so a cell is looked up by a normalised name match instead
+  // of one exact spelling.
+  const norm = (s: string) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const pick = (row: any, names: string[]): any => {
+    const keys = Object.keys(row);
+    for (const n of names) {
+      const k = keys.find(k => norm(k) === norm(n));
+      if (k !== undefined) return row[k];
+    }
+    for (const n of names) {
+      if (norm(n).length < 4) continue;
+      const k = keys.find(k => norm(k).includes(norm(n)));
+      if (k !== undefined) return row[k];
+    }
+    return undefined;
+  };
+  const num = (v: any) => parseFloat(String(v ?? '').replace(/,/g, '')) || 0;
+  const taxFromColumns = (row: any) =>
+    num(pick(row, ['Integrated Tax Amount', 'IGST Amount', 'IGST'])) +
+    num(pick(row, ['Central Tax Amount', 'CGST Amount', 'CGST'])) +
+    num(pick(row, ['State Tax Amount', 'SGST Amount', 'SGST'])) +
+    num(pick(row, ['Cess Amount', 'Cess']));
+
   for (const sheetName of wb.SheetNames) {
     const sNameNorm = sheetName.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (sNameNorm.includes('b2b') && !sNameNorm.includes('hsn')) {
-      const data = getSheetData(wb, sheetName, 3);
+      const data = readTable(sheetName, ['invoice', 'gstin']);
       for (const row of data) {
-        if (!row['Invoice Number'] || !row['GSTIN/UIN of Recipient']) continue;
+        const invNo = pick(row, ['Invoice Number', 'Invoice No']);
+        const gstin = pick(row, ['GSTIN/UIN of Recipient', 'GSTIN of Recipient', 'Recipient GSTIN', 'GSTIN/UIN']);
+        if (!invNo || !gstin) continue;
+
+        const taxable = num(pick(row, ['Taxable Value', 'Taxable Amount']));
+        const rate = num(pick(row, ['Rate', 'Tax Rate']));
+        // Use the tax columns when the export has them; only fall back to
+        // taxable x rate when it does not.
+        const taxFromCols = taxFromColumns(row);
         b2b.push({
-          GSTIN: String(row['GSTIN/UIN of Recipient'] || '').trim().toUpperCase(),
-          'Invoice No': String(row['Invoice Number'] || '').trim(),
-          Date: row['Invoice date'] || '',
-          'Invoice Value': parseFloat(row['Invoice Value'] || 0),
-          POS: String(row['Place Of Supply'] || ''),
-          Rate: String(row['Rate'] || ''),
-          Taxable: parseFloat(row['Taxable Value'] || 0),
-          Tax: (parseFloat(row['Taxable Value'] || 0) * (parseFloat(row['Rate'] || 0) / 100)) || 0,
+          GSTIN: String(gstin).trim().toUpperCase(),
+          'Invoice No': String(invNo).trim(),
+          Date: pick(row, ['Invoice date', 'Invoice Date', 'Date']) || '',
+          'Invoice Value': num(pick(row, ['Invoice Value', 'Invoice Amount'])),
+          POS: String(pick(row, ['Place Of Supply', 'Place of Supply', 'POS']) || ''),
+          Rate: String(rate),
+          Taxable: taxable,
+          Tax: taxFromCols > 0 ? taxFromCols : (taxable * rate) / 100,
           BooksFile: file.name,
         });
       }
     } else if (sNameNorm.includes('hsn')) {
-      const data = getSheetData(wb, sheetName, 3);
+      const data = readTable(sheetName, ['hsn', 'taxable']);
       for (const row of data) {
-        const code = String(row['HSN'] || row['HSN/SAC'] || row['HSN Code'] || '').trim();
+        const code = String(pick(row, ['HSN', 'HSN/SAC', 'HSN Code']) || '').trim();
         if (!code) continue;
         hsn.push({
           HSN: code,
-          UQC: String(row['UQC'] || ''),
-          Qty: parseFloat(row['Total Quantity'] || 0) || 0,
-          Rate: parseFloat(row['Rate'] || 0) || 0,
-          Taxable: parseFloat(row['Taxable Value'] || 0) || 0,
-          Tax:
-            (parseFloat(row['Integrated Tax Amount'] || 0) || 0) +
-            (parseFloat(row['Central Tax Amount'] || 0) || 0) +
-            (parseFloat(row['State Tax Amount'] || 0) || 0),
+          UQC: String(pick(row, ['UQC', 'Unit']) || ''),
+          Qty: num(pick(row, ['Total Quantity', 'Quantity', 'Qty'])),
+          Rate: num(pick(row, ['Rate'])),
+          Taxable: num(pick(row, ['Taxable Value', 'Taxable Amount'])),
+          Tax: taxFromColumns(row),
           BooksFile: file.name,
         });
       }
     } else if (sNameNorm.includes('cdnr')) {
-      const data = getSheetData(wb, sheetName, 3);
+      const data = readTable(sheetName, ['note', 'gstin']);
       for (const row of data) {
-        if (!row['Note Number'] || !row['GSTIN/UIN of Recipient']) continue;
+        const noteNo = pick(row, ['Note Number', 'Note No', 'Note/Voucher Number']);
+        const gstin = pick(row, ['GSTIN/UIN of Recipient', 'GSTIN of Recipient', 'Recipient GSTIN', 'GSTIN/UIN']);
+        if (!noteNo || !gstin) continue;
+
+        const taxable = num(pick(row, ['Taxable Value', 'Taxable Amount']));
+        const rate = num(pick(row, ['Rate', 'Tax Rate']));
+        const taxFromCols = taxFromColumns(row);
         cdnr.push({
-          GSTIN: String(row['GSTIN/UIN of Recipient'] || '').trim().toUpperCase(),
-          'Invoice No': String(row['Note Number'] || '').trim(),
-          Date: row['Note Date'] || '',
-          'Invoice Value': parseFloat(row['Note Value'] || 0),
-          POS: String(row['Place Of Supply'] || ''),
-          Type: String(row['Note Type'] || ''),
-          Rate: String(row['Rate'] || ''),
-          Taxable: parseFloat(row['Taxable Value'] || 0),
-          Tax: (parseFloat(row['Taxable Value'] || 0) * (parseFloat(row['Rate'] || 0) / 100)) || 0,
+          GSTIN: String(gstin).trim().toUpperCase(),
+          'Invoice No': String(noteNo).trim(),
+          Date: pick(row, ['Note Date', 'Note date', 'Date']) || '',
+          'Invoice Value': num(pick(row, ['Note Value', 'Note Amount'])),
+          POS: String(pick(row, ['Place Of Supply', 'Place of Supply', 'POS']) || ''),
+          Type: String(pick(row, ['Note Type', 'Document Type']) || ''),
+          Rate: String(rate),
+          Taxable: taxable,
+          Tax: taxFromCols > 0 ? taxFromCols : (taxable * rate) / 100,
           BooksFile: file.name,
         });
       }
@@ -293,6 +396,7 @@ export function runGstr1MultiReconciliation(
     // B2CS and HSN are rate/summary level: they belong to the file's return month
     if (fpOk) {
       for (const x of pf.b2cs || []) pB2cs.push(x);
+      for (const x of pf.b2cl || []) pB2cs.push(x);
       for (const h of pf.hsn || []) pHsn.push(h);
     }
   }
@@ -333,6 +437,19 @@ export function runGstr1MultiReconciliation(
     { Section: 'B2B', Status: 'Only in Books', Count: b2bOnlyBooks.length, 'Taxable (Portal)': 0, 'Taxable (Books)': sum(b2bOnlyBooks, 'Taxable_Books') },
   ];
 
+  // CDNR was reconciled but never reached the dashboard, so notes never showed
+  // up in the KPI strip or the overview table.
+  for (const st of ['Matched', 'Mismatch', 'Only in Portal', 'Only in Books']) {
+    const list = cdnrReco.filter(r => r.Status === st);
+    dashboard.push({
+      Section: 'CDNR',
+      Status: st,
+      Count: list.length,
+      'Taxable (Portal)': sum(list, 'Taxable_Portal'),
+      'Taxable (Books)': sum(list, 'Taxable_Books'),
+    });
+  }
+
   for (const st of ['Matched', 'Mismatch', 'Only in Portal', 'Only in Books']) {
     const list = hsnReco.filter(r => r.Status === st);
     dashboard.push({
@@ -367,16 +484,38 @@ export function runGstr1MultiReconciliation(
   }
   const monthWise = Array.from(monthMap.values());
 
-  // 3B Tie-out table
+  // 3B Tie-out table. The 3B grid is typed by hand, so "Apr-2026", "apr 2026",
+  // "042026" and "2026-04" all have to land on the same month; an exact string
+  // compare showed a full difference for a month that was actually entered.
+  const threeBByMonth = new Map<string, { Taxable: number; IGST: number; CGST: number; SGST: number }>();
+  for (const r of threeBRows) {
+    const k = normalizePeriodLabel(r['Return Period']);
+    if (!k) continue;
+    const cur = threeBByMonth.get(k) || { Taxable: 0, IGST: 0, CGST: 0, SGST: 0 };
+    cur.Taxable += Number(r.Taxable) || 0;
+    cur.IGST += Number(r.IGST) || 0;
+    cur.CGST += Number(r.CGST) || 0;
+    cur.SGST += Number(r.SGST) || 0;
+    threeBByMonth.set(k, cur);
+  }
+
   const tieOut: any[] = [];
   for (const m of monthWise) {
-    const matching3b = threeBRows.find(r => r['Return Period'] === m.Month) || {
-      'Return Period': m.Month,
-      Taxable: 0,
-      IGST: 0,
-      CGST: 0,
-      SGST: 0,
-    };
+    const matching3b = threeBByMonth.get(normalizePeriodLabel(m.Month));
+
+    if (!matching3b) {
+      tieOut.push({
+        'Return Period': m.Month,
+        'Taxable (GSTR-1)': m['Net Taxable'],
+        'Taxable (GSTR-3B)': '',
+        'Taxable Difference': '',
+        'Tax (GSTR-1)': m['Total Tax'],
+        'Tax (GSTR-3B)': '',
+        'Tax Difference': '',
+        Status: 'No 3B data entered',
+      });
+      continue;
+    }
 
     const diffTaxable = round(m['Net Taxable'] - matching3b.Taxable);
     const diffTax = round(m['Total Tax'] - (matching3b.IGST + matching3b.CGST + matching3b.SGST));
@@ -384,7 +523,7 @@ export function runGstr1MultiReconciliation(
     tieOut.push({
       'Return Period': m.Month,
       'Taxable (GSTR-1)': m['Net Taxable'],
-      'Taxable (GSTR-3B)': matching3b.Taxable,
+      'Taxable (GSTR-3B)': round(matching3b.Taxable),
       'Taxable Difference': diffTaxable,
       'Tax (GSTR-1)': m['Total Tax'],
       'Tax (GSTR-3B)': round(matching3b.IGST + matching3b.CGST + matching3b.SGST),
@@ -402,6 +541,35 @@ export function runGstr1MultiReconciliation(
     cdnrReco,
     hsnReco,
   };
+}
+
+export function normalizePeriodLabel(val: any): string {
+  const s = String(val || '').trim();
+  if (!s) return '';
+
+  let m = s.match(/^([A-Za-z]{3})[A-Za-z]*[\s\-/.]*(\d{2}|\d{4})$/);
+  if (m) {
+    const mi = MONTH_NAMES.findIndex(x => x.toLowerCase() === m![1].toLowerCase());
+    if (mi !== -1) {
+      let y = parseInt(m[2], 10);
+      if (y < 100) y += 2000;
+      return `${MONTH_NAMES[mi]}-${y}`;
+    }
+  }
+
+  m = s.match(/^(\d{2})[\s\-/.]*(\d{4})$/); // 042026, 04-2026
+  if (m) {
+    const mo = parseInt(m[1], 10);
+    if (mo >= 1 && mo <= 12) return `${MONTH_NAMES[mo - 1]}-${m[2]}`;
+  }
+
+  m = s.match(/^(\d{4})[\s\-/.]*(\d{1,2})$/); // 2026-04
+  if (m) {
+    const mo = parseInt(m[2], 10);
+    if (mo >= 1 && mo <= 12) return `${MONTH_NAMES[mo - 1]}-${m[1]}`;
+  }
+
+  return s;
 }
 
 function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0): any[] {

@@ -102,3 +102,54 @@
 ## Still pending (by design, not regressions)
 - Stock movement mode is disabled until Phase 6 (needs a sample of the movement report). `stock_reco.load_items` still uses the
   fixed Tally row layout (rows 5 to 3158); a different export layout needs a parser update.
+
+---
+
+## Logic fixes (reconciliation engines)
+
+Each item below was reproduced with a failing case before the change; the cases
+now live in `tests/engine-check.ts` (`npm run check:engines`).
+
+**GSTR-1 (`gstr1Engine.ts`)**
+- B2CL was never parsed. Inter-state B2C invoices above the threshold were
+  missing from net taxable value, tax and the 3B tie-out.
+- HSN summary read `hsn.hsn_b2b` / `hsn.hsn_b2c`, which the portal JSON no
+  longer uses. It is now read from `hsn.data` (with the old keys as fallback),
+  so the HSN tab and HSN reconciliation stop coming back empty.
+- Credit and debit notes were both subtracted. A debit note (`ntty: "D"`) now
+  adds to taxable value and tax; only a credit note reduces them.
+- The books sheet header was hard-coded to row 4, and column names were matched
+  by exact spelling. Header row is now located by its own column names and cells
+  are matched by normalised name (`Invoice Number` / `Invoice No.` / `INV NO`).
+- 3B tie-out compared return-period labels with `===`. `Apr-2026`, `apr 2026`,
+  `042026` and `2026-04` now resolve to the same month; a month with no 3B entry
+  is reported as "No 3B data entered" instead of a full difference.
+- CDNR reconciliation never reached the dashboard; CDN notes now appear in the
+  overview table.
+
+**GST 2A/2B (`recoCore.ts`)**
+- GSTR-9 ITC reference compared the whole-year books purchase register against
+  a period-filtered 2A total. Both sides are now annual.
+- Header matching used `norm.includes(header)`, which is true for every column
+  when the sheet has a blank header cell. Matching is now exact, then prefix,
+  then contains, and never against an empty header.
+
+**Stock (`stockRecoEngine.ts`)**
+- Unit-wise totals were read with `typeof cell === 'number'`, which is never true
+  for sheet values read as text, so the unit tie-out silently reported "tied".
+- Unit subtotal rows and the header row were counted as stock items, which
+  double-counted stock value (items sum never tied with the report total).
+- A unit present in the items but absent from the report's subtotals no longer
+  compares against itself; it is flagged.
+
+**Bank (`bankRecoEngine.ts`)**
+- Opening and closing balances were taken from the first and last row of the
+  file. Statements printed newest-first produced a wrong opening balance and an
+  unexplained closing difference; both now come from the earliest/latest date.
+- The Tally opening balance row took the first numeric cell, which is often the
+  date (`20-04-2026` reads as 20). It now takes the last pure number in the row.
+- A statement without a balance column falls back to opening + movement.
+
+**Period picker**
+- Changing period type reset the selection to today; it now converts the period
+  already on screen (month, quarter or FY) instead.

@@ -29,3 +29,6 @@ dist/
 !requirements.txt
 !requirements-desktop.txt
 .venv_recovery/
+
+# Local engine regression build output
+.tmp/
