@@ -1,4 +1,5 @@
 import { Gstr1RecoResult } from '../types';
+import { asDate, tryDate } from './periodManager';
 import { readExcelFile, getSheetData } from './excelEngine';
 
 export interface Gstr1PortalFile {
@@ -218,8 +219,16 @@ export function runGstr1MultiReconciliation(
   threeBRows: Array<{ 'Return Period': string; Taxable: number; IGST: number; CGST: number; SGST: number }> = [],
   tolerance = 1.0
 ): Gstr1RecoResult {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = asDate(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = asDate(endDate);
+  end.setHours(23, 59, 59, 999);
+  // Rows with an unreadable/blank date stay in the run rather than silently vanishing.
+  const inPeriod = (v: any): boolean => {
+    const d = tryDate(v);
+    if (!d) return true;
+    return d >= start && d <= end;
+  };
 
   // Combine Portal files
   const pB2b: any[] = [];
@@ -237,14 +246,12 @@ export function runGstr1MultiReconciliation(
     });
 
     for (const b of pf.b2b) {
-      const dt = b.Date ? new Date(b.Date) : null;
-      if (!dt || (dt >= start && dt <= end)) {
+      if (inPeriod(b.Date)) {
         pB2b.push(b);
       }
     }
     for (const c of pf.cdnr) {
-      const dt = c.Date ? new Date(c.Date) : null;
-      if (!dt || (dt >= start && dt <= end)) {
+      if (inPeriod(c.Date)) {
         pCdnr.push(c);
       }
     }
@@ -255,14 +262,12 @@ export function runGstr1MultiReconciliation(
   const bCdnr: any[] = [];
   for (const bf of booksFiles) {
     for (const b of bf.b2b) {
-      const dt = b.Date ? new Date(b.Date) : null;
-      if (!dt || (dt >= start && dt <= end)) {
+      if (inPeriod(b.Date)) {
         bB2b.push(b);
       }
     }
     for (const c of bf.cdnr) {
-      const dt = c.Date ? new Date(c.Date) : null;
-      if (!dt || (dt >= start && dt <= end)) {
+      if (inPeriod(c.Date)) {
         bCdnr.push(c);
       }
     }

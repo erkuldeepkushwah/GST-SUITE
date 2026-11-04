@@ -40,6 +40,50 @@ export function asDate(val: any): Date {
   return isNaN(fallback.getTime()) ? new Date() : fallback;
 }
 
+/**
+ * Strict date parser: returns null when the value is empty or cannot be read as
+ * a date, instead of silently falling back to today like asDate() does.
+ * Used by period filters so a blank/invalid cell does not become "today".
+ */
+export function tryDate(val: any): Date | null {
+  if (val === null || val === undefined || val === '') return null;
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  if (typeof val === 'number') {
+    if (val > 25000 && val < 65000) {
+      const d = new Date((val - 25569) * 86400 * 1000);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const s = String(val).trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) {
+    const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (m) {
+    const d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  m = s.match(/^(\d{1,2})[-/\s]([A-Za-z]{3})[-/\s](\d{2,4})/);
+  if (m) {
+    const moIdx = MONTH_NAMES.findIndex(x => x.toLowerCase() === m![2].toLowerCase());
+    if (moIdx !== -1) {
+      let yr = parseInt(m[3], 10);
+      yr = yr < 100 ? yr + 2000 : yr;
+      return new Date(yr, moIdx, parseInt(m[1], 10));
+    }
+  }
+  // Only trust the browser's lenient parser when the text actually carries a year,
+  // so things like "Apr-26" are not read as 26 April 2001.
+  if (!/\d{4}/.test(s)) return null;
+  const fallback = new Date(s);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 export function formatDateIso(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

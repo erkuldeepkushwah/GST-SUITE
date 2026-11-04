@@ -45,8 +45,13 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
   };
 
   const handleCustomDateChange = (fromVal?: string, toVal?: string) => {
-    const start = fromVal ?? value.start;
-    const end = toVal ?? value.end;
+    let start = fromVal !== undefined ? fromVal : value.start;
+    let end = toVal !== undefined ? toVal : value.end;
+    // Empty input: keep the current range instead of jumping back to today
+    if (!start || !end) return;
+    // Editing one end pulls the other along, so the range never silently swaps
+    if (fromVal !== undefined && start > end) end = start;
+    if (toVal !== undefined && end < start) start = end;
     try {
       onChange(periodBounds('custom', { start, end }));
     } catch {

@@ -153,7 +153,11 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
             <input
               type="checkbox"
               checked={overridePeriod}
-              onChange={(e) => setOverridePeriod(e.target.checked)}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setOverridePeriod(on);
+                if (on) setLocalPeriod(commonPeriod);
+              }}
               className="accent-[#1f4e79] rounded"
             />
             {t('override_period', lang)}
