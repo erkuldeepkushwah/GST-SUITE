@@ -184,6 +184,24 @@ export async function parseBooksGstr1File(file: File): Promise<{ b2b: any[]; cdn
           BooksFile: file.name,
         });
       }
+    } else if (sNameNorm.includes('hsn')) {
+      const data = getSheetData(wb, sheetName, 3);
+      for (const row of data) {
+        const code = String(row['HSN'] || row['HSN/SAC'] || row['HSN Code'] || '').trim();
+        if (!code) continue;
+        hsn.push({
+          HSN: code,
+          UQC: String(row['UQC'] || ''),
+          Qty: parseFloat(row['Total Quantity'] || 0) || 0,
+          Rate: parseFloat(row['Rate'] || 0) || 0,
+          Taxable: parseFloat(row['Taxable Value'] || 0) || 0,
+          Tax:
+            (parseFloat(row['Integrated Tax Amount'] || 0) || 0) +
+            (parseFloat(row['Central Tax Amount'] || 0) || 0) +
+            (parseFloat(row['State Tax Amount'] || 0) || 0),
+          BooksFile: file.name,
+        });
+      }
     } else if (sNameNorm.includes('cdnr')) {
       const data = getSheetData(wb, sheetName, 3);
       for (const row of data) {
@@ -204,7 +222,7 @@ export async function parseBooksGstr1File(file: File): Promise<{ b2b: any[]; cdn
     }
   }
 
-  if (b2b.length === 0 && cdnr.length === 0 && b2cs.length === 0) {
+  if (b2b.length === 0 && cdnr.length === 0 && b2cs.length === 0 && hsn.length === 0) {
     throw new Error(`No sales or B2B/CDNR sheets recognized in Books file "${file.name}". Please ensure standard Tally/ERP GSTR-1 sales sheets (e.g. B2B, CDNR) with Invoice Number and Recipient GSTIN are present. (फ़ाइल त्रुटि: मान्य सेल्स / B2B शीट नहीं मिली)।`);
   }
 
@@ -230,15 +248,32 @@ export function runGstr1MultiReconciliation(
     return d >= start && d <= end;
   };
 
+  // Return-month window, used for B2CS / HSN / month-wise (3B tie-out) rows
+  const startMo = start.getFullYear() * 12 + start.getMonth() + 1;
+  const endMo = end.getFullYear() * 12 + end.getMonth() + 1;
+  const fpInPeriod = (fp: any): boolean => {
+    const m = String(fp || '').trim();
+    if (!/^\d{6}$/.test(m)) return true; // unknown return period: keep the data visible
+    const mon = parseInt(m.slice(0, 2), 10);
+    const yr = parseInt(m.slice(2), 10);
+    if (mon < 1 || mon > 12) return true;
+    const idx = yr * 12 + mon;
+    return idx >= startMo && idx <= endMo;
+  };
+
   // Combine Portal files
   const pB2b: any[] = [];
   const pCdnr: any[] = [];
+  const pB2cs: any[] = [];
+  const pHsn: any[] = [];
   const portalSummaryRows: any[] = [];
 
   for (const pf of portalFiles) {
+    const fpOk = fpInPeriod(pf.fp);
     portalSummaryRows.push({
       File: pf.name,
       'Return Period': pf.returnPeriod,
+      'In Period': fpOk ? 'Yes' : 'No',
       'Net Taxable (portal)': pf.netTaxable,
       IGST: pf.igst,
       CGST: pf.cgst,
@@ -255,12 +290,19 @@ export function runGstr1MultiReconciliation(
         pCdnr.push(c);
       }
     }
+    // B2CS and HSN are rate/summary level: they belong to the file's return month
+    if (fpOk) {
+      for (const x of pf.b2cs || []) pB2cs.push(x);
+      for (const h of pf.hsn || []) pHsn.push(h);
+    }
   }
 
   // Combine Books files
   const bB2b: any[] = [];
   const bCdnr: any[] = [];
+  const bHsn: any[] = [];
   for (const bf of booksFiles) {
+    for (const h of bf.hsn || []) bHsn.push(h);
     for (const b of bf.b2b) {
       if (inPeriod(b.Date)) {
         bB2b.push(b);
@@ -276,6 +318,7 @@ export function runGstr1MultiReconciliation(
   // Reconcile B2B
   const b2bReco = matchGstr1Section(pB2b, bB2b, tolerance);
   const cdnrReco = matchGstr1Section(pCdnr, bCdnr, tolerance);
+  const hsnReco = matchHsnSection(pHsn, bHsn, tolerance);
 
   // Dashboard table
   const b2bMatched = b2bReco.filter(r => r.Status === 'Matched');
@@ -290,9 +333,21 @@ export function runGstr1MultiReconciliation(
     { Section: 'B2B', Status: 'Only in Books', Count: b2bOnlyBooks.length, 'Taxable (Portal)': 0, 'Taxable (Books)': sum(b2bOnlyBooks, 'Taxable_Books') },
   ];
 
+  for (const st of ['Matched', 'Mismatch', 'Only in Portal', 'Only in Books']) {
+    const list = hsnReco.filter(r => r.Status === st);
+    dashboard.push({
+      Section: 'HSN',
+      Status: st,
+      Count: list.length,
+      'Taxable (Portal)': sum(list, 'Taxable (Portal)'),
+      'Taxable (Books)': sum(list, 'Taxable (Books)'),
+    });
+  }
+
   // Month-wise table
   const monthMap = new Map<string, any>();
   for (const pf of portalFiles) {
+    if (!fpInPeriod(pf.fp)) continue;
     if (!monthMap.has(pf.returnPeriod)) {
       monthMap.set(pf.returnPeriod, {
         Month: pf.returnPeriod,
@@ -345,6 +400,7 @@ export function runGstr1MultiReconciliation(
     portalFiles: portalSummaryRows,
     b2bReco,
     cdnrReco,
+    hsnReco,
   };
 }
 
@@ -434,6 +490,67 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
   }
 
   return results;
+}
+
+/**
+ * HSN / SAC summary check: portal HSN lines against the books HSN sheet,
+ * grouped by HSN code so rate-wise splits on either side still compare.
+ */
+function matchHsnSection(portal: any[], books: any[], tolerance: number): Array<Record<string, any>> {
+  const keyOf = (r: any) => String(r.HSN || '').trim().toUpperCase() || '(blank)';
+  const aggregate = (rows: any[]) => {
+    const map = new Map<string, { taxable: number; tax: number; qty: number }>();
+    for (const r of rows) {
+      const k = keyOf(r);
+      const cur = map.get(k) || { taxable: 0, tax: 0, qty: 0 };
+      cur.taxable += Number(r.Taxable) || 0;
+      cur.tax += Number(r.Tax) || 0;
+      cur.qty += Number(r.Qty) || 0;
+      map.set(k, cur);
+    }
+    return map;
+  };
+
+  const p = aggregate(portal);
+  const b = aggregate(books);
+  const keys = Array.from(new Set([...p.keys(), ...b.keys()])).sort();
+
+  const out: Array<Record<string, any>> = [];
+  for (const k of keys) {
+    const pr = p.get(k);
+    const br = b.get(k);
+    const pTaxable = round(pr?.taxable || 0);
+    const bTaxable = round(br?.taxable || 0);
+    const pTax = round(pr?.tax || 0);
+    const bTax = round(br?.tax || 0);
+
+    let status = 'Matched';
+    if (!pr) status = 'Only in Books';
+    else if (!br) status = 'Only in Portal';
+    else if (Math.abs(bTaxable - pTaxable) > tolerance || Math.abs(bTax - pTax) > tolerance) status = 'Mismatch';
+
+    out.push({
+      HSN: k,
+      Status: status,
+      'Qty (Portal)': round(pr?.qty || 0),
+      'Qty (Books)': round(br?.qty || 0),
+      'Taxable (Portal)': pTaxable,
+      'Taxable (Books)': bTaxable,
+      'Taxable Diff': round(bTaxable - pTaxable),
+      'Tax (Portal)': pTax,
+      'Tax (Books)': bTax,
+      'Tax Diff': round(bTax - pTax),
+      Action:
+        status === 'Matched'
+          ? ''
+          : status === 'Only in Books'
+          ? 'HSN in books but not filed in GSTR-1.'
+          : status === 'Only in Portal'
+          ? 'HSN filed in GSTR-1 but missing in books.'
+          : 'Taxable value or tax differs for this HSN.',
+    });
+  }
+  return out;
 }
 
 function sum(arr: any[], col: string): number {

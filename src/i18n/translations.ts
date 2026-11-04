@@ -21,6 +21,8 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   about_heading: ["About", "परिचय", "关于", "Acerca de", "À propos"],
   sidebar_module: ["Module", "मॉड्यूल", "模块", "Módulo", "Module"],
   sidebar_company: ["Company", "कंपनी", "公司", "Empresa", "Entreprise"],
+  tab_hsn: ["HSN Summary", "HSN सारांश", "HSN 汇总", "Resumen HSN", "Récapitulatif HSN"],
+  info_no_hsn: ["No HSN lines found in the uploaded files.", "अपलोड की गई फ़ाइलों में कोई HSN पंक्ति नहीं मिली।", "上传的文件中没有 HSN 明细。", "No se encontraron líneas HSN en los archivos subidos.", "Aucune ligne HSN dans les fichiers importés."],
   history_title: ["Import history", "आयात इतिहास", "导入记录", "Historial de importaciones", "Historique des imports"],
   history_empty: ["No imports yet in this browser.", "इस ब्राउज़र में अभी कोई आयात नहीं हुआ।", "此浏览器中还没有导入记录。", "Todavía no hay importaciones en este navegador.", "Aucun import dans ce navigateur pour l'instant."],
   history_clear: ["Clear", "साफ़ करें", "清除", "Borrar", "Effacer"],

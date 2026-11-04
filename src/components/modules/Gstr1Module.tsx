@@ -38,7 +38,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [results, setResults] = useState<Gstr1RecoResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'dash' | 'month' | 'tieout' | 'b2b' | 'cdnr' | 'download'>('dash');
+  const [activeTab, setActiveTab] = useState<'dash' | 'month' | 'tieout' | 'b2b' | 'cdnr' | 'hsn' | 'download'>('dash');
 
   const activePeriod = overridePeriod ? localPeriod : commonPeriod;
 
@@ -127,6 +127,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
         'Portal files': results.portalFiles,
         'B2B Reco': results.b2bReco,
         'CDNR Reco': results.cdnrReco.length > 0 ? results.cdnrReco : [{ Info: t('no_cdnr_rows', lang) }],
+        'HSN Summary': results.hsnReco.length > 0 ? results.hsnReco : [{ Info: 'No HSN lines found in the uploaded files.' }],
       },
       `GSTR1_Reco_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
       { gstin, period: activePeriod.label, title: 'GSTR-1 & 3B Reconciliation' }
@@ -396,6 +397,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                 { id: 'tieout', label: t('tab_tieout', lang) },
                 { id: 'b2b', label: t('tab_b2b_reco', lang) },
                 { id: 'cdnr', label: t('tab_cdnr_reco', lang) },
+                { id: 'hsn', label: t('tab_hsn', lang) },
                 { id: 'download', label: t('tab_download', lang) },
               ].map((tab) => (
                 <button
@@ -436,6 +438,14 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                 <DataTable
                   data={results.cdnrReco.length > 0 ? results.cdnrReco : [{ Info: t('info_no_cdnr', lang) }]}
                   title="Credit / Debit Notes (CDNR) Reco"
+                />
+              )}
+
+              {activeTab === 'hsn' && (
+                <DataTable
+                  data={results.hsnReco.length > 0 ? results.hsnReco : [{ Info: t('info_no_hsn', lang) }]}
+                  title={t('tab_hsn', lang)}
+                  maxHeight="520px"
                 />
               )}
 

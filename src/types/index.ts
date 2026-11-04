@@ -44,6 +44,7 @@ export interface Gstr1RecoResult {
   portalFiles: Array<Record<string, any>>;
   b2bReco: Array<Record<string, any>>;
   cdnrReco: Array<Record<string, any>>;
+  hsnReco: Array<Record<string, any>>;
   parsed3b?: Array<Record<string, any>>;
 }
 

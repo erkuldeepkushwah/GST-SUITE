@@ -399,6 +399,31 @@ export function runGst2aReconciliation(
   // Dashboard table
   const dashboard = buildGst2aDashboard(b2bReco, cdnReco);
 
+  // Transparency rows: how much the period filter left out of the B2B run
+  const pKept = new Set(pFiltered);
+  const bKept = new Set(bFiltered);
+  const pB2bAll = portalRows.filter(r => r.type === 'B2B');
+  const bB2bAll = booksRows.filter(r => r.type === 'B2B');
+  const pLeft = pB2bAll.filter(r => !pKept.has(r));
+  const bLeft = bB2bAll.filter(r => !bKept.has(r));
+
+  dashboard.push({
+    Section: 'B2B',
+    Status: 'Left out by period filter (2A)',
+    Count: pLeft.length,
+    'Taxable as per 2A': round(pLeft.reduce((s, r) => s + (r.taxable || 0), 0)),
+    'Taxable as per Books': 0,
+    'Tax Difference': 0,
+  });
+  dashboard.push({
+    Section: 'B2B',
+    Status: 'Left out by period filter (Books)',
+    Count: bLeft.length,
+    'Taxable as per 2A': 0,
+    'Taxable as per Books': round(bLeft.reduce((s, r) => s + (r.taxable || 0), 0)),
+    'Tax Difference': 0,
+  });
+
   return {
     dashboard,
     b2bReco,
