@@ -417,32 +417,32 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
             <div className="p-4">
               {activeTab === 'dash' && (
                 <div className="space-y-4">
-                  <DataTable data={results.dashboard} title="GSTR-1 Reco Dashboard" hideSearch />
-                  <DataTable data={results.portalFiles} title={t('tab_portal_files', lang)} hideSearch />
+                  <DataTable gstin={gstin} period={activePeriod.label} data={results.dashboard} title="GSTR-1 Reco Dashboard" hideSearch />
+                  <DataTable gstin={gstin} period={activePeriod.label} data={results.portalFiles} title={t('tab_portal_files', lang)} hideSearch />
                 </div>
               )}
 
               {activeTab === 'month' && (
-                <DataTable data={results.monthWise} title="Month-wise Portal Figures" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.monthWise} title="Month-wise Portal Figures" hideSearch />
               )}
 
               {activeTab === 'tieout' && (
-                <DataTable data={results.tieOut} title="GSTR-1 vs GSTR-3B Tie-out" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.tieOut} title="GSTR-1 vs GSTR-3B Tie-out" hideSearch />
               )}
 
               {activeTab === 'b2b' && (
-                <DataTable data={results.b2bReco} title="B2B Sales Reconciliation" maxHeight="520px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.b2bReco} title="B2B Sales Reconciliation" maxHeight="520px" />
               )}
 
               {activeTab === 'cdnr' && (
-                <DataTable
+                <DataTable gstin={gstin} period={activePeriod.label}
                   data={results.cdnrReco.length > 0 ? results.cdnrReco : [{ Info: t('info_no_cdnr', lang) }]}
                   title="Credit / Debit Notes (CDNR) Reco"
                 />
               )}
 
               {activeTab === 'hsn' && (
-                <DataTable
+                <DataTable gstin={gstin} period={activePeriod.label}
                   data={results.hsnReco.length > 0 ? results.hsnReco : [{ Info: t('info_no_hsn', lang) }]}
                   title={t('tab_hsn', lang)}
                   maxHeight="520px"

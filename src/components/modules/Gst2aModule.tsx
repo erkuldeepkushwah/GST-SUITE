@@ -423,15 +423,15 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
 
             <div className="p-4">
               {activeTab === 'overview' && (
-                <DataTable data={results.dashboard} title="Reconciliation Dashboard Summary" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.dashboard} title="Reconciliation Dashboard Summary" hideSearch />
               )}
 
               {activeTab === 'b2b' && (
-                <DataTable data={results.b2bReco} title="B2B Invoices Reconciliation" maxHeight="520px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.b2bReco} title="B2B Invoices Reconciliation" maxHeight="520px" />
               )}
 
               {activeTab === 'cdn' && (
-                <DataTable data={results.cdnReco} title="Credit / Debit Notes Reconciliation" maxHeight="520px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.cdnReco} title="Credit / Debit Notes Reconciliation" maxHeight="520px" />
               )}
 
               {activeTab === 'gstr9' && (
@@ -439,7 +439,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   <div className="text-xs text-slate-500 bg-blue-50/60 p-2.5 rounded-lg border border-blue-100">
                     {t('note_gstr9', lang)}
                   </div>
-                  <DataTable data={results.gstr9Itc} title="GSTR-9 ITC Table Breakdown" hideSearch />
+                  <DataTable gstin={gstin} period={activePeriod.label} data={results.gstr9Itc} title="GSTR-9 ITC Table Breakdown" hideSearch />
                 </div>
               )}
 
@@ -451,7 +451,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
 
                   {reviewRows.length > 0 ? (
                     <div className="space-y-3">
-                      <DataTable
+                      <DataTable gstin={gstin} period={activePeriod.label}
                         data={reviewRows}
                         title="Unconfirmed Notes Requiring Verification"
                         editableColumn="Type (CN / DN)"

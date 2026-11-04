@@ -275,15 +275,15 @@ export const TdsRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
 
             <div className="p-4">
               {activeTab === 'summary' && (
-                <DataTable data={results.summary} title="TDS Reconciliation Summary" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.summary} title="TDS Reconciliation Summary" hideSearch />
               )}
 
               {activeTab === 'monthly' && (
-                <DataTable data={results.monthlyReco} title="Monthly TDS Reconciliation" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.monthlyReco} title="Monthly TDS Reconciliation" hideSearch />
               )}
 
               {activeTab === 'tally' && (
-                <DataTable data={results.tallyEntries} title="Tally TDS Entries" maxHeight="480px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.tallyEntries} title="Tally TDS Entries" maxHeight="480px" />
               )}
 
               {activeTab === 'download' && (

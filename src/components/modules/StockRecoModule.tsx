@@ -395,17 +395,17 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
             <div className="p-4">
               {activeTab === 'summary' && (
                 <div className="space-y-4">
-                  <DataTable data={snapshotResult.summary} title="Stock Consistency Summary" hideSearch />
-                  <DataTable data={snapshotResult.unitTieOut} title="Unit Tie-Out" hideSearch />
+                  <DataTable gstin={gstin} period={activePeriod.label} data={snapshotResult.summary} title="Stock Consistency Summary" hideSearch />
+                  <DataTable gstin={gstin} period={activePeriod.label} data={snapshotResult.unitTieOut} title="Unit Tie-Out" hideSearch />
                 </div>
               )}
 
               {activeTab === 'exceptions' && (
-                <DataTable data={snapshotResult.exceptions} title="Stock Exceptions" maxHeight="480px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={snapshotResult.exceptions} title="Stock Exceptions" maxHeight="480px" />
               )}
 
               {activeTab === 'allItems' && (
-                <DataTable data={snapshotResult.allItems} title="All Stock Items" maxHeight="480px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={snapshotResult.allItems} title="All Stock Items" maxHeight="480px" />
               )}
 
               {activeTab === 'download' && (
@@ -489,11 +489,11 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
 
             <div className="p-4">
               {activeTab === 'summary' && (
-                <DataTable data={movementResult.summary} title="Stock Movement Summary" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={movementResult.summary} title="Stock Movement Summary" hideSearch />
               )}
 
               {activeTab === 'exceptions' && (
-                <DataTable
+                <DataTable gstin={gstin} period={activePeriod.label}
                   data={movementResult.exceptions.length > 0 ? movementResult.exceptions : [{ Info: t('info_no_exceptions', lang) }]}
                   title="Stock Movement Exceptions"
                   maxHeight="480px"

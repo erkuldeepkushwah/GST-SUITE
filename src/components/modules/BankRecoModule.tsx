@@ -320,19 +320,19 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
 
             <div className="p-4">
               {activeTab === 'summary' && (
-                <DataTable data={results.summary} title="Bank Reconciliation Summary" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.summary} title="Bank Reconciliation Summary" hideSearch />
               )}
 
               {activeTab === 'closing' && (
-                <DataTable data={results.closingReconciliation} title="Closing Reconciliation" hideSearch />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.closingReconciliation} title="Closing Reconciliation" hideSearch />
               )}
 
               {activeTab === 'exceptions' && (
-                <DataTable data={results.exceptions} title="Unmatched Exceptions" maxHeight="480px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.exceptions} title="Unmatched Exceptions" maxHeight="480px" />
               )}
 
               {activeTab === 'entries' && (
-                <DataTable data={results.allEntries} title="All Transactions" maxHeight="480px" />
+                <DataTable gstin={gstin} period={activePeriod.label} data={results.allEntries} title="All Transactions" maxHeight="480px" />
               )}
 
               {activeTab === 'download' && (

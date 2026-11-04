@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { downloadCsv } from '../services/excelEngine';
+import { Search, Download, ChevronLeft, ChevronRight, FileSpreadsheet, FileText } from 'lucide-react';
+import { downloadCsv, exportToExcel } from '../services/excelEngine';
+import { downloadPdf } from '../services/pdfEngine';
 
 interface Props {
   data: Array<Record<string, any>>;
@@ -10,6 +11,8 @@ interface Props {
   editableOptions?: string[];
   onCellEdit?: (rowIndex: number, column: string, newValue: any) => void;
   hideSearch?: boolean;
+  gstin?: string;
+  period?: string;
 }
 
 export const DataTable: React.FC<Props> = ({
@@ -20,6 +23,8 @@ export const DataTable: React.FC<Props> = ({
   editableOptions = [],
   onCellEdit,
   hideSearch = false,
+  gstin = '',
+  period = '',
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,8 +61,22 @@ export const DataTable: React.FC<Props> = ({
     return filteredData.slice(start, start + pageSize);
   }, [filteredData, currentPage, pageSize]);
 
+  const baseName = (title || 'export').replace(/[\\/:*?"<>|]/g, '_');
+
   const handleDownloadCsv = () => {
-    downloadCsv(data, `${title || 'export'}.csv`);
+    downloadCsv(data, `${baseName}.csv`);
+  };
+
+  const handleDownloadExcel = () => {
+    exportToExcel({ [title || 'Report']: data }, `${baseName}.xlsx`, {
+      gstin,
+      period,
+      title: title || 'Report',
+    });
+  };
+
+  const handleDownloadPdf = () => {
+    downloadPdf(data, `${baseName}.pdf`, { title: title || 'Report', gstin, period });
   };
 
   const getStatusBadge = (val: any) => {
@@ -131,14 +150,32 @@ export const DataTable: React.FC<Props> = ({
             </div>
           )}
 
-          <button
-            onClick={handleDownloadCsv}
-            title="Download CSV"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors font-medium shadow-2xs"
-          >
-            <Download className="w-3.5 h-3.5" />
-            CSV
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleDownloadCsv}
+              title="Download CSV"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors font-medium shadow-2xs"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
+            <button
+              onClick={handleDownloadExcel}
+              title="Download Excel (.xlsx, password protected)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-emerald-800 border border-emerald-300 rounded-md hover:bg-emerald-50 transition-colors font-medium shadow-2xs"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Excel
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              title="Download PDF"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-rose-800 border border-rose-300 rounded-md hover:bg-rose-50 transition-colors font-medium shadow-2xs"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              PDF
+            </button>
+          </div>
         </div>
       </div>
 
