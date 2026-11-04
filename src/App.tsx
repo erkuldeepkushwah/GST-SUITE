@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModuleKey, LanguageCode, Period } from './types';
 import { Sidebar } from './components/Sidebar';
 import { HeaderHero } from './components/HeaderHero';
@@ -14,11 +14,29 @@ export const App: React.FC = () => {
   const [activeModule, setActiveModule] = useState<ModuleKey>('gst2a');
   const [gstin, setGstin] = useState<string>('');
   const [commonPeriod, setCommonPeriod] = useState<Period>(() => periodBounds('monthly'));
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+
+  // Start collapsed on phones so the workspace gets the full width
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f0f2f6] text-[#262730] flex flex-col md:flex-row antialiased relative">
+      {/* Backdrop while the sidebar overlays the content on small screens */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <Sidebar
+        isOpen={isSidebarOpen}
         lang={lang}
         onLanguageChange={setLang}
         activeModule={activeModule}
@@ -31,7 +49,12 @@ export const App: React.FC = () => {
 
       {/* Main Content Workspace */}
       <main className="flex-1 min-w-0 p-4 sm:p-7 lg:p-9 max-w-7xl mx-auto w-full transition-all duration-300">
-        <HeaderHero module={activeModule} lang={lang} />
+        <HeaderHero
+          module={activeModule}
+          lang={lang}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        />
 
         {activeModule === 'gst2a' && (
           <Gst2aModule

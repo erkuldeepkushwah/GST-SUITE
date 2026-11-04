@@ -8,6 +8,7 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { isValidGstin } from '../services/validation';
 
 interface Props {
+  isOpen: boolean;
   lang: LanguageCode;
   onLanguageChange: (lang: LanguageCode) => void;
   activeModule: ModuleKey;
@@ -21,6 +22,7 @@ interface Props {
 const MODULE_KEYS: ModuleKey[] = ['gst2a', 'gstr1', 'bank', 'tds', 'stock'];
 
 export const Sidebar: React.FC<Props> = ({
+  isOpen,
   lang,
   onLanguageChange,
   activeModule,
@@ -32,8 +34,12 @@ export const Sidebar: React.FC<Props> = ({
 }) => {
   const isGstinValid = isValidGstin(gstin);
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <aside className="w-full md:w-72 lg:w-80 shrink-0 bg-[#f0f2f6] border-b md:border-b-0 md:border-r border-[#d5dae2] flex flex-col justify-between gap-8 p-5 text-[#31333f] md:sticky md:top-0 md:h-screen md:overflow-y-auto">
+    <aside className="fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-[#f0f2f6] border-r border-[#d5dae2] flex flex-col justify-between gap-8 p-5 text-[#31333f] shadow-2xl md:sticky md:top-0 md:h-screen md:w-72 lg:w-80 md:shrink-0 md:z-auto md:shadow-none">
       <div className="space-y-6">
         {/* Logo / Banner */}
         <div className="flex items-center justify-between pt-1">
