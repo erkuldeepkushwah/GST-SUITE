@@ -8,7 +8,6 @@ import { BankRecoModule } from './components/modules/BankRecoModule';
 import { TdsRecoModule } from './components/modules/TdsRecoModule';
 import { StockRecoModule } from './components/modules/StockRecoModule';
 import { periodBounds } from './services/periodManager';
-import { Menu } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [lang, setLang] = useState<LanguageCode>('en');
@@ -33,20 +32,6 @@ export const App: React.FC = () => {
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-opacity"
           aria-hidden="true"
         />
-      )}
-
-      {/* Floating Three-line Button when Sidebar is Closed */}
-      {!isSidebarOpen && (
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          type="button"
-          title="Open sidebar"
-          aria-label="Open sidebar"
-          className="fixed top-3 left-3 z-30 p-2.5 rounded-lg bg-[#0b2a5b] text-white shadow-lg hover:bg-[#153e7e] transition-all flex items-center gap-2 cursor-pointer focus:outline-hidden ring-2 ring-white/50 animate-in fade-in duration-200"
-        >
-          <Menu className="w-5 h-5 text-white" />
-          <span className="text-xs font-semibold pr-1">Sidebar</span>
-        </button>
       )}
 
       {/* Sidebar Navigation */}

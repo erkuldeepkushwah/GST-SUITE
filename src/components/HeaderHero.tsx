@@ -2,7 +2,7 @@ import React from 'react';
 import { ModuleKey, LanguageCode } from '../types';
 import { t } from '../i18n/translations';
 import { FIRM_NAME, FIRM_TAGLINE, LOGO_PATH } from '../services/branding';
-import { Menu, PanelLeft } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 interface Props {
   module: ModuleKey;
@@ -17,18 +17,15 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, onToggleSidebar, isS
       {/* Brand title line with three-line hamburger menu toggle */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5 text-slate-800">
-          {/* Three-line hamburger button to toggle sidebar */}
+          {/* Mobile-only hamburger: opens the sidebar on small screens */}
           <button
             onClick={onToggleSidebar}
             type="button"
-            title={isSidebarOpen ? 'Hide sidebar (collapse)' : 'Show sidebar (expand)'}
+            title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
             aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            className="p-2 rounded-lg bg-white border border-[#d5dae2] text-slate-700 hover:text-[#1f3a5f] hover:bg-slate-100 hover:border-slate-400 transition-all shadow-2xs flex items-center gap-2 cursor-pointer group"
+            className="md:hidden p-2 rounded-lg bg-white border border-[#d5dae2] text-[#1f3a5f] hover:bg-slate-100 hover:border-slate-400 transition-all shadow-2xs cursor-pointer"
           >
-            <Menu className="w-5 h-5 text-[#1f3a5f] group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
-              {isSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
-            </span>
+            <Menu className="w-5 h-5" />
           </button>
 
           <div className="w-8 h-8 rounded-lg bg-[#0b2a5b] flex items-center justify-center p-1 shadow-2xs overflow-hidden shrink-0">

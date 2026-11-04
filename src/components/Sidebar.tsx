@@ -4,7 +4,7 @@ import { t } from '../i18n/translations';
 import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
 import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION, SIDEBAR_BANNER_PATH, LOGO_PATH } from '../services/branding';
-import { CheckCircle2, AlertCircle, ChevronLeft, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -57,10 +57,9 @@ export const Sidebar: React.FC<Props> = ({
             type="button"
             title="Close sidebar"
             aria-label="Close sidebar"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors cursor-pointer"
+            className="md:hidden p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors cursor-pointer"
           >
-            <ChevronLeft className="w-5 h-5 hidden md:block" />
-            <X className="w-5 h-5 md:hidden" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
