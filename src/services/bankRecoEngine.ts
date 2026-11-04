@@ -178,6 +178,11 @@ export async function runBankReconciliation(
   const stmtInPeriod = stmtParsed.filter(s => s.date >= pStart && s.date <= pEnd);
   const ledgerInPeriod = ledgerParsed.filter(l => l.date >= pStart && l.date <= pEnd);
 
+  // Roll both openings forward to the From date, so a mid-year period still reconciles
+  const bankOpeningBefore = round(stmtOpening + stmtParsed.filter(s => s.date < pStart).reduce((a, s) => a + s.amount, 0));
+  const ledgerOpeningBefore = round(ledgerOpening + ledgerParsed.filter(l => l.date < pStart).reduce((a, l) => a + l.amount, 0));
+  const openingDiff = round(bankOpeningBefore - ledgerOpeningBefore);
+
   // 3. Match
   const allEntries: any[] = [];
   for (const l of ledgerInPeriod) {
@@ -256,14 +261,15 @@ export async function runBankReconciliation(
 
   const totalBankClose = stmtInPeriod.length > 0 ? stmtInPeriod[stmtInPeriod.length - 1].closing : stmtOpening;
   const totalLedgerNet = round(ledgerInPeriod.reduce((s, r) => s + r.amount, 0));
-  const ledgerClose = round(ledgerOpening + totalLedgerNet);
+  const ledgerClose = round(ledgerOpeningBefore + totalLedgerNet);
 
-  const calculatedBankClose = round(ledgerClose + inBankNotBooksAmt - inBooksNotBankAmt);
+  const calculatedBankClose = round(ledgerClose + inBankNotBooksAmt - inBooksNotBankAmt + openingDiff);
   const unexplainedDiff = round(totalBankClose - calculatedBankClose);
 
   const closingReconciliation = [
     { Item: 'Closing Balance as per Books (Tally)', Amount: ledgerClose, Remark: 'Ledger balance at period end' },
     { Item: 'Add: In Bank, not in Books', Amount: inBankNotBooksAmt, Remark: 'Direct deposits / bank charges to be recorded' },
+    { Item: 'Add: Opening difference (bank minus Tally)', Amount: openingDiff, Remark: 'Difference carried from an earlier period' },
     { Item: 'Less: In Books, not in Bank', Amount: -inBooksNotBankAmt, Remark: 'Uncleared cheques / timing differences' },
     { Item: 'Reconciled Bank Balance', Amount: calculatedBankClose, Remark: 'Adjusted balance' },
     { Item: 'Closing Balance as per Bank Statement', Amount: totalBankClose, Remark: 'Statement balance at period end' },

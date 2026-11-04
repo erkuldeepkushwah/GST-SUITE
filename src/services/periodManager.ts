@@ -68,6 +68,12 @@ export function tryDate(val: any): Date | null {
     const d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
     return isNaN(d.getTime()) ? null : d;
   }
+  // Bank statements print two-digit years (05/04/26); read them as 20xx.
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2})(?!\d)/);
+  if (m) {
+    const d = new Date(2000 + parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    return isNaN(d.getTime()) ? null : d;
+  }
   m = s.match(/^(\d{1,2})[-/\s]([A-Za-z]{3})[-/\s](\d{2,4})/);
   if (m) {
     const moIdx = MONTH_NAMES.findIndex(x => x.toLowerCase() === m![2].toLowerCase());
