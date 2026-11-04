@@ -109,7 +109,7 @@ export function fyLabel(startYear: number): string {
   return `FY ${startYear}-${nextYearStr}`;
 }
 
-export function availableFyYears(referenceDate = new Date(), firstYear = 2020, futureYears = 1): number[] {
+export function availableFyYears(referenceDate = new Date(), firstYear = 2017, futureYears = 1): number[] {
   const current = financialYearStart(referenceDate);
   const years: number[] = [];
   for (let y = firstYear; y <= current + futureYears; y++) {
@@ -206,12 +206,13 @@ export function periodBounds(
 export function lakh(val: any): string {
   const x = parseFloat(val);
   if (isNaN(x)) return "-";
+  const sign = x < 0 ? '-' : '';
   const absX = Math.abs(x);
   if (absX >= 1e7) {
-    return `₹${(x / 1e7).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr`;
+    return `${sign}₹${(absX / 1e7).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr`;
   }
   if (absX >= 1e5) {
-    return `₹${(x / 1e5).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`;
+    return `${sign}₹${(absX / 1e5).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L`;
   }
-  return `₹${x.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  return `${sign}₹${absX.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }

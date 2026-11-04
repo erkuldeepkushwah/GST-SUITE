@@ -1,6 +1,6 @@
 import { BankRecoResult } from '../types';
 import { readExcelFile, getRawSheetRows } from './excelEngine';
-import { asDate, formatDateIso } from './periodManager';
+import { asDate, formatDateIso, tryDate } from './periodManager';
 
 const AMT_TOL = 0.5;
 const DATE_WINDOW_DAYS = 5;
@@ -80,8 +80,8 @@ export async function runBankReconciliation(
     for (let r = stmtHeaderIdx + 1; r < stmtRows.length; r++) {
       const line = stmtRows[r];
       if (!line || !Array.isArray(line) || line[colDate] === undefined) continue;
-      const d = asDate(line[colDate]);
-      if (isNaN(d.getTime())) continue;
+      const d = tryDate(line[colDate]);
+      if (!d) continue;
 
       const dateStr = formatDateIso(d);
       const narration = String(line[colNarr] || '').trim();
@@ -140,8 +140,8 @@ export async function runBankReconciliation(
     for (let r = ledgerHeaderIdx + 1; r < ledgerRows.length; r++) {
       const line = ledgerRows[r];
       if (!line || !Array.isArray(line) || !line[0]) continue;
-      const d = asDate(line[0]);
-      if (isNaN(d.getTime())) continue;
+      const d = tryDate(line[0]);
+      if (!d) continue;
 
       const dateStr = formatDateIso(d);
       const particulars = String(line[1] || '').trim();

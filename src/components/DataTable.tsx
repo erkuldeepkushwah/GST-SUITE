@@ -27,7 +27,19 @@ export const DataTable: React.FC<Props> = ({
 
   const columns = useMemo(() => {
     if (!data || data.length === 0) return [];
-    return Object.keys(data[0]);
+    // Union of keys from the first rows, so optional fields on later rows are
+    // not silently hidden. Capped so a messy sheet cannot explode the table.
+    const keys: string[] = Object.keys(data[0]);
+    const seen = new Set(keys);
+    for (const row of data.slice(0, 100)) {
+      for (const k of Object.keys(row || {})) {
+        if (!seen.has(k) && keys.length < 60) {
+          seen.add(k);
+          keys.push(k);
+        }
+      }
+    }
+    return keys;
   }, [data]);
 
   const filteredData = useMemo(() => {

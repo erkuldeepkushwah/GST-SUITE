@@ -1,6 +1,6 @@
 import { Gst2aRecoResult, ManualNoteType } from '../types';
 import { readExcelFile, getRawSheetRows } from './excelEngine';
-import { asDate, formatDateIso } from './periodManager';
+import { asDate, formatDateIso, tryDate } from './periodManager';
 
 const STORAGE_MANUAL_NOTES_KEY = 'gst_suite_manual_notes';
 
@@ -230,8 +230,8 @@ export async function parseWorkbookSheets(file: File, targetSource: 'GSTR-2A' | 
       // Format date to ISO
       let dateIso = '';
       if (dt) {
-        const d = asDate(dt);
-        dateIso = formatDateIso(d);
+        const d = tryDate(dt);
+        if (d) dateIso = formatDateIso(d);
       }
 
       rows.push({
@@ -325,7 +325,7 @@ export function runGst2aReconciliation(
 
   // Filter Portal rows
   const pFiltered = portalRows.filter(r => {
-    const invD = r.invoiceDate ? asDate(r.invoiceDate) : null;
+    const invD = r.invoiceDate ? tryDate(r.invoiceDate) : null;
     const inInv = invD ? (invD >= start && invD <= end) : false;
     if (options.basis === 'invoice' || !r.period) return inInv;
 
@@ -337,7 +337,7 @@ export function runGst2aReconciliation(
 
   // Filter Books rows (books always uses invoice date)
   const bFiltered = booksRows.filter(r => {
-    const invD = r.invoiceDate ? asDate(r.invoiceDate) : null;
+    const invD = r.invoiceDate ? tryDate(r.invoiceDate) : null;
     return invD ? (invD >= start && invD <= end) : false;
   });
 

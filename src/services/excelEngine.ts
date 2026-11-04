@@ -28,6 +28,7 @@ export function exportToExcel(
   meta?: { gstin?: string; period?: string; title?: string; password?: string }
 ) {
   const wb = XLSX.utils.book_new();
+  const usedNames = new Set<string>();
 
   for (const [sheetName, data] of Object.entries(sheets)) {
     let ws: XLSX.WorkSheet;
@@ -89,12 +90,19 @@ export function exportToExcel(
       pivotTables: false
     };
 
-    // Truncate sheet name to 31 chars (Excel limit)
-    const validSheetName = sheetName.slice(0, 31).replace(/[:\\\/\?\*\[\]]/g, '_');
+    // Truncate to 31 chars (Excel limit) and keep names unique: two long
+    // section names can otherwise collapse to the same name and throw.
+    let validSheetName = sheetName.slice(0, 31).replace(/[:\\/?*\[\]]/g, '_');
+    if (usedNames.has(validSheetName)) {
+      let n = 2;
+      while (usedNames.has(`${validSheetName.slice(0, 27)} (${n})`)) n++;
+      validSheetName = `${validSheetName.slice(0, 27)} (${n})`;
+    }
+    usedNames.add(validSheetName);
     XLSX.utils.book_append_sheet(wb, ws, validSheetName);
   }
 
-  XLSX.writeFile(wb, fileName);
+  XLSX.writeFile(wb, fileName.replace(/[\\/:*?"<>|]/g, '_'));
 }
 
 export function downloadCsv(data: any[], fileName: string) {

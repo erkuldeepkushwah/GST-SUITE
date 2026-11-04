@@ -1,6 +1,6 @@
 import { TdsRecoResult } from '../types';
 import { readExcelFile, getRawSheetRows } from './excelEngine';
-import { asDate, formatDateIso } from './periodManager';
+import { asDate, formatDateIso, tryDate } from './periodManager';
 
 const NON_TDS_KEYWORDS = ["partner remuneration", "profit and loss", "sundry balances written off"];
 const COMMISSION_KEYWORDS = ["commission"];
@@ -55,8 +55,8 @@ export async function runTdsReconciliation(
     for (let r = tallyHdrIdx + 1; r < tallyRows.length; r++) {
       const line = tallyRows[r];
       if (!line || !Array.isArray(line) || !line[0]) continue;
-      const d = asDate(line[0]);
-      if (isNaN(d.getTime())) continue;
+      const d = tryDate(line[0]);
+      if (!d) continue;
 
       const particulars = String(line[1] || '').trim();
       const vtype = String(line[2] || '').trim();
@@ -109,8 +109,8 @@ export async function runTdsReconciliation(
       for (let r = caHdrIdx + 1; r < table.length; r++) {
         const line = table[r];
         if (!line || !line[colMap.month]) continue;
-        const d = asDate(line[colMap.month]);
-        if (isNaN(d.getTime())) continue;
+        const d = tryDate(line[colMap.month]);
+        if (!d) continue;
 
         caEntries.push({
           Month: d,
