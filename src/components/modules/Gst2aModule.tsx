@@ -361,6 +361,20 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
             <span>{successMsg}</span>
           </div>
         )}
+
+        {results && (() => {
+          // If the Books file carried no IGST/CGST/SGST columns, every pair shows a
+          // tax difference. Say so instead of leaving a thousand "Mismatch" rows.
+          const bkTax = results.b2bReco.reduce((s: number, r: any) => s + (r['Total Tax_BK'] || 0), 0);
+          const pTax = results.b2bReco.reduce((s: number, r: any) => s + (r['Total Tax_2A'] || 0), 0);
+          const noBooksTax = pTax > 0 && bkTax === 0;
+          return noBooksTax ? (
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs">
+              Books file me IGST / CGST / SGST ke columns nahi mile, isliye har invoice me tax difference dikhega.
+              Books register me 'Integrated Tax Paid', 'Central Tax Paid', 'State/UT Tax Paid' columns ke saath file dobara export karein.
+            </div>
+          ) : null;
+        })()}
       </div>
 
       {/* Results View */}

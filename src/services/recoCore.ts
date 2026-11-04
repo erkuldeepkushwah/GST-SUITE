@@ -562,24 +562,36 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
       const diffSgst = round(b.SGST_BK - p.SGST_2A);
       const diffTax = round(b['Total Tax_BK'] - p['Total Tax_2A']);
 
-      if (Math.abs(diffTaxable) > tolerance) codes.push('TAXABLE_DIFF');
-      if (Math.abs(diffIgst) > tolerance) codes.push('IGST_DIFF');
-      if (Math.abs(diffCgst) > tolerance) codes.push('CGST_DIFF');
-      if (Math.abs(diffSgst) > tolerance) codes.push('SGST_DIFF');
+      // An invoice matches when the taxable value and the total tax agree. A
+      // different tax-head split (IGST vs CGST+SGST), a different document date
+      // or a supplier-name spelling is reported as a note, not as a mismatch:
+      // the ITC amount is the same, so flagging it as a discrepancy buries the
+      // real exceptions in a list of a thousand false ones.
+      const amountCodes: string[] = [];
+      if (Math.abs(diffTaxable) > tolerance) amountCodes.push('TAXABLE_DIFF');
+      if (Math.abs(diffTax) > tolerance) amountCodes.push('TAX_DIFF');
 
-      if (p.Date_2A && b.Date_BK && p.Date_2A !== b.Date_BK) {
-        codes.push('DATE_DIFF');
-      }
+      const headCodes: string[] = [];
+      if (Math.abs(diffIgst) > tolerance) headCodes.push('IGST_DIFF');
+      if (Math.abs(diffCgst) > tolerance) headCodes.push('CGST_DIFF');
+      if (Math.abs(diffSgst) > tolerance) headCodes.push('SGST_DIFF');
+
+      const dateDiff = Boolean(p.Date_2A && b.Date_BK && p.Date_2A !== b.Date_BK);
+      if (dateDiff) codes.push('DATE_DIFF');
       if (!matchDocType && p.Doc_2A !== b.Doc_BK) {
         codes.push('DOC_TYPE_DIFF');
       }
+      codes.unshift(...amountCodes, ...headCodes);
 
-      let nameNote = '';
+      const notes: string[] = [];
+      if (dateDiff) notes.push('Date differs (2A vs Books)');
+      if (headCodes.length > 0 && amountCodes.length === 0) notes.push('Tax head split differs, total tax matches');
       if (p.Party_2A && b.Party_BK && p.Party_2A.toLowerCase() !== b.Party_BK.toLowerCase()) {
-        nameNote = 'Name differs (check master)';
+        notes.push('Name differs (check master)');
       }
+      const nameNote = notes.join(' · ');
 
-      const isMatch = codes.length === 0;
+      const isMatch = amountCodes.length === 0;
 
       rows.push({
         Status: isMatch ? 'Matched' : 'Mismatch',
@@ -597,7 +609,9 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
         Doc_2A: p.Doc_2A,
         Doc_BK: b.Doc_BK,
         'Reason Code': codes.join(', '),
-        Action: isMatch ? '' : 'Discrepancy in taxable value, tax, or document date. Verify supplier invoice.',
+        Action: isMatch
+          ? 'Amounts agree. Check the note column for date or tax-head differences.'
+          : 'Taxable value or total tax differs. Verify the supplier invoice before claiming ITC.',
         'Name Check': nameNote,
         'Possible Pair': ''
       });
