@@ -63,7 +63,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     setSuccessMsg(null);
 
     if (gstin.length !== 15) {
-      setErrorMsg("Please enter a valid 15-character GSTIN in the sidebar (e.g. 23AAACC1234D1Z5), or click 'Load Sample / Demo Data' to test immediately.");
+      setErrorMsg("Please enter a valid 15-character GSTIN in the sidebar (e.g. 23AAOFT2395R1ZA), or click 'Load Sample / Demo Data' to test immediately.");
       return;
     }
     if (!portalFile || !booksFile) {
@@ -455,9 +455,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                         editableColumn="Type (CN / DN)"
                         editableOptions={['CN', 'DN']}
                         onCellEdit={(rowIndex, col, val) => {
-                          const updated = [...reviewRows];
-                          updated[rowIndex][col] = val;
-                          setReviewRows(updated);
+                          setReviewRows(reviewRows.map((r, i) => (i === rowIndex ? { ...r, [col]: val } : r)));
                         }}
                       />
                       <button

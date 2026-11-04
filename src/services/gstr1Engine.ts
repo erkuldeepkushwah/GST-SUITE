@@ -137,11 +137,11 @@ export async function parseGstr1JsonFile(file: File): Promise<Gstr1PortalFile> {
       Qty: parseFloat(h.qty || 0),
       Rate: parseFloat(h.rt || 0),
       Taxable: parseFloat(h.txval || 0),
-      Tax: (parseFloat(h.iamt || 0)) + (parseFloat(h.camt || 0)) + (parseFloat(h.samt || 0)),
+      Tax: (parseFloat(h.iamt) || 0) + (parseFloat(h.camt) || 0) + (parseFloat(h.samt) || 0),
     });
   }
 
-  const netTaxable = b2bTaxable - cdnTaxable + b2cs.reduce((s, x) => s + x.Taxable, 0);
+  const netTaxable = b2bTaxable - cdnTaxable + b2cs.reduce((s, x) => s + (parseFloat(x.Taxable) || 0), 0);
 
   return {
     name: file.name,

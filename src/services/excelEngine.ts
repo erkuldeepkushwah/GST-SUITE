@@ -36,7 +36,7 @@ export function exportToExcel(
       ws = XLSX.utils.aoa_to_sheet([
         [`${FIRM_NAME} - ${FIRM_TAGLINE}`],
         [meta?.title || 'Reconciliation Report', `GSTIN: ${meta?.gstin || '-'}`, `Period: ${meta?.period || '-'}`],
-        ['Security: Protected Audit Document (Read-Only)'],
+        [`Status: Official Protected Audit Report - password required to edit (${FIRM_NAME})`],
         [],
         ['Info: No records found for this section.']
       ]);
@@ -56,9 +56,19 @@ export function exportToExcel(
       ws = XLSX.utils.aoa_to_sheet(combined);
     }
 
-    // Auto-fit column widths
-    const maxCols = 30;
-    const colWidths = Array(maxCols).fill({ wch: 18 });
+    // Auto-fit column widths from the actual cell contents
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const colWidths: Array<{ wch: number }> = [];
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      let max = 10;
+      for (let r = range.s.r; r <= range.e.r; r++) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        if (cell && cell.v !== undefined && cell.v !== null) {
+          max = Math.max(max, String(cell.v).length + 2);
+        }
+      }
+      colWidths.push({ wch: Math.min(max, 45) });
+    }
     ws['!cols'] = colWidths;
 
     // Apply worksheet security / protection (Excel read-only audit lock)

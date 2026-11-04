@@ -5,6 +5,7 @@ import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
 import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION, SIDEBAR_BANNER_PATH, LOGO_PATH } from '../services/branding';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { isValidGstin } from '../services/validation';
 
 interface Props {
   lang: LanguageCode;
@@ -29,7 +30,7 @@ export const Sidebar: React.FC<Props> = ({
   commonPeriod,
   onCommonPeriodChange,
 }) => {
-  const isGstinValid = gstin.length === 15;
+  const isGstinValid = isValidGstin(gstin);
 
   return (
     <aside className="w-full md:w-72 lg:w-80 shrink-0 bg-[#f0f2f6] border-b md:border-b-0 md:border-r border-[#d5dae2] flex flex-col justify-between gap-8 p-5 text-[#31333f] md:sticky md:top-0 md:h-screen md:overflow-y-auto">
@@ -94,15 +95,15 @@ export const Sidebar: React.FC<Props> = ({
                   : 'border-[#d5dae2]'
               }`}
             />
-            {gstin.length === 15 && (
+            {isGstinValid && (
               <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-2.5 top-2.5" />
             )}
-            {gstin.length > 0 && gstin.length < 15 && (
+            {gstin.length > 0 && !isGstinValid && (
               <AlertCircle className="w-4 h-4 text-amber-500 absolute right-2.5 top-2.5" />
             )}
           </div>
           <div className="flex justify-between items-center mt-1 text-[11px] text-slate-500">
-            <span>{t('gstin_caption', lang)}</span>
+            <span>{gstin.length === 15 && !isGstinValid ? t('gstin_invalid', lang) : t('gstin_caption', lang)}</span>
             <span>{gstin.length}/15</span>
           </div>
         </div>

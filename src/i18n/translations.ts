@@ -21,6 +21,7 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   about_heading: ["About", "परिचय", "关于", "Acerca de", "À propos"],
   sidebar_module: ["Module", "मॉड्यूल", "模块", "Módulo", "Module"],
   sidebar_company: ["Company", "कंपनी", "公司", "Empresa", "Entreprise"],
+  gstin_invalid: ["Checksum does not match - please re-check", "चेकसम मेल नहीं खा रहा - दोबारा जाँचें", "校验位不匹配，请重新核对", "La suma de verificación no coincide: revísalo", "La clé de contrôle ne correspond pas : vérifiez"],
   gstin_label: ["GSTIN (15 characters)", "GSTIN (15 अक्षर)", "GSTIN（15 位）", "GSTIN (15 caracteres)", "GSTIN (15 caractères)"],
   gstin_caption: ["Enter GSTIN", "GSTIN दर्ज करें", "输入 GSTIN", "Ingrese el GSTIN", "Saisissez le GSTIN"],
   common_period: ["Common reporting period", "सामान्य रिपोर्टिंग अवधि", "通用报告期间", "Período de informe común", "Période de rapport commune"],

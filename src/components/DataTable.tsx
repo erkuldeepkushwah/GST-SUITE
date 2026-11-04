@@ -149,7 +149,9 @@ export const DataTable: React.FC<Props> = ({
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-800">
             {paginatedData.map((row, rIdx) => {
-              const actualRowIndex = (currentPage - 1) * pageSize + rIdx;
+              // Index in the original array, not in the filtered/paged view,
+              // so an edit never lands on the wrong row while a search is active.
+              const originalRowIndex = data.indexOf(row);
               return (
                 <tr key={rIdx} className="hover:bg-blue-50/40 transition-colors">
                   {columns.map((col) => {
@@ -166,7 +168,7 @@ export const DataTable: React.FC<Props> = ({
                         {isColEditable ? (
                           <select
                             value={val || ''}
-                            onChange={(e) => onCellEdit?.(actualRowIndex, col, e.target.value)}
+                            onChange={(e) => onCellEdit?.(originalRowIndex, col, e.target.value)}
                             className="bg-white border border-slate-300 rounded px-2 py-0.5 text-xs font-semibold focus:ring-1 focus:ring-blue-500"
                           >
                             {editableOptions.map((opt) => (

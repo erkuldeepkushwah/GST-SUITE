@@ -1,7 +1,7 @@
 import { StandardRow } from './recoCore';
 import { Gstr1PortalFile } from './gstr1Engine';
 
-export const SAMPLE_GSTIN = "23AAACC1234D1Z5";
+export const SAMPLE_GSTIN = "23AAOFT2395R1ZA";
 
 export function getSampleGst2aRows(): { portal: StandardRow[]; books: StandardRow[] } {
   const portal: StandardRow[] = [
