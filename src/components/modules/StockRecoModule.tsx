@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LanguageCode, Period, StockMode, StockSnapshotResult, StockMovementResult } from '../../types';
 import { t } from '../../i18n/translations';
 import { PeriodPicker } from '../PeriodPicker';
+import { recordImport } from '../../services/importHistory';
 import { KPICards } from '../KPICards';
 import { DataTable } from '../DataTable';
 import { lakh, formatDateDisplay } from '../../services/periodManager';
@@ -116,6 +117,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
         const res = await runStockSnapshot(snapshotFile);
         setSnapshotResult(res);
         setSuccessMsg("Stock summary check completed successfully!");
+        recordImport({ gstin, module: 'stock', period: activePeriod.label, files: [snapshotFile.name], rows: res.allItems.length });
       } else {
         if (!movementFile) {
           setErrorMsg("Please upload Tally Stock Movement Register (.xlsx), or click 'Load Sample / Demo Data' to test immediately.");
@@ -124,6 +126,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
         const res = await runStockMovement(movementFile, closingFile || undefined);
         setMovementResult(res);
         setSuccessMsg("Stock movement reconciliation completed successfully!");
+        recordImport({ gstin, module: 'stock', period: activePeriod.label, files: closingFile ? [movementFile.name, closingFile.name] : [movementFile.name], rows: res.allItems.length });
       }
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
