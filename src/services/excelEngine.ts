@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION } from './branding';
+import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION, REPORT_PASSWORD } from './branding';
 
 export async function readExcelFile(file: File): Promise<XLSX.WorkBook> {
   const buffer = await file.arrayBuffer();
@@ -45,7 +45,7 @@ export function exportToExcel(
       const headerRows: any[][] = [
         [`${FIRM_NAME} | ${FIRM_LOCATION}`],
         [`Report: ${sheetName}`, `Company GSTIN: ${meta?.gstin || '-'}`, `Period: ${meta?.period || '-'}`],
-        ['Status: Official Protected Audit Report (Read-Only to prevent accidental modification)'],
+        [`Status: Official Protected Audit Report - password required to edit (${FIRM_NAME})`],
         []
       ];
 
@@ -63,7 +63,7 @@ export function exportToExcel(
 
     // Apply worksheet security / protection (Excel read-only audit lock)
     ws['!protect'] = {
-      password: meta?.password || '',
+      password: meta?.password || REPORT_PASSWORD,
       selectLockedCells: true,
       selectUnlockedCells: true,
       formatCells: false,
