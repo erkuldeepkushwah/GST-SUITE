@@ -37,6 +37,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const [isRunning, setIsRunning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [resultsPeriod, setResultsPeriod] = useState<string>('');
   const [results, setResults] = useState<Gstr1RecoResult | null>(null);
   const [activeTab, setActiveTab] = useState<'dash' | 'month' | 'tieout' | 'b2b' | 'cdnr' | 'hsn' | 'download'>('dash');
 
@@ -92,6 +93,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
 
       setResults(res);
       setSuccessMsg("GSTR-1 & 3B reconciliation completed successfully!");
+      setResultsPeriod(activePeriod.label);
       recordImport({ gstin, module: 'gstr1', period: activePeriod.label, files: [...jsonFiles.map(f => f.name), ...booksFiles.map(f => f.name)], rows: res.b2bReco.length + res.cdnrReco.length });
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
@@ -103,14 +105,17 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const handleAdd3bRow = () => {
     setThreeBGrid([
       ...threeBGrid,
-      { 'Return Period': 'May-2026', Taxable: 0, IGST: 0, CGST: 0, SGST: 0 },
+      { 'Return Period': activePeriod.label, Taxable: 0, IGST: 0, CGST: 0, SGST: 0 },
     ]);
   };
 
   const handleUpdate3bRow = (idx: number, field: string, val: any) => {
-    const updated = [...threeBGrid];
-    (updated[idx] as any)[field] = field === 'Return Period' ? val : (parseFloat(val) || 0);
-    setThreeBGrid(updated);
+    // Build a new row object: mutating the existing one leaves React state stale
+    setThreeBGrid(
+      threeBGrid.map((row, i) =>
+        i === idx ? { ...row, [field]: field === 'Return Period' ? val : (parseFloat(val) || 0) } : row
+      )
+    );
   };
 
   const handleDelete3bRow = (idx: number) => {
@@ -353,6 +358,11 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
+          </div>
+        )}
+        {resultsPeriod && resultsPeriod !== activePeriod.label && results && (
+          <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs">
+            Ye results {resultsPeriod} ke hain, ab selected period {activePeriod.label} hai. Numbers refresh karne ke liye Run dobara dabayein.
           </div>
         )}
       </div>

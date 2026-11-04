@@ -26,6 +26,7 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
   const [isRunning, setIsRunning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [resultsPeriod, setResultsPeriod] = useState<string>('');
   const [results, setResults] = useState<BankRecoResult | null>(null);
   const [activeTab, setActiveTab] = useState<'summary' | 'closing' | 'exceptions' | 'entries' | 'download'>('summary');
 
@@ -120,6 +121,7 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
       const res = await runBankReconciliation(stmtFile, ledgerFile, activePeriod.start, activePeriod.end);
       setResults(res);
       setSuccessMsg("Bank reconciliation completed successfully!");
+      setResultsPeriod(activePeriod.label);
       recordImport({ gstin, module: 'bank', period: activePeriod.label, files: [stmtFile.name, ledgerFile.name], rows: res.allEntries.length });
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
@@ -260,6 +262,11 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
+          </div>
+        )}
+        {resultsPeriod && resultsPeriod !== activePeriod.label && results && (
+          <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs">
+            Ye results {resultsPeriod} ke hain, ab selected period {activePeriod.label} hai. Numbers refresh karne ke liye Run dobara dabayein.
           </div>
         )}
       </div>

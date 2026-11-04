@@ -35,6 +35,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const [isRunning, setIsRunning] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [resultsPeriod, setResultsPeriod] = useState<string>('');
   const [results, setResults] = useState<Gst2aRecoResult | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'b2b' | 'cdn' | 'gstr9' | 'confirm' | 'download'>('overview');
 
@@ -95,6 +96,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
       setResults(res);
       setReviewRows(res.cdnReview);
       setSuccessMsg("Reconciliation completed successfully!");
+      setResultsPeriod(activePeriod.label);
       recordImport({ gstin, module: 'gst2a', period: activePeriod.label, files: [portalFile.name, booksFile.name], rows: res.b2bReco.length + res.cdnReco.length });
     } catch (e: any) {
       setErrorMsg(t('err_gst2a_failed', lang, { error: e.message || String(e) }));
@@ -124,10 +126,28 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const text = evt.target?.result as string;
+        // Excel-saved CSVs start with a BOM and may quote values that contain commas
+        const text = String(evt.target?.result || '').replace(/^\uFEFF/, '');
+        const parseCsvLine = (line: string): string[] => {
+          const out: string[] = [];
+          let cur = '';
+          let quoted = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (quoted) {
+              if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+              else if (ch === '"') quoted = false;
+              else cur += ch;
+            } else if (ch === '"') quoted = true;
+            else if (ch === ',') { out.push(cur.trim()); cur = ''; }
+            else cur += ch;
+          }
+          out.push(cur.trim());
+          return out;
+        };
         const lines = text.split(/\r?\n/).filter(Boolean);
         if (lines.length < 2) return;
-        const headers = lines[0].split(',').map(h => h.trim());
+        const headers = parseCsvLine(lines[0]);
         const gIdx = headers.indexOf('GSTIN');
         const nIdx = headers.indexOf('Note No');
         const tIdx = headers.indexOf('Type');
@@ -138,7 +158,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
 
         const incoming: ManualNoteType[] = [];
         for (let i = 1; i < lines.length; i++) {
-          const parts = lines[i].split(',').map(s => s.trim());
+          const parts = parseCsvLine(lines[i]);
           if (parts.length > tIdx) {
             incoming.push({
               GSTIN: parts[gIdx],
@@ -359,6 +379,11 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-xs flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
+          </div>
+        )}
+        {resultsPeriod && resultsPeriod !== activePeriod.label && results && (
+          <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs">
+            Ye results {resultsPeriod} ke hain, ab selected period {activePeriod.label} hai. Numbers refresh karne ke liye Run dobara dabayein.
           </div>
         )}
 
