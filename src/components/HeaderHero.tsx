@@ -2,32 +2,18 @@ import React from 'react';
 import { ModuleKey, LanguageCode } from '../types';
 import { t } from '../i18n/translations';
 import { FIRM_NAME, FIRM_TAGLINE, LOGO_PATH } from '../services/branding';
-import { Menu } from 'lucide-react';
 
 interface Props {
   module: ModuleKey;
   lang: LanguageCode;
-  onToggleSidebar?: () => void;
-  isSidebarOpen?: boolean;
 }
 
-export const HeaderHero: React.FC<Props> = ({ module, lang, onToggleSidebar, isSidebarOpen = true }) => {
+export const HeaderHero: React.FC<Props> = ({ module, lang }) => {
   return (
     <div className="mb-5">
-      {/* Brand title line with three-line hamburger menu toggle */}
+      {/* Brand title line */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5 text-slate-800">
-          {/* Mobile-only hamburger: opens the sidebar on small screens */}
-          <button
-            onClick={onToggleSidebar}
-            type="button"
-            title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-            className="md:hidden p-2 rounded-lg bg-white border border-[#d5dae2] text-[#1f3a5f] hover:bg-slate-100 hover:border-slate-400 transition-all shadow-2xs cursor-pointer"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
           <div className="w-8 h-8 rounded-lg bg-[#0b2a5b] flex items-center justify-center p-1 shadow-2xs overflow-hidden shrink-0">
             <img src={LOGO_PATH} alt={FIRM_NAME} className="w-full h-full object-contain" />
           </div>
