@@ -211,6 +211,10 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
             />
             {t('override_period', lang)}
           </label>
+
+          <p className="text-[11px] text-slate-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+            {t('stock_period_note', lang)}
+          </p>
         </div>
 
         {overridePeriod && (

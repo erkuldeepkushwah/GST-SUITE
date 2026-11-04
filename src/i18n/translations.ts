@@ -21,6 +21,7 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   about_heading: ["About", "परिचय", "关于", "Acerca de", "À propos"],
   sidebar_module: ["Module", "मॉड्यूल", "模块", "Módulo", "Module"],
   sidebar_company: ["Company", "कंपनी", "公司", "Empresa", "Entreprise"],
+  stock_period_note: ["Stock snapshot is a point-in-time report - the period does not filter it, it only names the file.", "स्टॉक स्नैपशॉट एक तत्काल स्थिति की रिपोर्ट है - पीरियड इस पर फ़िल्टर नहीं करता, सिर्फ़ फ़ाइल का नाम तय करता है।", "库存快照是时点报表，期间不会对其过滤，仅用于文件命名。", "El snapshot de stock es una foto en un momento dado: el período no lo filtra, solo nombra el archivo.", "L'instantané de stock est une photo à un instant donné : la période ne le filtre pas, elle ne sert qu'au nom du fichier."],
   gstin_invalid: ["Checksum does not match - please re-check", "चेकसम मेल नहीं खा रहा - दोबारा जाँचें", "校验位不匹配，请重新核对", "La suma de verificación no coincide: revísalo", "La clé de contrôle ne correspond pas : vérifiez"],
   gstin_label: ["GSTIN (15 characters)", "GSTIN (15 अक्षर)", "GSTIN（15 位）", "GSTIN (15 caracteres)", "GSTIN (15 caractères)"],
   gstin_caption: ["Enter GSTIN", "GSTIN दर्ज करें", "输入 GSTIN", "Ingrese el GSTIN", "Saisissez le GSTIN"],
