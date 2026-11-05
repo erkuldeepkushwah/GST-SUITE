@@ -15,7 +15,7 @@ import {
 } from '../../services/recoCore';
 import { exportToExcel, downloadCsv } from '../../services/excelEngine';
 import { getSampleGst2aRows, SAMPLE_GSTIN } from '../../services/sampleData';
-import { Upload, Play, Download, Sparkles, Check, AlertCircle, Lock } from 'lucide-react';
+import { Upload, Play, Download, Sparkles, Check, AlertCircle } from 'lucide-react';
 
 interface Props {
   commonPeriod: Period;
@@ -534,13 +534,9 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
               {activeTab === 'download' && (
                 <div className="p-8 text-center space-y-4">
                   <div className="max-w-md mx-auto space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
-                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Security Protected (Read-Only Sheet Lock Active)</span>
-                    </div>
                     <h4 className="text-sm font-bold text-slate-800">Ready to export reconciliation report</h4>
                     <p className="text-xs text-slate-500">
-                      Export includes Dashboard, B2B Reco, CDN Reco, GSTR-9 ITC and Notes Review in a formatted multi-sheet Excel spreadsheet with audit sheet protection enabled.
+                      Export includes Dashboard, B2B Reco, CDN Reco, GSTR-9 ITC and Notes Review in a multi-sheet Excel workbook. The heading rows are fixed; data stays free to filter, sort and edit.
                     </p>
                   </div>
                   <button

@@ -8,7 +8,7 @@ import { DataTable } from '../DataTable';
 import { lakh, formatDateDisplay } from '../../services/periodManager';
 import { runStockSnapshot, runStockMovement } from '../../services/stockRecoEngine';
 import { exportToExcel } from '../../services/excelEngine';
-import { Upload, Play, Download, Sparkles, Check, AlertCircle, Lock } from 'lucide-react';
+import { Upload, Play, Download, Sparkles, Check, AlertCircle } from 'lucide-react';
 
 interface Props {
   commonPeriod: Period;
@@ -411,10 +411,6 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
               {activeTab === 'download' && (
                 <div className="p-8 text-center space-y-4">
                   <div className="max-w-md mx-auto space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
-                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Security Protected (Read-Only Sheet Lock Active)</span>
-                    </div>
                     <h4 className="text-sm font-bold text-slate-800">Export Stock Summary Check</h4>
                     <p className="text-xs text-slate-500">
                       Download full Excel workbook with Summary, Unit Tie-out, Exceptions and All Items with audit protection enabled.
@@ -503,10 +499,6 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
               {activeTab === 'download' && (
                 <div className="p-8 text-center space-y-4">
                   <div className="max-w-md mx-auto space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
-                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Security Protected (Read-Only Sheet Lock Active)</span>
-                    </div>
                     <h4 className="text-sm font-bold text-slate-800">Export Stock Movement Reconciliation</h4>
                     <p className="text-xs text-slate-500">
                       Download full Excel report with Movement Summary, Exceptions and All Items with audit protection enabled.
