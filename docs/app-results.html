@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GST 2A/2B result | Fingenuity Associates</title>
+<link rel="icon" href="assets/logo.png">
+<style>
+  :root{
+    --side:#f0f2f6;--ink:#262730;--label:#31333f;--muted:#808495;--line:#d5dae2;
+    --red:#ff4b4b;--hero-a:#224f7c;--hero-b:#1b4266;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:"Source Sans Pro","Segoe UI",Roboto,-apple-system,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:#e9ecf1;padding:22px 14px 40px;-webkit-font-smoothing:antialiased;
+  }
+  .window{max-width:1016px;margin:0 auto;background:#fff;border-radius:6px;overflow:hidden;
+    box-shadow:0 10px 34px rgba(16,32,56,.22);border:1px solid #cdd4de}
+  .titlebar{display:flex;align-items:center;justify-content:space-between;background:#f7f8fa;
+    border-bottom:1px solid #e3e7ee;padding:6px 10px;font-size:12.5px;color:#33383f}
+  .titlebar .t-left{display:flex;align-items:center;gap:8px}
+  .titlebar .appicon{width:14px;height:14px;border-radius:2px;background:linear-gradient(135deg,#0b2a5b,#1f4e79)}
+  .win-btns{display:flex;gap:16px;color:#4a505a;font-size:12px}
+  .sbar{display:flex;align-items:center;justify-content:flex-end;gap:18px;padding:8px 18px 4px;font-size:14px;color:#6c7380}
+  .sbar .dots{letter-spacing:.2em;color:#9aa1ad}
+  .app{display:grid;grid-template-columns:305px 1fr;min-height:640px}
+  .side{background:var(--side);padding:18px 20px 26px}
+  .side img.logo{height:38px;display:block;margin:2px 0 20px}
+  .side .lab{font-size:15px;color:var(--label);margin:0 0 8px}
+  .side h3{font-size:19px;margin:22px 0 10px;color:var(--label);font-weight:700}
+  .side h3:first-of-type{margin-top:18px}
+  .select,.input{background:#fff;border:1px solid var(--line);border-radius:8px;height:40px;
+    display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:15px;color:var(--label)}
+  .select .caret{color:#8d93a1;font-size:10px}
+  .input .cal{color:#8d93a1;font-size:14px}
+  .radio{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--label);margin:9px 0}
+  .radio .dot{width:16px;height:16px;border-radius:50%;border:1.8px solid #b9bfca;flex:0 0 auto;background:#fff}
+  .radio .dot.on{border-color:var(--red);position:relative}
+  .radio .dot.on::after{content:"";position:absolute;inset:2.4px;border-radius:50%;background:var(--red)}
+  .main{padding:14px 34px 34px 34px}
+  .brand{display:flex;align-items:center;gap:10px;margin:4px 0 10px}
+  .brand .bl{width:34px;height:34px;border-radius:6px;background:#0b2a5b;overflow:hidden}
+  .brand .bl img{width:100%;height:100%;object-fit:cover}
+  .brand b{font-size:15.5px;color:#1f3a5f;white-space:nowrap}
+  .brand span{font-size:13.5px;color:var(--muted);line-height:1.3}
+  .hero{background:linear-gradient(102deg,var(--hero-a),var(--hero-b));color:#fff;border-radius:10px;
+    padding:26px 30px 30px;margin:6px 0 18px}
+  .hero h1{margin:0 0 14px;font-size:30px}
+  .hero p{margin:0;font-size:16.5px;color:#e3ecf7}
+  .check{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--label);margin:0 0 20px}
+  .check .box{width:16px;height:16px;border:1.8px solid #b9bfca;border-radius:4px;background:#fff}
+  .basis{display:flex;gap:30px;flex-wrap:wrap;margin:0 0 18px}
+  .basis .radio{margin:0}
+  .windowcap{font-size:14.5px;color:var(--muted);margin:0 0 14px}
+  .note{font-size:15.5px;color:#7c8492;line-height:1.65;margin:0 0 24px;max-width:64ch}
+  .uploads{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:0 0 20px}
+  .up-lab{font-size:14.5px;color:var(--label);margin:0 0 7px}
+  .drop{background:#f7f8fa;border:1px solid #e4e8ee;border-radius:10px;padding:12px;min-height:96px;
+    display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;min-width:0}
+  .chip .ic{width:26px;height:26px;border-radius:5px;background:#31333f;color:#fff;font-size:13px;
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .chip .nm{font-size:14px;color:var(--label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+  .chip .sz{font-size:12px;color:var(--muted)}
+  .chip .x{color:#8d93a1;font-size:13px;margin-left:6px}
+  .plus{align-self:center;color:#8d93a1;font-size:19px}
+  .run{background:var(--red);color:#fff;border:none;border-radius:8px;padding:11px 18px;font-size:15px;font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0 26px}
+  .kpi{border-radius:10px;padding:16px 18px;color:#fff;min-height:104px}
+  .kpi .k{font-size:14px;white-space:nowrap}
+  .kpi .v{font-size:28px;font-weight:700;line-height:1.2;margin:6px 0 4px}
+  .kpi .s{font-size:13.5px;opacity:.95;white-space:nowrap}
+  .kpi.green{background:linear-gradient(135deg,#1e8e5a,#2fbf7b)}
+  .kpi.amber{background:linear-gradient(135deg,#c98a0b,#f0b429)}
+  .kpi.red{background:linear-gradient(135deg,#b3261e,#e5534b)}
+  .kpi.blue{background:linear-gradient(135deg,#2e6da4,#4b9be0)}
+  .tabs{display:flex;gap:26px;border-bottom:1px solid #e6eaf0;font-size:15px;color:#31333f;margin-bottom:20px}
+  .tabs .t{padding-bottom:9px;margin-bottom:-1px;border-bottom:2.5px solid transparent}
+  .tabs .t.on{color:var(--red);border-bottom-color:var(--red)}
+  table.ov{width:100%;border-collapse:collapse;font-size:14px}
+  table.ov th{background:#f7f9fc;color:#5b6675;font-weight:400;text-align:left;padding:9px 12px;border:1px solid #e6eaf0}
+  table.ov td{padding:9px 12px;border:1px solid #e6eaf0;color:#262730}
+  table.ov td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .hintline{max-width:1016px;margin:12px auto 0;font-size:12.5px;color:#5c6470;text-align:center}
+  .hintline a{color:#1f4e79}
+  @media (max-width:860px){
+    .app{grid-template-columns:1fr}
+    .main{padding:16px 18px 30px}
+    .uploads,.kpis{grid-template-columns:1fr}
+    .tabs{gap:14px;flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="t-left"><span class="appicon"></span> GST Reconciliation | Fingenuity Associates</div>
+    <div class="win-btns"><span>−</span><span>□</span><span>✕</span></div>
+  </div>
+
+  <div class="sbar"><span>Deploy</span><span class="dots">⋮</span></div>
+
+  <div class="app">
+    <aside class="side">
+      <img class="logo" src="assets/logo_banner.png" alt="Fingenuity Associates">
+
+      <p class="lab">Language / भाषा / 语言 / Idioma / Langue</p>
+      <div class="select">English <span class="caret">▼</span></div>
+
+      <h3>Module</h3>
+      <div class="radio"><span class="dot on"></span> GST 2A/2B reco</div>
+      <div class="radio"><span class="dot"></span> GSTR-1 &amp; GSTR-3B reco</div>
+      <div class="radio"><span class="dot"></span> Bank reco</div>
+      <div class="radio"><span class="dot"></span> TDS reco</div>
+      <div class="radio"><span class="dot"></span> Stock reco</div>
+
+      <h3>Company</h3>
+      <p class="lab">GSTIN (15 characters)</p>
+      <div class="input">23ABCDE1234F1Z5</div>
+
+      <h3>Common reporting period</h3>
+      <p class="lab">Period type</p>
+      <div class="select">Financial Year <span class="caret">▼</span></div>
+      <p class="lab" style="margin-top:12px">Select financial year</p>
+      <div class="input">2026 / 27 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8d93a1" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></div>
+    </aside>
+
+    <main class="main">
+      <div class="brand">
+        <span class="bl"><img src="assets/logo.png" alt=""></span>
+        <b>Fingenuity Associates</b>
+        <span>Streamlining GST, Empowering Businesses, GST Compliance Made Simple.</span>
+      </div>
+
+      <div class="hero">
+        <h1>GST 2A/2B reco</h1>
+        <p>Upload files, click Run, then download the Excel report.</p>
+      </div>
+
+      <div class="check"><span class="box"></span> Override common period for this module</div>
+
+      <p class="lab" style="font-size:15px;margin-bottom:12px">GST 2A/2B period basis</p>
+      <div class="basis">
+        <div class="radio"><span class="dot on"></span> Both (Invoice Date + Return Period)</div>
+        <div class="radio"><span class="dot"></span> Invoice Date</div>
+        <div class="radio"><span class="dot"></span> Return Period</div>
+      </div>
+
+      <p class="windowcap">Reporting window: FY 2026-27 | 01-Apr-2026 to 31-Mar-2027</p>
+
+      <p class="note">Invoice Date: both sides are filtered by invoice date. Return Period: portal side is filtered by
+        return month, so older invoices filed in this period are included. Both: a row is kept if either test matches.
+        The Books side always uses invoice date.</p>
+
+      <div class="uploads">
+        <div>
+          <p class="up-lab">GSTR-2A / 2B (Excel)</p>
+          <div class="drop">
+            <span class="chip">
+              <span class="ic">▤</span>
+              <span>
+                <span class="nm">GSTR2A...t_2026.xlsx</span><br>
+                <span class="sz">264.1KB</span>
+              </span>
+              <span class="x">✕</span>
+            </span>
+            <span class="plus">+</span>
+          </div>
+        </div>
+        <div>
+          <p class="up-lab">Books purchase register (Excel)</p>
+          <div class="drop">
+            <span class="chip">
+              <span class="ic">▤</span>
+              <span>
+                <span class="nm">TECH E...3-2027.xlsx</span><br>
+                <span class="sz">154.8KB</span>
+              </span>
+              <span class="x">✕</span>
+            </span>
+            <span class="plus">+</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="run">▶ Run GST 2A/2B reconciliation</button>
+
+      <div class="kpis">
+        <div class="kpi green"><div class="k">B2B Matched</div><div class="v">1,058</div><div class="s">Taxable ₹18.78 Cr</div></div>
+        <div class="kpi amber"><div class="k">B2B Mismatch</div><div class="v">26</div><div class="s">Taxable ₹34.60 L</div></div>
+        <div class="kpi red"><div class="k">Only in 2A (ITC risk)</div><div class="v">105</div><div class="s">Taxable ₹59.95 L</div></div>
+        <div class="kpi blue"><div class="k">Only in Books</div><div class="v">65</div><div class="s">Taxable ₹83.49 L</div></div>
+      </div>
+
+      <div class="tabs">
+        <span class="t on">Overview</span>
+        <span class="t">B2B</span>
+        <span class="t">CN / DN</span>
+        <span class="t">GSTR-9 ITC</span>
+        <span class="t">Confirm notes</span>
+        <span class="t">Download</span>
+      </div>
+
+      <table class="ov">
+        <thead>
+          <tr>
+            <th style="width:30%">Section</th>
+            <th style="width:33%">Status</th>
+            <th style="width:8%">Count</th>
+            <th style="width:15%">Taxable as per 2A</th>
+            <th style="width:14%">Taxable as per Books</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Period filter (B2B rows outside period)</td><td>Both (Invoice Date + Return Period)</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td>B2B (2A vs Books)</td><td>Matched</td><td class="num">1058</td><td class="num">187753584.52</td><td class="num">187753580.25</td></tr>
+          <tr><td>B2B (2A vs Books)</td><td>Mismatch</td><td class="num">26</td><td class="num">3459716.08</td><td class="num">3427842.85</td></tr>
+          <tr><td>B2B (2A vs Books)</td><td>Only in 2A</td><td class="num">105</td><td class="num">5994999.54</td><td class="num">0</td></tr>
+          <tr><td>B2B (2A vs Books)</td><td>Only in Books</td><td class="num">65</td><td class="num">0</td><td class="num">8348737.84</td></tr>
+          <tr><td>CDN (2A vs Books)</td><td>Matched</td><td class="num">42</td><td class="num">1095313.05</td><td class="num">1095313.05</td></tr>
+          <tr><td>CDN (2A vs Books)</td><td>Mismatch</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+          <tr><td>CDN (2A vs Books)</td><td>Only in 2A</td><td class="num">51</td><td class="num">2933402.61</td><td class="num">0</td></tr>
+          <tr><td>CDN (2A vs Books)</td><td>Only in Books</td><td class="num">39</td><td class="num">0</td><td class="num">729735.78</td></tr>
+          <tr><td>Prior FY invoices (B2B)</td><td>Reported in FY 26-27, dated earlier</td><td class="num">1</td><td class="num">0</td><td class="num">0</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</div>
+
+<p class="hintline">
+  Static replica of the result screen for design reference — sample figures, nothing is processed here.
+  <a href="./">Project page</a> · <a href="app-preview.html">See the input screen</a>
+</p>
+
+</body>
+</html>
