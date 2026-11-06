@@ -185,7 +185,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                     setStockMode('snapshot');
                     setActiveTab('summary');
                   }}
-                  className="accent-[#1f4e79]"
+                  className="accent-[#165DFC]"
                 />
                 {t('stock_snapshot', lang)}
               </label>
@@ -199,7 +199,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                     setStockMode('movement');
                     setActiveTab('summary');
                   }}
-                  className="accent-[#1f4e79]"
+                  className="accent-[#165DFC]"
                 />
                 {t('stock_movement', lang)}
               </label>
@@ -215,7 +215,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                 setOverridePeriod(on);
                 if (on) setLocalPeriod(commonPeriod);
               }}
-              className="accent-[#1f4e79] rounded"
+              className="accent-[#165DFC] rounded"
             />
             {t('override_period', lang)}
           </label>
@@ -305,7 +305,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-98 disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-98 disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             {isRunning ? t('checking', lang) : (stockMode === 'snapshot' ? t('run_stock', lang) : t('run_stock_movement', lang))}
@@ -388,7 +388,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all border-b-2 ${
                     activeTab === tab.id
-                      ? 'border-[#ff4b4b] text-[#ff4b4b] bg-white'
+                      ? 'border-[#165DFC] text-[#165DFC] bg-white'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -423,7 +423,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                   </div>
                   <button
                     onClick={handleDownloadSnapshot}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
                   >
                     <Download className="w-4 h-4" />
                     {t('download_stock', lang)}
@@ -479,7 +479,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all border-b-2 ${
                     activeTab === tab.id
-                      ? 'border-[#ff4b4b] text-[#ff4b4b] bg-white'
+                      ? 'border-[#165DFC] text-[#165DFC] bg-white'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -511,7 +511,7 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
                   </div>
                   <button
                     onClick={handleDownloadMovement}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
                   >
                     <Download className="w-4 h-4" />
                     {t('download_stock_movement', lang)}

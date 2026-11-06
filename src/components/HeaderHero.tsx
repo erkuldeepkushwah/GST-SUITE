@@ -24,16 +24,16 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true
             title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
             aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
             aria-expanded={isSidebarOpen}
-            className="p-2 rounded-lg bg-white border border-[#d5dae2] text-[#1f3a5f] hover:bg-slate-100 hover:border-slate-400 transition-all shadow-2xs cursor-pointer"
+            className="p-2 rounded-lg bg-white border border-[#DDE4EE] text-[#165DFC] hover:bg-[#EEF6FF] hover:border-[#8AC4FF] transition-colors shadow-2xs cursor-pointer"
           >
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="w-8 h-8 rounded-lg bg-[#0b2a5b] flex items-center justify-center p-1 shadow-2xs overflow-hidden shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[#062E80] flex items-center justify-center p-1 shadow-2xs overflow-hidden shrink-0">
             <img src={LOGO_PATH} alt={FIRM_NAME} className="w-full h-full object-contain" />
           </div>
           <div className="leading-tight">
-            <span className="font-bold text-sm text-[#1f3a5f]">{FIRM_NAME}</span>
+            <span className="font-bold text-sm text-[#062E80]">{FIRM_NAME}</span>
             <span className="text-xs text-slate-500 ml-2 hidden sm:inline">{FIRM_TAGLINE}</span>
           </div>
         </div>
@@ -46,7 +46,8 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true
       </div>
 
       {/* Streamlit Hero Gradient banner */}
-      <div className="bg-gradient-to-r from-[#1f3a5f] via-[#244b7a] to-[#2e6da4] text-white p-5 sm:p-6 rounded-xl shadow-xs">
+      <div className="bg-gradient-to-r from-[#062E80] via-[#0D45E8] to-[#165DFC] text-white p-5 sm:p-6 rounded-xl shadow-xs">
+        <span className="mb-3 block h-[3px] w-10 rounded-full bg-[#C9A227]" aria-hidden="true" />
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-1 text-white">
           {t(`mod_${module}`, lang)}
         </h1>

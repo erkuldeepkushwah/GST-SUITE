@@ -207,7 +207,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                 setOverridePeriod(on);
                 if (on) setLocalPeriod(commonPeriod);
               }}
-              className="accent-[#1f4e79] rounded"
+              className="accent-[#165DFC] rounded"
             />
             {t('override_period', lang)}
           </label>
@@ -278,7 +278,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
             <span className="text-xs font-bold text-slate-700">{t('gstr1_3b_header', lang)}</span>
             <button
               onClick={handleAdd3bRow}
-              className="flex items-center gap-1 text-[11px] font-semibold text-[#1f4e79] hover:underline"
+              className="flex items-center gap-1 text-[11px] font-semibold text-[#165DFC] hover:underline"
             >
               <Plus className="w-3.5 h-3.5" /> Add Month
             </button>
@@ -360,7 +360,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-98 disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-98 disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             {isRunning ? t('reconciling', lang) : t('run_gstr1', lang)}
@@ -455,7 +455,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all border-b-2 ${
                     activeTab === tab.id
-                      ? 'border-[#ff4b4b] text-[#ff4b4b] bg-white'
+                      ? 'border-[#165DFC] text-[#165DFC] bg-white'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -509,7 +509,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   </div>
                   <button
                     onClick={handleDownloadFullExcel}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
                   >
                     <Download className="w-4 h-4" />
                     {t('download_gstr1', lang)}

@@ -144,15 +144,15 @@ export async function exportToExcel(
     const textCol = logoId !== null ? 2 : 1;
     const brand = ws.getRow(1).getCell(textCol);
     brand.value = `${FIRM_NAME} | ${FIRM_LOCATION}`;
-    brand.font = { bold: true, size: 12, color: { argb: 'FF1F3A5F' } };
+    brand.font = { bold: true, size: 12, color: { argb: 'FF062E80' } };
 
     const reportCell = ws.getRow(2).getCell(textCol);
     reportCell.value = `Report: ${sheetName}`;
-    reportCell.font = { bold: true, size: 10, color: { argb: 'FF1F3A5F' } };
+    reportCell.font = { bold: true, size: 10, color: { argb: 'FF062E80' } };
 
     const metaCell = ws.getRow(3).getCell(textCol);
     metaCell.value = `Company GSTIN: ${meta?.gstin || '-'}   |   Period: ${meta?.period || '-'}`;
-    metaCell.font = { size: 10, color: { argb: 'FF5B6675' } };
+    metaCell.font = { size: 10, color: { argb: 'FF47566B' } };
 
     // --- locked heading row ---
     const headerRow = ws.getRow(HEADER_ROWS + 1);
@@ -160,9 +160,9 @@ export async function exportToExcel(
       const cell = headerRow.getCell(i + 1);
       cell.value = c;
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3A5F' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF062E80' } };
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-      cell.border = { bottom: { style: 'thin', color: { argb: 'FFD0D7E2' } } };
+      cell.border = { bottom: { style: 'thin', color: { argb: 'FFDDE4EE' } } };
       cell.protection = { locked: true };
     });
     headerRow.commit();

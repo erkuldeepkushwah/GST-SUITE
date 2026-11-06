@@ -1,10 +1,33 @@
 @import "tailwindcss";
 
+/**
+ * One palette for the whole app.
+ * Blues come from the Brivora site (#165DFC family); the navy and gold are
+ * sampled from the firm logo, so the UI, the logo and the Excel reports agree.
+ */
 @layer base {
+  :root {
+    --brand-blue: #165dfc;
+    --brand-blue-dark: #0d45e8;
+    --brand-blue-soft: #eef6ff;
+    --brand-blue-line: #8ac4ff;
+    --logo-navy: #062e80;
+    --logo-navy-deep: #131d3e;
+    --logo-gold: #c9a227;
+    --logo-gold-soft: #f6edd9;
+    --surface: #f8fafc;
+    --surface-alt: #f1f5f9;
+    --border: #dde4ee;
+    --border-strong: #c8d1df;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --text-soft: #94a3b8;
+  }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    color: #262730;
-    background-color: #f0f2f6;
+    color: var(--text);
+    background-color: var(--surface);
   }
 }
 
@@ -14,12 +37,12 @@
   height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f3f7;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd3de;
+  background: #c8d1df;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a4b0c2;
+  background: #94a3b8;
 }

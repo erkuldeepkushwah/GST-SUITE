@@ -24,7 +24,7 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f0f2f6] text-[#262730] flex flex-col md:flex-row antialiased relative">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col md:flex-row antialiased relative">
       {/* Backdrop while the sidebar overlays the content on small screens */}
       {isSidebarOpen && (
         <div
