@@ -1,8 +1,14 @@
-name: Deploy app to GitHub Pages
+name: Build and publish app to Pages
 
-# Builds the Vite app and publishes dist/. GitHub Pages was publishing the
-# static docs/ mockup, whose buttons do nothing - this puts the real app online
-# and rebuilds it on every push to main.
+# GitHub Pages is set to publish main:/docs (the static design mockup, whose
+# buttons have no handlers). Changing that source needs repository admin, so
+# this workflow builds the real app and publishes it to docs/app/ instead - the
+# mockups stay where they are, and the working app appears at
+# https://erkuldeepkushwah.github.io/GST-SUITE/app/
+#
+# To serve the app at the site root instead: Settings -> Pages -> Build and
+# deployment -> Source: GitHub Actions, then say so and this workflow can hand
+# dist/ straight to actions/deploy-pages.
 
 on:
   push:
@@ -10,16 +16,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: pages-app-build
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-publish:
+    # The publish step commits back to main; skip that commit so it cannot loop.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +40,7 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      - name: Engine and export checks
+      - name: Engine, export and reco checks
         run: |
           npm run check:engines
           npm run check:export
@@ -42,21 +48,26 @@ jobs:
 
       - name: Build
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_BASE: /${{ github.event.repository.name }}/app/
         run: npm run build
 
-      - uses: actions/configure-pages@v5
+      - name: Publish dist into docs/app
+        run: |
+          rm -rf docs/app
+          mkdir -p docs/app
+          cp -r dist/. docs/app/
+          # Pages serves docs/ through Jekyll unless .nojekyll is present, and
+          # Jekyll would drop the _assets style folders.
+          touch docs/app/.nojekyll
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit the build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/app
+          if git diff --cached --quiet; then
+            echo "No change in the build output."
+          else
+            git commit -m "Build app into docs/app [skip ci]"
+            git push
+          fi
