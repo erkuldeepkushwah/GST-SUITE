@@ -79,8 +79,6 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
   const portalWb = useRef<any>(null);
   const booksWb = useRef<any>(null);
   const [tolerance, setTolerance] = useState<string>('1');
-  // Match key: GSTIN + bill number always; the invoice date joins it on demand.
-  const [matchOnDate, setMatchOnDate] = useState<boolean>(false);
   // Which two return types to compare, and what each uploaded file is.
   const [pairId, setPairId] = useState<string>('2B-purchase');
   const [portalType, setPortalType] = useState<FileType>('GSTR-2B');
@@ -223,19 +221,16 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
         setIsRunning(false);
         return;
       }
-      const rows = compareFrames(portalRows, booksRows, Number(tolerance) || 0, { matchOnDate });
+      const rows = compareFrames(portalRows, booksRows, Number(tolerance) || 0);
       setResults(rows as any);
-      const dateDiffs = summarize(rows as any).dateMismatched;
       setSuccessMsg(
-        dateDiffs > 0 && !matchOnDate
-          ? t('reco_done_date_diff', lang, { n: rows.length, d: dateDiffs })
-          : t('reco_done_filtered', lang, {
-              n: rows.length,
-              portal: portalRows.length,
-              portalTotal: portal.imported.length,
-              books: booksRows.length,
-              booksTotal: books.imported.length,
-            })
+        t('reco_done_filtered', lang, {
+          n: rows.length,
+          portal: portalRows.length,
+          portalTotal: portal.imported.length,
+          books: booksRows.length,
+          booksTotal: books.imported.length,
+        })
       );
       setActiveTab('reco');
     } catch (e: any) {
@@ -498,19 +493,6 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               className="w-24 text-xs font-mono bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#165DFC]/30"
             />
           </label>
-          <label className="flex items-center gap-2 text-[11px] text-[#47566B] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={matchOnDate}
-              onChange={(e) => {
-                setMatchOnDate(e.target.checked);
-                setResults(null);
-                setErrorMsg(null);
-              }}
-              className="accent-[#165DFC] rounded"
-            />
-            <span>{t('reco_match_on_date', lang)}</span>
-          </label>
           </div>
           <button
             onClick={handleRun}
@@ -541,9 +523,14 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
           <KPICards
             items={[
               { label: t('reco_kpi_matched', lang), value: summary.matched.toLocaleString(), sub: t('reco_kpi_invoices', lang), color: 'green' },
-              { label: t('reco_kpi_mismatch', lang), value: summary.mismatched.toLocaleString(), sub: t('reco_kpi_value_diff', lang), color: 'amber' },
-              { label: t('reco_kpi_only_portal', lang), value: summary.onlyPortal.toLocaleString(), sub: t('reco_kpi_books_missing', lang), color: 'red' },
-              { label: t('reco_kpi_only_books', lang), value: summary.onlyBooks.toLocaleString(), sub: t('reco_kpi_portal_missing', lang), color: 'blue' },
+              { label: t('reco_kpi_possible', lang), value: summary.possible.toLocaleString(), sub: t('reco_kpi_invoices', lang), color: 'blue' },
+              { label: t('reco_kpi_mismatch', lang), value: summary.mismatch.toLocaleString(), sub: t('reco_kpi_value_diff', lang), color: 'amber' },
+              {
+                label: t('reco_kpi_only_one_side', lang),
+                value: (summary.onlyPortal + summary.onlyBooks).toLocaleString(),
+                sub: t('reco_kpi_only_split', lang, { portal: summary.onlyPortal, books: summary.onlyBooks }),
+                color: 'red',
+              },
             ]}
           />
 

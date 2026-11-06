@@ -126,8 +126,11 @@ export const DataTable: React.FC<Props> = ({
 
   const getStatusBadge = (val: any) => {
     const s = String(val).toLowerCase();
-    if (s === 'matched' || s === 'tied' || s === 'all tally') {
+    if (s === 'matched' || s === 'match' || s === 'tied' || s === 'all tally') {
       return <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">Matched</span>;
+    }
+    if (s.includes('possible match')) {
+      return <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-300">{String(val)}</span>;
     }
     if (s.includes('mismatch') || s === 'difference' || s.includes('not tied')) {
       return <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">{String(val)}</span>;
