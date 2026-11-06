@@ -225,17 +225,14 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
       }
       const rows = compareFrames(portalRows, booksRows, Number(tolerance) || 0, { matchOnDate });
       setResults(rows as any);
-      const dateDiffs = summarize(rows as any).dateMismatched;
       setSuccessMsg(
-        dateDiffs > 0 && !matchOnDate
-          ? t('reco_done_date_diff', lang, { n: rows.length, d: dateDiffs })
-          : t('reco_done_filtered', lang, {
-              n: rows.length,
-              portal: portalRows.length,
-              portalTotal: portal.imported.length,
-              books: booksRows.length,
-              booksTotal: books.imported.length,
-            })
+        t('reco_done_filtered', lang, {
+          n: rows.length,
+          portal: portalRows.length,
+          portalTotal: portal.imported.length,
+          books: booksRows.length,
+          booksTotal: books.imported.length,
+        })
       );
       setActiveTab('reco');
     } catch (e: any) {
@@ -537,20 +534,13 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               {
                 label: t('reco_kpi_possible', lang),
                 value: summary.possible.toLocaleString(),
-                sub: t('reco_kpi_possible_sub', lang, { gstin: summary.fieldMismatches['GSTIN'] || 0 }),
+                sub: t('reco_kpi_possible_sub', lang, { n: summary.possible }),
                 color: 'blue',
               },
               {
                 label: t('reco_kpi_mismatch', lang),
                 value: summary.mismatch.toLocaleString(),
-                sub: t('reco_kpi_field_mismatch', lang, {
-                  bill: summary.fieldMismatches['Bill No'] || 0,
-                  taxable: summary.fieldMismatches['Taxable Value'] || 0,
-                  tax:
-                    (summary.fieldMismatches['CGST'] || 0) +
-                    (summary.fieldMismatches['SGST'] || 0) +
-                    (summary.fieldMismatches['IGST'] || 0),
-                }),
+                sub: t('reco_kpi_fields_differ', lang),
                 color: 'amber',
               },
               {

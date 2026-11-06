@@ -280,18 +280,18 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   reco_done: ["{n} invoices compared.", "{n} इनवॉइस मिलाए गए।", "已核对 {n} 张发票。", "{n} facturas comparadas.", "{n} factures rapprochées."],
   reco_kpi_possible: ["Possible match", "संभावित मिलान", "可能匹配", "Coincidencia posible", "Correspondance possible"],
   reco_kpi_possible_sub: [
-    "GSTIN {gstin} mismatch",
-    "GSTIN {gstin} में अंतर",
-    "GSTIN {gstin} 处不符",
-    "GSTIN {gstin} no coincide",
-    "GSTIN {gstin} différents"
+    "GSTIN mismatch | {n} invoices",
+    "GSTIN में अंतर | {n} इनवॉइस",
+    "GSTIN 不符 | {n} 张发票",
+    "GSTIN no coincide | {n} facturas",
+    "GSTIN différents | {n} factures"
   ],
-  reco_kpi_field_mismatch: [
-    "Bill No {bill} | Taxable {taxable} | Tax {tax}",
-    "बिल नं {bill} | टैक्सेबल {taxable} | टैक्स {tax}",
-    "单据号 {bill} | 应税值 {taxable} | 税额 {tax}",
-    "Factura {bill} | Base {taxable} | Impuesto {tax}",
-    "Facture {bill} | Base {taxable} | Taxe {tax}"
+  reco_kpi_fields_differ: [
+    "one or more fields differ",
+    "एक या अधिक फ़ील्ड में अंतर",
+    "一处或多处字段不符",
+    "uno o más campos no coinciden",
+    "un ou plusieurs champs diffèrent"
   ],
   reco_kpi_only_one_side: ["Not matched", "बिना मिलान", "未匹配", "Sin coincidencia", "Non rapproché"],
   reco_kpi_only_split: ["{portal} only in portal | {books} only in books", "{portal} सिर्फ़ पोर्टल में | {books} सिर्फ़ बुक्स में", "{portal} 仅门户 | {books} 仅账簿", "{portal} solo en el portal | {books} solo en libros", "{portal} portail seulement | {books} livres seulement"],

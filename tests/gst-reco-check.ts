@@ -80,9 +80,8 @@ const byKey = Object.fromEntries(reco.map((r) => [r['Invoice Key'], r]));
 check('reco: row count', reco.length === 4, String(reco.length));
 check('reco: INV001 matched', byKey['INV-001']?.Status === 'Matched', String(byKey['INV-001']?.Status));
 check('reco: INV002 is a mismatch', byKey['INV-002']?.Status === 'Not Mismatch', String(byKey['INV-002']?.Status));
-check('reco: INV002 flags the taxable value and IGST', byKey['INV-002']?.['Taxable Value match'] === 'No' && byKey['INV-002']?.['IGST match'] === 'No', JSON.stringify({ t: byKey['INV-002']?.['Taxable Value match'], i: byKey['INV-002']?.['IGST match'] }));
 check('reco: no reason column is emitted', byKey['INV-002']?.['Mismatch Reason'] === undefined);
-check('reco: INV002 field flags', byKey['INV-002']?.['GSTIN match'] === 'Yes' && byKey['INV-002']?.['Bill No match'] === 'Yes' && byKey['INV-002']?.['Taxable Value match'] === 'No', JSON.stringify({ g: byKey['INV-002']?.['GSTIN match'], b: byKey['INV-002']?.['Bill No match'], t: byKey['INV-002']?.['Taxable Value match'] }));
+check('reco: no per-field columns are emitted', !Object.keys(byKey['INV-002'] || {}).some((k) => k.endsWith(' match')), Object.keys(byKey['INV-002'] || {}).join(', '));
 check('reco: INV003 only in portal', byKey['INV-003']?.Status === 'Only in Portal', String(byKey['INV-003']?.Status));
 check('reco: INV004 only in books', byKey['INV-004']?.Status === 'Only in Books', String(byKey['INV-004']?.Status));
 check('reco: matched rows sort last', reco[reco.length - 1]['Status'] === 'Matched', reco[reco.length - 1]['Status']);
@@ -151,20 +150,20 @@ const dateBooks = standardize([
 
 const looseDate = compareFrames(datePortal, dateBooks, 1);
 check('key: same GSTIN + bill no matches even with a different date', looseDate.length === 1 && looseDate[0].Status === 'Matched', String(looseDate[0]?.Status));
-check('key: date difference is still reported', looseDate[0]['Date match'] === 'No', String(looseDate[0]['Date match']));
+check('key: both dates are still shown', looseDate[0]['Date (portal)'] !== looseDate[0]['Date (books)'], `${looseDate[0]['Date (portal)']} / ${looseDate[0]['Date (books)']}`);
 check('key: both dates are shown', looseDate[0]['Date (portal)'] === '2026-04-05' && looseDate[0]['Date (books)'] === '2026-04-07', `${looseDate[0]['Date (portal)']} / ${looseDate[0]['Date (books)']}`);
-check('summary: counts date differences', summarize(looseDate).dateMismatched === 1, String(summarize(looseDate).dateMismatched));
+
 
 const strictDate = compareFrames(datePortal, dateBooks, 1, { matchOnDate: true });
 check('key: with date matching the same invoice becomes a mismatch', strictDate.length === 1 && strictDate[0].Status === 'Not Mismatch', String(strictDate[0]?.Status));
-check('key: and the date column says No', strictDate[0]['Date match'] === 'No', String(strictDate[0]?.['Date match']));
+check('key: date-only difference is a Not Mismatch', strictDate[0].Status === 'Not Mismatch', String(strictDate[0]?.Status));
 
 const sameDateBooks = standardize([
   { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-9', 'Voucher Date': '05-04-2026', 'Taxable Amt': 1000, 'IGST Amt': 180 },
 ], m1, {});
 const strictSame = compareFrames(datePortal, sameDateBooks, 1, { matchOnDate: true });
 check('key: with date matching, equal dates still match', strictSame.length === 1 && strictSame[0].Status === 'Matched', String(strictSame[0]?.Status));
-check('key: same-date row reports Date match Yes', strictSame[0]['Date match'] === 'Yes', String(strictSame[0]['Date match']));
+check('key: same-date row is Matched', strictSame[0].Status === 'Matched', String(strictSame[0]?.Status));
 
 
 // ---------- 9. possible pairs and mismatch reasons ----------
@@ -180,8 +179,8 @@ const gstinCase = compareFrames(
   1
 );
 check('possible: different GSTIN pairs up', gstinCase.length === 1 && gstinCase[0].Status === 'Possible Match', String(gstinCase[0]?.Status));
-check('possible: GSTIN flag is the only No', gstinCase[0]['GSTIN match'] === 'No' && ['Bill No', 'Taxable Value', 'Invoice Value', 'CGST', 'SGST', 'IGST'].every((f) => gstinCase[0][`${f} match`] === 'Yes'), JSON.stringify(gstinCase[0]));
-check('possible: every other field still says Yes', ['Bill No', 'Taxable Value', 'Invoice Value', 'CGST', 'SGST', 'IGST'].every((f) => gstinCase[0][`${f} match`] === 'Yes'), JSON.stringify(gstinCase[0]));
+check('possible: classified as Possible Match', gstinCase[0].Status === 'Possible Match', String(gstinCase[0]?.Status));
+check('possible: no field columns on the row', !Object.keys(gstinCase[0]).some((k) => k.endsWith(' match')));
 check('possible: shows what it paired with', String(gstinCase[0]['Matched With']).includes('27AABCT1332L1ZZ'), String(gstinCase[0]['Matched With']));
 
 // Same GSTIN, bill number differs, money agrees -> possible match
@@ -191,8 +190,8 @@ const billCase = compareFrames(
   1
 );
 check('bill no: different bill no is a Mismatch, not a possible match', billCase.length === 1 && billCase[0].Status === 'Not Mismatch', String(billCase[0]?.Status));
-check('bill no: Bill No flag is No', billCase[0]['Bill No match'] === 'No', String(billCase[0]?.['Bill No match']));
-check('bill no: GSTIN still reads Yes', billCase[0]['GSTIN match'] === 'Yes', String(billCase[0]['GSTIN match']));
+check('bill no: classified as Not Mismatch', billCase[0].Status === 'Not Mismatch', String(billCase[0]?.Status));
+
 
 // Same GSTIN + bill no, only the date differs, and dates are part of the key
 const dateCase = compareFrames(
@@ -202,7 +201,7 @@ const dateCase = compareFrames(
   { matchOnDate: true }
 );
 check('date: date-only difference is a Mismatch', dateCase.length === 1 && dateCase[0].Status === 'Not Mismatch', String(dateCase[0]?.Status));
-check('date: Date match says No', dateCase[0]['Date match'] === 'No', String(dateCase[0]?.['Date match']));
+check('date: date-only difference is a Not Mismatch', dateCase[0].Status === 'Not Mismatch', String(dateCase[0]?.Status));
 
 // Money that does not agree must not become a possible match
 const noPair = compareFrames(
@@ -219,10 +218,10 @@ const taxOnly = compareFrames(
   mkBooks('27AABCT1332L1ZE', 'INV-500', 10000, 1900),
   1
 );
-check('flags: tax difference marks IGST and Invoice Value', taxOnly[0]['IGST match'] === 'No' && taxOnly[0]['Invoice Value match'] === 'No', JSON.stringify({ i: taxOnly[0]['IGST match'], v: taxOnly[0]['Invoice Value match'] }));
+check('tax difference is a Not Mismatch', taxOnly[0].Status === 'Not Mismatch', String(taxOnly[0]?.Status));
 
 const summaryPossible = summarize(gstinCase);
-check('summary: counts possible matches', summaryPossible.possible === 1 && summaryPossible.fieldMismatches['GSTIN'] === 1, JSON.stringify({ p: summaryPossible.possible, g: summaryPossible.fieldMismatches['GSTIN'] }));
+check('summary: counts possible matches', summaryPossible.possible === 1, String(summaryPossible.possible));
 
 
 // ---------- 10. invoice value as its own field ----------
@@ -234,8 +233,7 @@ const ivBooks = standardize([ivBooksRow], autoMapColumns(Object.keys(ivBooksRow)
 const ivCase = compareFrames(ivPortal, ivBooks, 1);
 check('invoice value: taken from the file when present', ivPortal[0]['Invoice Value'] === 11800, String(ivPortal[0]['Invoice Value']));
 check('invoice value: a difference makes it a Mismatch', ivCase[0].Status === 'Not Mismatch', String(ivCase[0]?.Status));
-check('invoice value: every other flag stays Yes', ['GSTIN', 'Bill No', 'Taxable Value', 'CGST', 'SGST', 'IGST'].every((f) => ivCase[0][`${f} match`] === 'Yes'), JSON.stringify(ivCase[0]));
-check('invoice value: flag says No', ivCase[0]['Invoice Value match'] === 'No', String(ivCase[0]['Invoice Value match']));
+check('invoice value: still a Not Mismatch', ivCase[0].Status === 'Not Mismatch', String(ivCase[0]?.Status));
 
 // ---------- 11. never Matched when anything differs ----------
 const multi = compareFrames(
@@ -243,7 +241,7 @@ const multi = compareFrames(
   mkBooks('27AABCT1332L1ZE', 'INV-800', 11000, 2000),
   1
 );
-check('multi: two fields differ, both flagged', multi[0].Status === 'Not Mismatch' && multi[0]['Taxable Value match'] === 'No' && multi[0]['IGST match'] === 'No', JSON.stringify(multi[0]));
+check('multi: two fields differ, still Not Mismatch', multi[0].Status === 'Not Mismatch', String(multi[0]?.Status));
 check('multi: not Matched', multi[0].Status !== 'Matched');
 
 console.log(failures === 0 ? 'ALL GST-RECO CHECKS OK' : `${failures} CHECK(S) FAILED`);
