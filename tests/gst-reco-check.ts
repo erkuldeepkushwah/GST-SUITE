@@ -153,8 +153,8 @@ check('key: both dates are shown', looseDate[0]['Date (portal)'] === '2026-04-05
 check('summary: counts date differences', summarize(looseDate).dateMismatched === 1, String(summarize(looseDate).dateMismatched));
 
 const strictDate = compareFrames(datePortal, dateBooks, 1, { matchOnDate: true });
-check('key: with date matching the same invoice splits', strictDate.length === 2, String(strictDate.length));
-check('key: one side only each', strictDate.every((r) => r.Status === 'Only in Portal' || r.Status === 'Only in Books'), strictDate.map((r) => r.Status).join(' | '));
+check('key: with date matching the same invoice becomes a possible match', strictDate.length === 1 && strictDate[0].Status === 'Possible match', String(strictDate[0]?.Status));
+check('key: and the reason is the date', strictDate[0].Reason === 'Date mismatch', String(strictDate[0]?.Reason));
 
 const sameDateBooks = standardize([
   { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-9', 'Voucher Date': '05-04-2026', 'Taxable Amt': 1000, 'IGST Amt': 180 },
@@ -162,6 +162,62 @@ const sameDateBooks = standardize([
 const strictSame = compareFrames(datePortal, sameDateBooks, 1, { matchOnDate: true });
 check('key: with date matching, equal dates still match', strictSame.length === 1 && strictSame[0].Status === 'Matched', String(strictSame[0]?.Status));
 check('key: same-date row reports Date match Yes', strictSame[0]['Date match'] === 'Yes', String(strictSame[0]['Date match']));
+
+
+// ---------- 9. possible pairs and mismatch reasons ----------
+const mkPortal = (gstin: string, inv: string, taxable: number, igst: number, date = '05-04-2026') =>
+  standardize([{ 'GSTIN of Supplier': gstin, 'Invoice Number': inv, 'Invoice Date': date, 'Taxable Value': taxable, 'Integrated Tax Amount': igst }], m2, {});
+const mkBooks = (gstin: string, inv: string, taxable: number, igst: number, date = '05-04-2026') =>
+  standardize([{ 'Supplier GSTIN': gstin, 'Voucher No': inv, 'Voucher Date': date, 'Taxable Amt': taxable, 'IGST Amt': igst }], m1, {});
+
+// GSTIN typed differently, everything else agrees -> possible match
+const gstinCase = compareFrames(
+  mkPortal('27AABCT1332L1ZE', 'INV-100', 10000, 1800),
+  mkBooks('27AABCT1332L1ZZ', 'INV-100', 10000, 1800),
+  1
+);
+check('possible: different GSTIN pairs up', gstinCase.length === 1 && gstinCase[0].Status === 'Possible match', String(gstinCase[0]?.Status));
+check('possible: reason is GSTIN mismatch', gstinCase[0].Reason === 'GSTIN mismatch', String(gstinCase[0]?.Reason));
+check('possible: shows what it paired with', String(gstinCase[0]['Matched With']).includes('27AABCT1332L1ZZ'), String(gstinCase[0]['Matched With']));
+
+// Same GSTIN, bill number differs, money agrees -> possible match
+const billCase = compareFrames(
+  mkPortal('27AABCT1332L1ZE', 'INV-200', 10000, 1800),
+  mkBooks('27AABCT1332L1ZE', 'INV-201', 10000, 1800),
+  1
+);
+check('possible: different bill no pairs up', billCase.length === 1 && billCase[0].Status === 'Possible match', String(billCase[0]?.Status));
+check('possible: reason is Bill No mismatch', billCase[0].Reason === 'Bill No mismatch', String(billCase[0]?.Reason));
+
+// Same GSTIN + bill no, only the date differs, and dates are part of the key
+const dateCase = compareFrames(
+  mkPortal('27AABCT1332L1ZE', 'INV-300', 10000, 1800, '05-04-2026'),
+  mkBooks('27AABCT1332L1ZE', 'INV-300', 10000, 1800, '09-04-2026'),
+  1,
+  { matchOnDate: true }
+);
+check('possible: date-only difference pairs up', dateCase.length === 1 && dateCase[0].Status === 'Possible match', String(dateCase[0]?.Status));
+check('possible: reason is Date mismatch', dateCase[0].Reason === 'Date mismatch', String(dateCase[0]?.Reason));
+
+// Money that does not agree must not become a possible match
+const noPair = compareFrames(
+  mkPortal('27AABCT1332L1ZE', 'INV-400', 10000, 1800),
+  mkBooks('27AABCT1332L1ZZ', 'INV-400', 12000, 2160),
+  1
+);
+check('possible: different money is not paired', noPair.length === 2 && noPair.every((r) => r.Status.startsWith('Only in')), noPair.map((r) => r.Status).join(' | '));
+check('possible: unpaired rows say so', noPair.every((r) => r.Reason === 'No pair found'), noPair.map((r) => r.Reason).join(' | '));
+
+// Value reasons: tax only, and invoice value only
+const taxOnly = compareFrames(
+  mkPortal('27AABCT1332L1ZE', 'INV-500', 10000, 1800),
+  mkBooks('27AABCT1332L1ZE', 'INV-500', 10000, 1900),
+  1
+);
+check('reason: tax difference', taxOnly[0].Status === 'Value mismatch' && taxOnly[0].Reason === 'Tax mismatch', String(taxOnly[0]?.Reason));
+
+const summaryPossible = summarize(gstinCase);
+check('summary: counts possible matches', summaryPossible.possible === 1 && summaryPossible.possibleGstin === 1, JSON.stringify({ p: summaryPossible.possible, g: summaryPossible.possibleGstin }));
 
 console.log(failures === 0 ? 'ALL GST-RECO CHECKS OK' : `${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

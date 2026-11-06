@@ -278,6 +278,16 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   reco_load_sample: ["Load sample data", "सैंपल डेटा लोड करें", "加载示例数据", "Cargar datos de ejemplo", "Charger des données d'exemple"],
   reco_sample_loaded: ["Sample files loaded and mapped - press Run.", "सैंपल फ़ाइलें लोड और मैप हो गईं - Run दबाएँ।", "示例文件已加载并映射——请点运行。", "Archivos de ejemplo cargados y asignados: pulse Ejecutar.", "Fichiers d'exemple chargés et associés : lancez le rapprochement."],
   reco_done: ["{n} invoices compared.", "{n} इनवॉइस मिलाए गए।", "已核对 {n} 张发票。", "{n} facturas comparadas.", "{n} factures rapprochées."],
+  reco_kpi_possible: ["Possible match", "संभावित मिलान", "可能匹配", "Coincidencia posible", "Correspondance possible"],
+  reco_kpi_possible_sub: [
+    "GSTIN {gstin} | Bill No {bill} | Date {date}",
+    "GSTIN {gstin} | बिल नं {bill} | तारीख {date}",
+    "GSTIN {gstin} | 单据号 {bill} | 日期 {date}",
+    "GSTIN {gstin} | Factura {bill} | Fecha {date}",
+    "GSTIN {gstin} | Facture {bill} | Date {date}"
+  ],
+  reco_kpi_only_one_side: ["Not matched", "बिना मिलान", "未匹配", "Sin coincidencia", "Non rapproché"],
+  reco_kpi_only_split: ["{portal} only in portal | {books} only in books", "{portal} सिर्फ़ पोर्टल में | {books} सिर्फ़ बुक्स में", "{portal} 仅门户 | {books} 仅账簿", "{portal} solo en el portal | {books} solo en libros", "{portal} portail seulement | {books} livres seulement"],
   reco_kpi_matched: ["Matched", "मिले", "已匹配", "Coinciden", "Concordantes"],
   reco_kpi_mismatch: ["Value mismatch", "राशि में अंतर", "金额不符", "Diferencia de importe", "Écart de montant"],
   reco_kpi_only_portal: ["Only in portal", "सिर्फ़ पोर्टल में", "仅门户有", "Solo en el portal", "Portail seulement"],

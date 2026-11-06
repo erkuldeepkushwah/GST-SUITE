@@ -261,11 +261,15 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
       { 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'INV-001', 'Invoice Date': d0, 'Taxable Value': 100000, 'Integrated Tax Amount': 18000 },
       { 'GSTIN of Supplier': '24AAACB2233M1ZZ', 'Invoice Number': 'INV-002', 'Invoice Date': d1, 'Taxable Value': 50000, 'Integrated Tax Amount': 9000 },
       { 'GSTIN of Supplier': '23AACCF4455P1ZD', 'Invoice Number': 'INV-003', 'Invoice Date': d2, 'Taxable Value': 25000, 'Integrated Tax Amount': 4500 },
+      // Same bill and money as the books row below, GSTIN typed differently -
+      // this is the "possible match" the second pass is for.
+      { 'GSTIN of Supplier': '27AABCT1332L1ZZ', 'Invoice Number': 'INV-005', 'Invoice Date': d1, 'Taxable Value': 40000, 'Integrated Tax Amount': 7200 },
     ];
     const booksRows = [
       { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-001', 'Voucher Date': d0, 'Taxable Amt': 100000, 'IGST Amt': 18000 },
       { 'Supplier GSTIN': '24AAACB2233M1ZZ', 'Voucher No': 'INV-002', 'Voucher Date': d1, 'Taxable Amt': 48000, 'IGST Amt': 8640 },
       { 'Supplier GSTIN': '23AABCS8899Q1ZB', 'Voucher No': 'INV-004', 'Voucher Date': d2, 'Taxable Amt': 30000, 'IGST Amt': 5400 },
+      { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-005', 'Voucher Date': d1, 'Taxable Amt': 40000, 'IGST Amt': 7200 },
     ];
     const build = (rows: Array<Record<string, any>>, name: string): SideState => {
       const headers = Object.keys(rows[0]);
@@ -530,9 +534,23 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
           <KPICards
             items={[
               { label: t('reco_kpi_matched', lang), value: summary.matched.toLocaleString(), sub: t('reco_kpi_invoices', lang), color: 'green' },
+              {
+                label: t('reco_kpi_possible', lang),
+                value: summary.possible.toLocaleString(),
+                sub: t('reco_kpi_possible_sub', lang, {
+                  gstin: summary.possibleGstin,
+                  bill: summary.possibleBill,
+                  date: summary.possibleDate,
+                }),
+                color: 'blue',
+              },
               { label: t('reco_kpi_mismatch', lang), value: summary.mismatched.toLocaleString(), sub: t('reco_kpi_value_diff', lang), color: 'amber' },
-              { label: t('reco_kpi_only_portal', lang), value: summary.onlyPortal.toLocaleString(), sub: t('reco_kpi_books_missing', lang), color: 'red' },
-              { label: t('reco_kpi_only_books', lang), value: summary.onlyBooks.toLocaleString(), sub: t('reco_kpi_portal_missing', lang), color: 'blue' },
+              {
+                label: t('reco_kpi_only_one_side', lang),
+                value: (summary.onlyPortal + summary.onlyBooks).toLocaleString(),
+                sub: t('reco_kpi_only_split', lang, { portal: summary.onlyPortal, books: summary.onlyBooks }),
+                color: 'red',
+              },
             ]}
           />
 
