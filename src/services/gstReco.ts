@@ -15,6 +15,7 @@ export const RECO_FIELDS = [
   'Invoice Date',
   'Invoice Type',
   'Taxable Value',
+  'Invoice Value',
   'IGST',
   'CGST',
   'SGST',
@@ -25,7 +26,7 @@ export const RECO_FIELDS = [
 export type RecoField = (typeof RECO_FIELDS)[number];
 
 export const TEXT_FIELDS: RecoField[] = ['GSTIN', 'Party Name', 'Invoice No', 'Invoice Date', 'Invoice Type'];
-export const VALUE_FIELDS: RecoField[] = ['Taxable Value', 'IGST', 'CGST', 'SGST', 'Cess', 'Total Tax'];
+export const VALUE_FIELDS: RecoField[] = ['Taxable Value', 'Invoice Value', 'IGST', 'CGST', 'SGST', 'Cess', 'Total Tax'];
 
 export const NOT_MAPPED = '(Not mapped)';
 
@@ -45,6 +46,7 @@ export const FIELD_ALIASES: Record<string, string[]> = {
   ],
   'Invoice Date': ['invoice date', 'date', 'idt', 'bill date', 'document date', 'voucher date'],
   'Taxable Value': ['taxable value', 'taxable amount', 'taxable', 'assessable value', 'taxable amt'],
+  'Invoice Value': ['invoice value', 'invoice amount', 'bill amount', 'invoice total', 'total invoice value', 'grand total'],
   IGST: ['igst', 'integrated tax', 'igst amount', 'integrated tax amount'],
   CGST: ['cgst', 'central tax', 'cgst amount', 'central tax amount'],
   SGST: ['sgst', 'utgst', 'state tax', 'sgst amount', 'state tax amount', 'utgst amount'],
@@ -367,7 +369,10 @@ export function standardize(
     const taxSum = out['IGST'] + out['CGST'] + out['SGST'] + out['Cess'];
     if (out['Total Tax'] === 0 && taxSum !== 0) out['Total Tax'] = taxSum;
 
-    out['Invoice Value'] = money2(out['Taxable Value'] + out['Total Tax']);
+    const invoiceValueCol = mapping['Invoice Value'];
+    const fileInvoiceValue =
+      invoiceValueCol && invoiceValueCol !== NOT_MAPPED ? toNumber(row?.[invoiceValueCol]) : 0;
+    out['Invoice Value'] = money2(fileInvoiceValue || out['Taxable Value'] + out['Total Tax']);
     out['Invoice Key'] = normalizeInvoice(out['Invoice No']);
     if (ctx.returnPeriodColumn) {
       out['Return Period'] = cleanText(row?.[ctx.returnPeriodColumn]);
@@ -380,31 +385,24 @@ export function standardize(
   });
 }
 
-export type RecoStatus =
-  | 'Matched'
-  | 'Value mismatch'
-  | 'Possible match'
-  | 'Only in Portal'
-  | 'Only in Books';
+export type RecoStatus = 'Matched' | 'Possible Match' | 'Mismatch' | 'Only in Portal' | 'Only in Books';
 
-/**
- * Why a row is not a clean match. The first three are pairs the app found with
- * a weaker key (GSTIN, bill number or date differ but the money agrees); the
- * rest name the value that does not agree.
- */
-export type RecoReason =
-  | ''
-  | 'GSTIN mismatch'
-  | 'Bill No mismatch'
-  | 'Date mismatch'
-  | 'Taxable Value mismatch'
-  | 'Tax mismatch'
-  | 'Invoice Value mismatch'
-  | 'No pair found';
+/** Every field that is compared, in the order it is reported. */
+export const MATCH_FIELDS = [
+  'GSTIN',
+  'Bill No',
+  'Taxable Value',
+  'Invoice Value',
+  'CGST',
+  'SGST',
+  'IGST',
+] as const;
+
+export type MatchField = (typeof MATCH_FIELDS)[number];
 
 export interface RecoRow extends Record<string, any> {
   Status: RecoStatus;
-  Reason: RecoReason;
+  'Mismatch Reason': string;
   'Invoice Key': string;
   GSTIN: string;
 }
@@ -413,8 +411,7 @@ export interface CompareOptions {
   /**
    * Also require the invoice date to agree before calling two rows a match.
    * Off by default: GSTIN + bill number identifies an invoice, and a date
-   * written differently on the two sides (05-04-2026 vs 2026-04-05, or the
-   * books carrying the entry date) would otherwise break a real match.
+   * written differently on the two sides would otherwise break a real match.
    */
   matchOnDate?: boolean;
 }
@@ -429,14 +426,71 @@ interface Agg {
 
 const money = (v: number) => Math.round((Number(v) || 0) * 100) / 100;
 
+interface FieldCheck {
+  /** Yes / No per field, for the field-wise status columns. */
+  flags: Record<MatchField, 'Yes' | 'No'>;
+  /** Every field that does not agree, as "GSTIN mismatch" etc. */
+  reasons: string[];
+  /** True when the only difference is the GSTIN. */
+  gstinOnly: boolean;
+  allMatch: boolean;
+}
+
 /**
- * Compare the two sides in two passes.
+ * Compare two aggregated invoices field by field. Nothing is inferred from a
+ * single field: each of GSTIN, bill number, taxable value, invoice value and
+ * the three tax components is checked on its own and reported on its own.
+ */
+function checkFields(
+  a: Agg,
+  b: Agg,
+  close: (x: number, y: number) => boolean,
+  matchOnDate: boolean
+): FieldCheck & { dateOnly: boolean } {
+  const flags: Record<MatchField, 'Yes' | 'No'> = {
+    GSTIN: a.gstin === b.gstin ? 'Yes' : 'No',
+    'Bill No': a.key === b.key ? 'Yes' : 'No',
+    'Taxable Value': close(a.values['Taxable Value'], b.values['Taxable Value']) ? 'Yes' : 'No',
+    'Invoice Value': close(a.values['Invoice Value'], b.values['Invoice Value']) ? 'Yes' : 'No',
+    CGST: close(a.values['CGST'], b.values['CGST']) ? 'Yes' : 'No',
+    SGST: close(a.values['SGST'], b.values['SGST']) ? 'Yes' : 'No',
+    IGST: close(a.values['IGST'], b.values['IGST']) ? 'Yes' : 'No',
+  };
+
+  const reasons: string[] = [];
+  for (const field of MATCH_FIELDS) {
+    if (flags[field] === 'No') reasons.push(`${field} mismatch`);
+  }
+  // Cess is not one of the seven headline fields, but it must not be ignored.
+  const cessDiffers = !close(a.values['Cess'], b.values['Cess']);
+  if (cessDiffers) reasons.push('Cess mismatch');
+
+  const datesDiffer =
+    matchOnDate && Array.from(a.dates).sort().join(',') !== Array.from(b.dates).sort().join(',');
+  if (datesDiffer) reasons.push('Date mismatch');
+
+  const failed = MATCH_FIELDS.filter((f) => flags[f] === 'No');
+  const gstinOnly = failed.length === 1 && failed[0] === 'GSTIN' && !cessDiffers && !datesDiffer;
+
+  return {
+    flags,
+    reasons,
+    gstinOnly,
+    allMatch: reasons.length === 0,
+    dateOnly: datesDiffer && failed.length === 0,
+  };
+}
+
+/**
+ * Field-wise reconciliation.
  *
- * Pass 1 matches on GSTIN + bill number (plus the date when asked for).
- * Whatever is left over is offered to pass 2, which pairs rows whose money
- * agrees but whose GSTIN, bill number or date does not - a "possible match"
- * with the reason spelled out, instead of dumping both sides into the
- * only-in lists. Anything still unpaired stays only-in.
+ * Pass 1 joins on GSTIN + bill number (plus the date when asked for) and
+ * compares every field on the joined pair.
+ * Pass 2 offers the leftovers to each other only when a single identity field
+ * differs (GSTIN, bill number or date) and all the money agrees - so a GSTIN
+ * typed differently becomes a Possible Match, while a bill number that differs
+ * is a Mismatch with the reason spelled out. Each row pairs at most once.
+ * Anything still unpaired stays Only in.
  */
 export function compareFrames(
   portal: StandardRow[],
@@ -445,6 +499,7 @@ export function compareFrames(
   options: CompareOptions = {}
 ): RecoRow[] {
   const matchOnDate = options.matchOnDate === true;
+  const close = (x: number, y: number) => Math.abs((Number(x) || 0) - (Number(y) || 0)) <= tolerance;
 
   const aggregate = (rows: StandardRow[]): Map<string, Agg> => {
     const map = new Map<string, Agg>();
@@ -467,28 +522,10 @@ export function compareFrames(
     return map;
   };
 
-  const close = (x: number, y: number) => Math.abs((Number(x) || 0) - (Number(y) || 0)) <= tolerance;
-  const sameMoney = (a: Agg, b: Agg) =>
-    close(a.values['Taxable Value'], b.values['Taxable Value']) &&
-    close(a.values['Total Tax'], b.values['Total Tax']);
-
   const left = aggregate(portal);
   const right = aggregate(books);
 
-  const rows: RecoRow[] = [];
-  const portalOnly: Agg[] = [];
-  const booksOnly: Agg[] = [];
-
-  const valueRow = (a: Agg | undefined, b: Agg | undefined) => {
-    const out: Record<string, any> = {};
-    for (const f of VALUE_FIELDS) {
-      out[`${f}_Portal`] = a ? money(a.values[f]) : 0;
-      out[`${f}_Books`] = b ? money(b.values[f]) : 0;
-    }
-    return out;
-  };
-
-  const dateCells = (a: Agg | undefined, b: Agg | undefined) => {
+  const dateCells = (a?: Agg, b?: Agg) => {
     const portalDates = a ? Array.from(a.dates).sort() : [];
     const booksDates = b ? Array.from(b.dates).sort() : [];
     return {
@@ -498,128 +535,105 @@ export function compareFrames(
     };
   };
 
+  const valueCells = (a?: Agg, b?: Agg) => {
+    const out: Record<string, any> = {};
+    for (const f of VALUE_FIELDS) {
+      out[`${f}_Portal`] = a ? money(a.values[f]) : 0;
+      out[`${f}_Books`] = b ? money(b.values[f]) : 0;
+    }
+    return out;
+  };
+
+  const pairRow = (a: Agg, b: Agg, matchedWith: string): RecoRow => {
+    const check = checkFields(a, b, close, matchOnDate);
+    const status: RecoStatus = check.allMatch
+      ? 'Matched'
+      : check.gstinOnly
+      ? 'Possible Match'
+      : 'Mismatch';
+
+    const row: Record<string, any> = {
+      Status: status,
+      'Mismatch Reason': check.reasons.join('; '),
+      'Invoice Key': a.key,
+      GSTIN: a.gstin,
+      ...dateCells(a, b),
+    };
+    for (const field of MATCH_FIELDS) row[`${field} match`] = check.flags[field];
+    row['Matched With'] = matchedWith;
+    return { ...row, ...valueCells(a, b) } as RecoRow;
+  };
+
+  const oneSided = (a: Agg | undefined, b: Agg | undefined): RecoRow => {
+    const row: Record<string, any> = {
+      Status: a ? 'Only in Portal' : 'Only in Books',
+      'Mismatch Reason': 'No pair found',
+      'Invoice Key': (a || b)!.key,
+      GSTIN: (a || b)!.gstin,
+      ...dateCells(a, b),
+    };
+    for (const field of MATCH_FIELDS) row[`${field} match`] = '';
+    row['Matched With'] = '';
+    return { ...row, ...valueCells(a, b) } as RecoRow;
+  };
+
+  const rows: RecoRow[] = [];
+  const portalOnly: Agg[] = [];
+  const booksOnly: Agg[] = [];
+
   // ---------- pass 1: GSTIN + bill number ----------
   for (const id of new Set([...left.keys(), ...right.keys()])) {
     const a = left.get(id);
     const b = right.get(id);
-    if (a && !b) {
-      portalOnly.push(a);
-      continue;
-    }
-    if (!a && b) {
-      booksOnly.push(b);
-      continue;
-    }
-
-    const fields: string[] = VALUE_FIELDS.filter((f) => !close(a!.values[f], b!.values[f]));
-    const taxableDiff = fields.includes('Taxable Value');
-    const taxDiff = ['IGST', 'CGST', 'SGST', 'Cess'].some((f) => fields.includes(f));
-    const invoiceValueDiff = !close(
-      a!.values['Taxable Value'] + a!.values['Total Tax'],
-      b!.values['Taxable Value'] + b!.values['Total Tax']
-    );
-
-    const reason: RecoReason = !fields.length
-      ? ''
-      : taxableDiff
-      ? 'Taxable Value mismatch'
-      : taxDiff
-      ? 'Tax mismatch'
-      : invoiceValueDiff
-      ? 'Invoice Value mismatch'
-      : '';
-
-    rows.push({
-      Status: fields.length ? 'Value mismatch' : 'Matched',
-      Reason: reason,
-      'Invoice Key': a!.key,
-      GSTIN: a!.gstin,
-      ...dateCells(a, b),
-      'Mismatch fields': fields.join(', '),
-      'Matched With': '',
-      ...valueRow(a, b),
-    } as RecoRow);
+    if (a && b) rows.push(pairRow(a, b, ''));
+    else if (a) portalOnly.push(a);
+    else if (b) booksOnly.push(b);
   }
 
-  // ---------- pass 2: possible pairs among the leftovers ----------
+  // ---------- pass 2: one identity field off, all money equal ----------
   const usedBooks = new Set<string>();
   const pairedPortal = new Set<string>();
 
+  const moneyMatches = (a: Agg, b: Agg) => {
+    const check = checkFields(a, b, close, matchOnDate);
+    return MATCH_FIELDS.every((f) => f === 'GSTIN' || f === 'Bill No' || check.flags[f] === 'Yes')
+      && close(a.values['Cess'], b.values['Cess']);
+  };
+
   for (const a of portalOnly) {
-    let candidate: Agg | undefined;
-    let reason: RecoReason = '';
-
-    // Same bill number and same money, GSTIN typed differently.
-    candidate = booksOnly.find(
-      (b) => !usedBooks.has(b.id) && b.key === a.key && b.gstin !== a.gstin && sameMoney(a, b)
-    );
-    if (candidate) reason = 'GSTIN mismatch';
-
-    // Same GSTIN and same money, bill number differs.
-    if (!candidate) {
-      candidate = booksOnly.find(
-        (b) => !usedBooks.has(b.id) && b.gstin === a.gstin && b.key !== a.key && sameMoney(a, b)
-      );
-      if (candidate) reason = 'Bill No mismatch';
-    }
-
-    // Same GSTIN and bill number, only the date differs (only reachable when
-    // the date is part of the key).
-    if (!candidate && matchOnDate) {
-      candidate = booksOnly.find(
-        (b) => !usedBooks.has(b.id) && b.gstin === a.gstin && b.key === a.key && sameMoney(a, b)
-      );
-      if (candidate) reason = 'Date mismatch';
-    }
+    const candidate =
+      // GSTIN differs, everything else agrees -> possible match
+      booksOnly.find(
+        (b) => !usedBooks.has(b.id) && b.key === a.key && b.gstin !== a.gstin && moneyMatches(a, b)
+      ) ||
+      // bill number differs, everything else agrees -> mismatch with the reason
+      booksOnly.find(
+        (b) => !usedBooks.has(b.id) && b.gstin === a.gstin && b.key !== a.key && moneyMatches(a, b)
+      ) ||
+      // date differs (only when the date is part of the key)
+      (matchOnDate
+        ? booksOnly.find(
+            (b) =>
+              !usedBooks.has(b.id) &&
+              b.gstin === a.gstin &&
+              b.key === a.key &&
+              Array.from(a.dates).sort().join(',') !== Array.from(b.dates).sort().join(',') &&
+              moneyMatches(a, b)
+          )
+        : undefined);
 
     if (!candidate) continue;
-
     usedBooks.add(candidate.id);
     pairedPortal.add(a.id);
-    rows.push({
-      Status: 'Possible match',
-      Reason: reason,
-      'Invoice Key': a.key,
-      GSTIN: a.gstin,
-      ...dateCells(a, candidate),
-      'Mismatch fields': reason,
-      'Matched With': `${candidate.gstin} / ${candidate.key}`,
-      ...valueRow(a, candidate),
-    } as RecoRow);
+    rows.push(pairRow(a, candidate, `${candidate.gstin} / ${candidate.key}`));
   }
 
-  // ---------- what is left ----------
-  for (const a of portalOnly) {
-    if (pairedPortal.has(a.id)) continue;
-    rows.push({
-      Status: 'Only in Portal',
-      Reason: 'No pair found',
-      'Invoice Key': a.key,
-      GSTIN: a.gstin,
-      ...dateCells(a, undefined),
-      'Mismatch fields': '',
-      'Matched With': '',
-      ...valueRow(a, undefined),
-    } as RecoRow);
-  }
-  for (const b of booksOnly) {
-    if (usedBooks.has(b.id)) continue;
-    rows.push({
-      Status: 'Only in Books',
-      Reason: 'No pair found',
-      'Invoice Key': b.key,
-      GSTIN: b.gstin,
-      ...dateCells(undefined, b),
-      'Mismatch fields': '',
-      'Matched With': '',
-      ...valueRow(undefined, b),
-    } as RecoRow);
-  }
+  for (const a of portalOnly) if (!pairedPortal.has(a.id)) rows.push(oneSided(a, undefined));
+  for (const b of booksOnly) if (!usedBooks.has(b.id)) rows.push(oneSided(undefined, b));
 
-  // Clean matches last; inside each group the invoice number decides.
   const rank: Record<string, number> = {
-    'Value mismatch': 0,
-    'Possible match': 1,
+    Mismatch: 0,
+    'Possible Match': 1,
     'Only in Portal': 2,
     'Only in Books': 3,
     Matched: 4,
@@ -640,19 +654,15 @@ export function exceptionRows(rows: RecoRow[]): RecoRow[] {
 }
 
 export interface RecoSummary {
-  portalInvoices: number;
-  booksInvoices: number;
   matched: number;
-  /** Paired on money, but GSTIN / bill number / date differs. */
   possible: number;
-  possibleGstin: number;
-  possibleBill: number;
-  possibleDate: number;
-  mismatched: number;
+  mismatch: number;
   onlyPortal: number;
   onlyBooks: number;
   /** Matched on GSTIN + bill number, but the dates disagree. */
   dateMismatched: number;
+  /** How many rows carry each field-level mismatch. */
+  fieldMismatches: Record<string, number>;
   portalTaxable: number;
   booksTaxable: number;
 }
@@ -661,18 +671,19 @@ export function summarize(rows: RecoRow[]): RecoSummary {
   const sum = (side: 'Portal' | 'Books') =>
     rows.reduce((total, r) => total + (Number(r[`Taxable Value_${side}`]) || 0), 0);
 
+  const fieldMismatches: Record<string, number> = {};
+  for (const field of MATCH_FIELDS) {
+    fieldMismatches[field] = rows.filter((r) => r[`${field} match`] === 'No').length;
+  }
+
   return {
-    portalInvoices: rows.filter((r) => r.Status !== 'Only in Books').length,
-    booksInvoices: rows.filter((r) => r.Status !== 'Only in Portal').length,
     matched: rows.filter((r) => r.Status === 'Matched').length,
-    possible: rows.filter((r) => r.Status === 'Possible match').length,
-    possibleGstin: rows.filter((r) => r.Reason === 'GSTIN mismatch').length,
-    possibleBill: rows.filter((r) => r.Reason === 'Bill No mismatch').length,
-    possibleDate: rows.filter((r) => r.Reason === 'Date mismatch').length,
-    mismatched: rows.filter((r) => r.Status === 'Value mismatch').length,
+    possible: rows.filter((r) => r.Status === 'Possible Match').length,
+    mismatch: rows.filter((r) => r.Status === 'Mismatch').length,
     onlyPortal: rows.filter((r) => r.Status === 'Only in Portal').length,
     onlyBooks: rows.filter((r) => r.Status === 'Only in Books').length,
     dateMismatched: rows.filter((r) => r['Date match'] === 'No').length,
+    fieldMismatches,
     portalTaxable: sum('Portal'),
     booksTaxable: sum('Books'),
   };

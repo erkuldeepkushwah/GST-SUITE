@@ -79,7 +79,9 @@ const reco = compareFrames(p, b, 1);
 const byKey = Object.fromEntries(reco.map((r) => [r['Invoice Key'], r]));
 check('reco: row count', reco.length === 4, String(reco.length));
 check('reco: INV001 matched', byKey['INV-001']?.Status === 'Matched', String(byKey['INV-001']?.Status));
-check('reco: INV002 value mismatch', String(byKey['INV-002']?.Status).startsWith('Value mismatch'), String(byKey['INV-002']?.Status));
+check('reco: INV002 is a mismatch', byKey['INV-002']?.Status === 'Mismatch', String(byKey['INV-002']?.Status));
+check('reco: INV002 reason names taxable and the tax', String(byKey['INV-002']?.['Mismatch Reason']).includes('Taxable Value mismatch') && String(byKey['INV-002']?.['Mismatch Reason']).includes('IGST mismatch'), String(byKey['INV-002']?.['Mismatch Reason']));
+check('reco: INV002 field flags', byKey['INV-002']?.['GSTIN match'] === 'Yes' && byKey['INV-002']?.['Bill No match'] === 'Yes' && byKey['INV-002']?.['Taxable Value match'] === 'No', JSON.stringify({ g: byKey['INV-002']?.['GSTIN match'], b: byKey['INV-002']?.['Bill No match'], t: byKey['INV-002']?.['Taxable Value match'] }));
 check('reco: INV003 only in portal', byKey['INV-003']?.Status === 'Only in Portal', String(byKey['INV-003']?.Status));
 check('reco: INV004 only in books', byKey['INV-004']?.Status === 'Only in Books', String(byKey['INV-004']?.Status));
 check('reco: matched rows sort last', reco[reco.length - 1]['Status'] === 'Matched', reco[reco.length - 1]['Status']);
@@ -90,7 +92,7 @@ check('reco: tolerance absorbs small diff', loose.find((r) => r['Invoice Key'] =
 
 const s = summarize(reco);
 check('summary: matched 1', s.matched === 1, String(s.matched));
-check('summary: mismatch 1', s.mismatched === 1, String(s.mismatched));
+check('summary: mismatch 1', s.mismatch === 1, String(s.mismatch));
 check('summary: only portal 1', s.onlyPortal === 1, String(s.onlyPortal));
 check('summary: only books 1', s.onlyBooks === 1, String(s.onlyBooks));
 check('summary: portal taxable total', s.portalTaxable === 175000, String(s.portalTaxable));
@@ -153,8 +155,8 @@ check('key: both dates are shown', looseDate[0]['Date (portal)'] === '2026-04-05
 check('summary: counts date differences', summarize(looseDate).dateMismatched === 1, String(summarize(looseDate).dateMismatched));
 
 const strictDate = compareFrames(datePortal, dateBooks, 1, { matchOnDate: true });
-check('key: with date matching the same invoice becomes a possible match', strictDate.length === 1 && strictDate[0].Status === 'Possible match', String(strictDate[0]?.Status));
-check('key: and the reason is the date', strictDate[0].Reason === 'Date mismatch', String(strictDate[0]?.Reason));
+check('key: with date matching the same invoice becomes a mismatch', strictDate.length === 1 && strictDate[0].Status === 'Mismatch', String(strictDate[0]?.Status));
+check('key: and the reason is the date', String(strictDate[0]?.['Mismatch Reason']).includes('Date mismatch'), String(strictDate[0]?.['Mismatch Reason']));
 
 const sameDateBooks = standardize([
   { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-9', 'Voucher Date': '05-04-2026', 'Taxable Amt': 1000, 'IGST Amt': 180 },
@@ -176,8 +178,9 @@ const gstinCase = compareFrames(
   mkBooks('27AABCT1332L1ZZ', 'INV-100', 10000, 1800),
   1
 );
-check('possible: different GSTIN pairs up', gstinCase.length === 1 && gstinCase[0].Status === 'Possible match', String(gstinCase[0]?.Status));
-check('possible: reason is GSTIN mismatch', gstinCase[0].Reason === 'GSTIN mismatch', String(gstinCase[0]?.Reason));
+check('possible: different GSTIN pairs up', gstinCase.length === 1 && gstinCase[0].Status === 'Possible Match', String(gstinCase[0]?.Status));
+check('possible: reason is GSTIN mismatch', gstinCase[0]['Mismatch Reason'] === 'GSTIN mismatch', String(gstinCase[0]?.['Mismatch Reason']));
+check('possible: every other field still says Yes', ['Bill No', 'Taxable Value', 'Invoice Value', 'CGST', 'SGST', 'IGST'].every((f) => gstinCase[0][`${f} match`] === 'Yes'), JSON.stringify(gstinCase[0]));
 check('possible: shows what it paired with', String(gstinCase[0]['Matched With']).includes('27AABCT1332L1ZZ'), String(gstinCase[0]['Matched With']));
 
 // Same GSTIN, bill number differs, money agrees -> possible match
@@ -186,8 +189,9 @@ const billCase = compareFrames(
   mkBooks('27AABCT1332L1ZE', 'INV-201', 10000, 1800),
   1
 );
-check('possible: different bill no pairs up', billCase.length === 1 && billCase[0].Status === 'Possible match', String(billCase[0]?.Status));
-check('possible: reason is Bill No mismatch', billCase[0].Reason === 'Bill No mismatch', String(billCase[0]?.Reason));
+check('bill no: different bill no is a Mismatch, not a possible match', billCase.length === 1 && billCase[0].Status === 'Mismatch', String(billCase[0]?.Status));
+check('bill no: reason is Bill No mismatch', billCase[0]['Mismatch Reason'] === 'Bill No mismatch', String(billCase[0]?.['Mismatch Reason']));
+check('bill no: GSTIN still reads Yes', billCase[0]['GSTIN match'] === 'Yes', String(billCase[0]['GSTIN match']));
 
 // Same GSTIN + bill no, only the date differs, and dates are part of the key
 const dateCase = compareFrames(
@@ -196,8 +200,8 @@ const dateCase = compareFrames(
   1,
   { matchOnDate: true }
 );
-check('possible: date-only difference pairs up', dateCase.length === 1 && dateCase[0].Status === 'Possible match', String(dateCase[0]?.Status));
-check('possible: reason is Date mismatch', dateCase[0].Reason === 'Date mismatch', String(dateCase[0]?.Reason));
+check('date: date-only difference is a Mismatch', dateCase.length === 1 && dateCase[0].Status === 'Mismatch', String(dateCase[0]?.Status));
+check('date: reason is Date mismatch', String(dateCase[0]?.['Mismatch Reason']).includes('Date mismatch'), String(dateCase[0]?.['Mismatch Reason']));
 
 // Money that does not agree must not become a possible match
 const noPair = compareFrames(
@@ -206,7 +210,7 @@ const noPair = compareFrames(
   1
 );
 check('possible: different money is not paired', noPair.length === 2 && noPair.every((r) => r.Status.startsWith('Only in')), noPair.map((r) => r.Status).join(' | '));
-check('possible: unpaired rows say so', noPair.every((r) => r.Reason === 'No pair found'), noPair.map((r) => r.Reason).join(' | '));
+check('possible: unpaired rows say so', noPair.every((r) => r['Mismatch Reason'] === 'No pair found'), noPair.map((r) => r['Mismatch Reason']).join(' | '));
 
 // Value reasons: tax only, and invoice value only
 const taxOnly = compareFrames(
@@ -214,10 +218,32 @@ const taxOnly = compareFrames(
   mkBooks('27AABCT1332L1ZE', 'INV-500', 10000, 1900),
   1
 );
-check('reason: tax difference', taxOnly[0].Status === 'Value mismatch' && taxOnly[0].Reason === 'Tax mismatch', String(taxOnly[0]?.Reason));
+check('reason: tax difference reports every differing field', taxOnly[0].Status === 'Mismatch' && String(taxOnly[0]['Mismatch Reason']).includes('IGST mismatch') && String(taxOnly[0]['Mismatch Reason']).includes('Invoice Value mismatch'), String(taxOnly[0]?.['Mismatch Reason']));
 
 const summaryPossible = summarize(gstinCase);
-check('summary: counts possible matches', summaryPossible.possible === 1 && summaryPossible.possibleGstin === 1, JSON.stringify({ p: summaryPossible.possible, g: summaryPossible.possibleGstin }));
+check('summary: counts possible matches', summaryPossible.possible === 1 && summaryPossible.fieldMismatches['GSTIN'] === 1, JSON.stringify({ p: summaryPossible.possible, g: summaryPossible.fieldMismatches['GSTIN'] }));
+
+
+// ---------- 10. invoice value as its own field ----------
+const ivPortalRow = { 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'INV-700', 'Invoice Date': '05-04-2026', 'Taxable Value': 10000, 'Invoice Value': 11800, 'Integrated Tax Amount': 1800 };
+const ivBooksRow = { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-700', 'Voucher Date': '05-04-2026', 'Taxable Amt': 10000, 'Invoice Value': 12000, 'IGST Amt': 1800 };
+// Map from each file's own headers, the way the module does it.
+const ivPortal = standardize([ivPortalRow], autoMapColumns(Object.keys(ivPortalRow)), {});
+const ivBooks = standardize([ivBooksRow], autoMapColumns(Object.keys(ivBooksRow)), {});
+const ivCase = compareFrames(ivPortal, ivBooks, 1);
+check('invoice value: taken from the file when present', ivPortal[0]['Invoice Value'] === 11800, String(ivPortal[0]['Invoice Value']));
+check('invoice value: a difference is its own reason', ivCase[0].Status === 'Mismatch' && ivCase[0]['Mismatch Reason'] === 'Invoice Value mismatch', String(ivCase[0]?.['Mismatch Reason']));
+check('invoice value: every other flag stays Yes', ['GSTIN', 'Bill No', 'Taxable Value', 'CGST', 'SGST', 'IGST'].every((f) => ivCase[0][`${f} match`] === 'Yes'), JSON.stringify(ivCase[0]));
+check('invoice value: flag says No', ivCase[0]['Invoice Value match'] === 'No', String(ivCase[0]['Invoice Value match']));
+
+// ---------- 11. never Matched when anything differs ----------
+const multi = compareFrames(
+  mkPortal('27AABCT1332L1ZE', 'INV-800', 10000, 1800),
+  mkBooks('27AABCT1332L1ZE', 'INV-800', 11000, 2000),
+  1
+);
+check('multi: two fields differ, both reasons listed', multi[0].Status === 'Mismatch' && String(multi[0]['Mismatch Reason']).includes('Taxable Value mismatch') && String(multi[0]['Mismatch Reason']).includes('IGST mismatch'), String(multi[0]?.['Mismatch Reason']));
+check('multi: not Matched', multi[0].Status !== 'Matched');
 
 console.log(failures === 0 ? 'ALL GST-RECO CHECKS OK' : `${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

@@ -537,14 +537,22 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               {
                 label: t('reco_kpi_possible', lang),
                 value: summary.possible.toLocaleString(),
-                sub: t('reco_kpi_possible_sub', lang, {
-                  gstin: summary.possibleGstin,
-                  bill: summary.possibleBill,
-                  date: summary.possibleDate,
-                }),
+                sub: t('reco_kpi_possible_sub', lang, { gstin: summary.fieldMismatches['GSTIN'] || 0 }),
                 color: 'blue',
               },
-              { label: t('reco_kpi_mismatch', lang), value: summary.mismatched.toLocaleString(), sub: t('reco_kpi_value_diff', lang), color: 'amber' },
+              {
+                label: t('reco_kpi_mismatch', lang),
+                value: summary.mismatch.toLocaleString(),
+                sub: t('reco_kpi_field_mismatch', lang, {
+                  bill: summary.fieldMismatches['Bill No'] || 0,
+                  taxable: summary.fieldMismatches['Taxable Value'] || 0,
+                  tax:
+                    (summary.fieldMismatches['CGST'] || 0) +
+                    (summary.fieldMismatches['SGST'] || 0) +
+                    (summary.fieldMismatches['IGST'] || 0),
+                }),
+                color: 'amber',
+              },
               {
                 label: t('reco_kpi_only_one_side', lang),
                 value: (summary.onlyPortal + summary.onlyBooks).toLocaleString(),
