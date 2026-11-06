@@ -182,5 +182,5 @@ export function gstinIssueKey(issue: GstinIssueCode): string {
 export function describeGstin(raw: unknown): string {
   const check = validateGstin(raw);
   if (check.status !== 'valid') return '';
-  return `${check.stateCode} - ${check.stateName} | PAN ${check.pan} | ${check.holderType}`;
+  return `${check.stateCode} - ${check.stateName} · PAN ${check.pan}`;
 }

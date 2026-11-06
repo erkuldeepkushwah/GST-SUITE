@@ -268,7 +268,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   value="both"
                   checked={basis === 'both'}
                   onChange={() => setBasis('both')}
-                  className="accent-[#1f4e79]"
+                  className="accent-[#165DFC]"
                 />
                 {t('basis_both', lang)}
               </label>
@@ -279,7 +279,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   value="invoice"
                   checked={basis === 'invoice'}
                   onChange={() => setBasis('invoice')}
-                  className="accent-[#1f4e79]"
+                  className="accent-[#165DFC]"
                 />
                 {t('basis_invoice', lang)}
               </label>
@@ -290,7 +290,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   value="return"
                   checked={basis === 'return'}
                   onChange={() => setBasis('return')}
-                  className="accent-[#1f4e79]"
+                  className="accent-[#165DFC]"
                 />
                 {t('basis_return', lang)}
               </label>
@@ -306,7 +306,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                 setOverridePeriod(on);
                 if (on) setLocalPeriod(commonPeriod);
               }}
-              className="accent-[#1f4e79] rounded"
+              className="accent-[#165DFC] rounded"
             />
             {t('override_period', lang)}
           </label>
@@ -377,7 +377,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-98 disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-98 disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             {isRunning ? t('reconciling', lang) : t('run_gst2a', lang)}
@@ -487,7 +487,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all border-b-2 ${
                     activeTab === tab.id
-                      ? 'border-[#ff4b4b] text-[#ff4b4b] bg-white'
+                      ? 'border-[#165DFC] text-[#165DFC] bg-white'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -577,7 +577,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   <button
                     onClick={handleDownloadFullExcel}
                     disabled={isExporting}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98 disabled:opacity-60 disabled:cursor-wait"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#165DFC] hover:bg-[#0D45E8] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98 disabled:opacity-60 disabled:cursor-wait"
                   >
                     <Download className="w-4 h-4" />
                     {isExporting ? t('export_running', lang) : t('download_gst2a', lang)}

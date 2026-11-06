@@ -21,6 +21,14 @@ interface Props {
 
 const MODULE_KEYS: ModuleKey[] = ['gst2a', 'gstr1', 'bank', 'tds', 'stock'];
 
+/** Section label with the gold tick taken from the logo. */
+const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h3 className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.09em] text-[#64748B]">
+    <span className="h-3 w-[3px] rounded-full bg-[#C9A227]" aria-hidden="true" />
+    {children}
+  </h3>
+);
+
 export const Sidebar: React.FC<Props> = ({
   isOpen,
   lang,
@@ -44,8 +52,8 @@ export const Sidebar: React.FC<Props> = ({
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-[#f0f2f6] border-r border-[#d5dae2] flex flex-col justify-between gap-8 p-5 text-[#31333f] shadow-2xl md:sticky md:top-0 md:h-screen md:w-72 lg:w-80 md:shrink-0 md:z-auto md:shadow-none">
-      <div className="space-y-6">
+    <aside className="fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-white border-r border-[#DDE4EE] flex flex-col justify-between gap-6 p-5 text-[#344056] shadow-2xl md:sticky md:top-0 md:h-screen md:w-72 lg:w-80 md:shrink-0 md:z-auto md:shadow-none">
+      <div className="space-y-7">
         {/* Logo / Banner */}
         <div className="flex items-center justify-between pt-1">
           <img
@@ -54,17 +62,16 @@ export const Sidebar: React.FC<Props> = ({
               (e.currentTarget as HTMLImageElement).src = LOGO_PATH;
             }}
             alt={FIRM_NAME}
-            className="h-9 w-auto object-contain"
+            className="h-10 w-auto object-contain"
           />
         </div>
+        <div className="h-px bg-[#DDE4EE]" />
 
 
 
         {/* Module selection */}
         <div>
-          <h3 className="text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider text-[11px]">
-            {t('sidebar_module', lang)}
-          </h3>
+          <SectionLabel>{t('sidebar_module', lang)}</SectionLabel>
           <div className="space-y-1.5">
             {MODULE_KEYS.map((k) => {
               const isSelected = activeModule === k;
@@ -72,14 +79,16 @@ export const Sidebar: React.FC<Props> = ({
                 <button
                   key={k}
                   onClick={() => onModuleChange(k)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between ${
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-colors flex items-center justify-between gap-2 ${
                     isSelected
-                      ? 'bg-[#1f3a5f] text-white shadow-xs font-semibold'
-                      : 'bg-white/80 hover:bg-white text-slate-700 border border-transparent hover:border-slate-300'
+                      ? 'bg-[#165DFC] text-white shadow-sm font-semibold'
+                      : 'bg-white text-[#344056] border border-[#DDE4EE] font-medium hover:bg-[#EEF6FF] hover:border-[#8AC4FF] hover:text-[#062E80]'
                   }`}
                 >
                   <span>{t(`mod_${k}`, lang)}</span>
-                  {isSelected && <span className="w-2 h-2 rounded-full bg-[#f0b429]"></span>}
+                  {isSelected && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227] ring-2 ring-white/40" aria-hidden="true" />
+                  )}
                 </button>
               );
             })}
@@ -88,9 +97,7 @@ export const Sidebar: React.FC<Props> = ({
 
         {/* Company GSTIN */}
         <div>
-          <h3 className="text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider text-[11px]">
-            {t('sidebar_company', lang)}
-          </h3>
+          <SectionLabel>{t('sidebar_company', lang)}</SectionLabel>
           <div className="relative">
             <input
               type="text"
@@ -116,12 +123,12 @@ export const Sidebar: React.FC<Props> = ({
               autoComplete="off"
               aria-invalid={gstinCheck.status === 'invalid'}
               placeholder={t('gstin_label', lang)}
-              className={`w-full text-xs font-mono tracking-wider bg-white border rounded-lg px-3 py-2 text-slate-800 uppercase focus:ring-1 focus:ring-[#1f4e79] ${
+              className={`w-full text-xs font-mono tracking-wider bg-white border rounded-lg py-2 pl-3 pr-8 text-[#0F172A] uppercase outline-none transition-shadow focus:ring-2 focus:ring-[#165DFC]/30 focus:border-[#165DFC] ${
                 gstin.length > 0 && !isGstinValid
                   ? 'border-amber-400 bg-amber-50/20'
                   : isGstinValid
                   ? 'border-emerald-500 bg-emerald-50/20'
-                  : 'border-[#d5dae2]'
+                  : 'border-[#DDE4EE]'
               }`}
             />
             {isGstinValid && (
@@ -131,30 +138,28 @@ export const Sidebar: React.FC<Props> = ({
               <AlertCircle className="w-4 h-4 text-amber-500 absolute right-2.5 top-2.5" />
             )}
           </div>
-          <div className="flex justify-between items-start gap-2 mt-1 text-[11px] text-slate-500">
-            <span className={gstinProblem ? 'text-amber-700 font-medium' : ''}>
+          <div className="flex items-baseline justify-between gap-2 mt-1.5 text-[11px] leading-snug text-[#64748B]">
+            <span className={`min-w-0 truncate ${gstinProblem ? 'text-amber-700 font-medium' : ''}`}>
               {gstinProblem
                 ? gstinProblem
                 : isGstinValid
                 ? describeGstin(gstin)
                 : t('gstin_caption', lang)}
             </span>
-            <span className="shrink-0">{gstin.length}/15</span>
+            <span className="shrink-0 font-mono text-[#94A3B8]">{gstin.length}/15</span>
           </div>
         </div>
 
         {/* Common Reporting Period */}
         <div>
-          <h3 className="text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider text-[11px]">
-            {t('common_period', lang)}
-          </h3>
+          <SectionLabel>{t('common_period', lang)}</SectionLabel>
           <PeriodPicker
             prefix="common"
             value={commonPeriod}
             onChange={onCommonPeriodChange}
             lang={lang}
           />
-          <div className="mt-2 p-2 bg-slate-200/60 rounded text-[11px] text-slate-600">
+          <div className="mt-2 p-2.5 bg-[#EEF6FF] border border-[#DDE4EE] rounded-lg text-[11px] leading-snug text-[#47566B]">
             {t('period_caption', lang, {
               label: commonPeriod.label,
               start: formatDateDisplay(commonPeriod.start),
@@ -164,12 +169,14 @@ export const Sidebar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* About Box in sidebar footer */}
-      <div className="pt-6 border-t border-[#d5dae2] text-xs text-slate-500 leading-relaxed mt-6">
-        <b className="text-slate-800 font-semibold block mb-0.5">{t('about_heading', lang)}</b>
-        <div className="font-medium text-slate-700">{FIRM_NAME}</div>
-        <div className="text-[11px] text-slate-500 my-0.5">{FIRM_TAGLINE}</div>
-        <div className="text-[11px] text-slate-400">{FIRM_LOCATION}</div>
+      {/* About box in the sidebar footer */}
+      <div className="mt-2 border-t-2 border-[#C9A227]/30 pt-4 text-xs leading-relaxed text-[#64748B]">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-[#94A3B8]">
+          {t('about_heading', lang)}
+        </div>
+        <div className="font-semibold text-[#062E80]">{FIRM_NAME}</div>
+        <div className="my-0.5 text-[11px] text-[#64748B]">{FIRM_TAGLINE}</div>
+        <div className="text-[11px] text-[#94A3B8]">{FIRM_LOCATION}</div>
       </div>
     </aside>
   );
