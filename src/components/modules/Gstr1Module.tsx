@@ -37,6 +37,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   ]);
 
   const [isRunning, setIsRunning] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [resultsPeriod, setResultsPeriod] = useState<string>('');
@@ -149,22 +150,30 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     setThreeBGrid(threeBGrid.filter((_, i) => i !== idx));
   };
 
-  const handleDownloadFullExcel = () => {
-    if (!results) return;
-    exportToExcel(
-      {
-        Dashboard: results.dashboard,
-        'Month-wise (portal)': results.monthWise,
-        '3B tie-out': results.tieOut,
-        'Portal files': results.portalFiles,
-        'B2B Reco': results.b2bReco,
-        'CDNR Reco': results.cdnrReco.length > 0 ? results.cdnrReco : [{ Info: t('no_cdnr_rows', lang) }],
-        'HSN Summary': results.hsnReco.length > 0 ? results.hsnReco : [{ Info: 'No HSN lines found in the uploaded files.' }],
-        ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
-      },
-      `GSTR1_Reco_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
-      { gstin, period: activePeriod.label, title: 'GSTR-1 & 3B Reconciliation' }
-    );
+  const handleDownloadFullExcel = async () => {
+    if (!results || isExporting) return;
+    setIsExporting(true);
+    setErrorMsg(null);
+    try {
+      await exportToExcel(
+        {
+          Dashboard: results.dashboard,
+          'Month-wise (portal)': results.monthWise,
+          '3B tie-out': results.tieOut,
+          'Portal files': results.portalFiles,
+          'B2B Reco': results.b2bReco,
+          'CDNR Reco': results.cdnrReco.length > 0 ? results.cdnrReco : [{ Info: t('no_cdnr_rows', lang) }],
+          'HSN Summary': results.hsnReco.length > 0 ? results.hsnReco : [{ Info: 'No HSN lines found in the uploaded files.' }],
+          ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
+        },
+        `GSTR1_Reco_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
+        { gstin, period: activePeriod.label, title: 'GSTR-1 & 3B Reconciliation' }
+      );
+    } catch (e: any) {
+      setErrorMsg(t('err_export', lang, { error: e?.message || String(e) }));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // KPIs

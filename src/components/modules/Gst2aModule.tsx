@@ -35,6 +35,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const [booksFile, setBooksFile] = useState<File | null>(null);
 
   const [isRunning, setIsRunning] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [resultsPeriod, setResultsPeriod] = useState<string>('');
@@ -202,20 +203,28 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     reader.readAsText(file);
   };
 
-  const handleDownloadFullExcel = () => {
-    if (!results) return;
-    exportToExcel(
-      {
-        Dashboard: results.dashboard,
-        'B2B Reco': results.b2bReco,
-        'CDN Reco': results.cdnReco,
-        'GSTR-9 ITC': results.gstr9Itc,
-        'CDN Review': results.cdnReview,
-        ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
-      },
-      `GST_2A_Reco_${gstin}_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
-      { gstin, period: activePeriod.label, title: 'GST 2A/2B Reconciliation' }
-    );
+  const handleDownloadFullExcel = async () => {
+    if (!results || isExporting) return;
+    setIsExporting(true);
+    setErrorMsg(null);
+    try {
+      await exportToExcel(
+        {
+          Dashboard: results.dashboard,
+          'B2B Reco': results.b2bReco,
+          'CDN Reco': results.cdnReco,
+          'GSTR-9 ITC': results.gstr9Itc,
+          'CDN Review': results.cdnReview,
+          ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
+        },
+        `GST_2A_Reco_${gstin}_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
+        { gstin, period: activePeriod.label, title: 'GST 2A/2B Reconciliation' }
+      );
+    } catch (e: any) {
+      setErrorMsg(t('err_export', lang, { error: e?.message || String(e) }));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Compute KPI counts from Dashboard
@@ -567,10 +576,11 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                   </div>
                   <button
                     onClick={handleDownloadFullExcel}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98"
+                    disabled={isExporting}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#ff4b4b] hover:bg-[#e03a3a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-98 disabled:opacity-60 disabled:cursor-wait"
                   >
                     <Download className="w-4 h-4" />
-                    {t('download_gst2a', lang)}
+                    {isExporting ? t('export_running', lang) : t('download_gst2a', lang)}
                   </button>
                 </div>
               )}

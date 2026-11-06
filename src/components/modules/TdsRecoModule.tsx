@@ -88,17 +88,21 @@ export const TdsRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
     }
   };
 
-  const handleDownloadFullExcel = () => {
+  const handleDownloadFullExcel = async () => {
     if (!results) return;
-    exportToExcel(
-      {
-        Summary: results.summary,
-        'Monthly Reco': results.monthlyReco,
-        'Tally Entries': results.tallyEntries,
-      },
-      `TDS_Reco_${activePeriod.start}_to_${activePeriod.end}.xlsx`,
-      { gstin, period: `TDS ${activePeriod.start} to ${activePeriod.end}`, title: 'TDS Reconciliation' }
-    );
+    try {
+      await exportToExcel(
+        {
+          Summary: results.summary,
+          'Monthly Reco': results.monthlyReco,
+          'Tally Entries': results.tallyEntries,
+        },
+        `TDS_Reco_${activePeriod.start}_to_${activePeriod.end}.xlsx`,
+        { gstin, period: `TDS ${activePeriod.start} to ${activePeriod.end}`, title: 'TDS Reconciliation' }
+      );
+    } catch (e: any) {
+      setErrorMsg(t('err_export', lang, { error: e?.message || String(e) }));
+    }
   };
 
   const totalRow = results?.monthlyReco.find(r => r.Month === 'Period total');

@@ -149,6 +149,20 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
     "El GSTIN de la empresa no es válido: {reason}. Corríjalo en la barra lateral",
     "Le GSTIN de l'entreprise n'est pas valide : {reason}. Corrigez-le dans la barre latérale"
   ],
+  err_export: [
+    "Could not create the file: {error}",
+    "फ़ाइल नहीं बन पाई: {error}",
+    "无法生成文件：{error}",
+    "No se pudo crear el archivo: {error}",
+    "Impossible de créer le fichier : {error}"
+  ],
+  export_running: [
+    "Preparing file...",
+    "फ़ाइल तैयार हो रही है...",
+    "正在生成文件...",
+    "Preparando el archivo...",
+    "Préparation du fichier..."
+  ],
   err_period: [
     "Please choose a valid period.",
     "सही अवधि चुनें।",

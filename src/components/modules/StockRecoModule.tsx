@@ -132,31 +132,39 @@ export const StockRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) 
     }
   };
 
-  const handleDownloadSnapshot = () => {
+  const handleDownloadSnapshot = async () => {
     if (!snapshotResult) return;
-    exportToExcel(
-      {
-        Summary: snapshotResult.summary,
-        'Unit Tie-out': snapshotResult.unitTieOut,
-        Exceptions: snapshotResult.exceptions,
-        'All Items': snapshotResult.allItems,
-      },
-      `Stock_Check_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
-      { gstin, period: `Stock summary ${activePeriod.label}`, title: 'Stock Report Check' }
-    );
+    try {
+      await exportToExcel(
+        {
+          Summary: snapshotResult.summary,
+          'Unit Tie-out': snapshotResult.unitTieOut,
+          Exceptions: snapshotResult.exceptions,
+          'All Items': snapshotResult.allItems,
+        },
+        `Stock_Check_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
+        { gstin, period: `Stock summary ${activePeriod.label}`, title: 'Stock Report Check' }
+      );
+    } catch (e: any) {
+      setErrorMsg(t('err_export', lang, { error: e?.message || String(e) }));
+    }
   };
 
-  const handleDownloadMovement = () => {
+  const handleDownloadMovement = async () => {
     if (!movementResult) return;
-    exportToExcel(
-      {
-        Summary: movementResult.summary,
-        Exceptions: movementResult.exceptions,
-        'All Items': movementResult.allItems,
-      },
-      `Stock_Movement_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
-      { gstin, period: `Stock movement ${activePeriod.label}`, title: 'Stock Movement Reconciliation' }
-    );
+    try {
+      await exportToExcel(
+        {
+          Summary: movementResult.summary,
+          Exceptions: movementResult.exceptions,
+          'All Items': movementResult.allItems,
+        },
+        `Stock_Movement_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
+        { gstin, period: `Stock movement ${activePeriod.label}`, title: 'Stock Movement Reconciliation' }
+      );
+    } catch (e: any) {
+      setErrorMsg(t('err_export', lang, { error: e?.message || String(e) }));
+    }
   };
 
   return (
