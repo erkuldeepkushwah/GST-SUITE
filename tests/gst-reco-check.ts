@@ -73,43 +73,48 @@ check('date: same day in both formats is one value',
   parseDateValue('05-04-2026') === parseDateValue('2026-04-05'));
 
 // ---------- priority table ----------
+// Match needs one of GSTIN / invoice no to agree plus the amount; the date is
+// optional and only shows up in the Reason column.
 let r = one(base, { ...base });
-check('rule 1: everything matches -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 1, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 1: GSTIN + invoice + date + amount -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 1, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
-r = one(base, { ...base, gstin: B });
-check('rule 2: GSTIN differs, rest matches -> Possible Match', r[0].Status === 'Possible Match' && r[0]['Match Rule'] === 2, `${r[0].Status} / ${r[0]['Match Rule']}`);
-
-r = one(base, { ...base, gstin: B, date: '09-04-2026' });
-check('rule 3: GSTIN + date differ, invoice + taxable match -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 3, `${r[0].Status} / ${r[0]['Match Rule']}`);
-
-r = one(base, { ...base, gstin: B, date: '09-04-2026', inv: 'INV-9' });
-check('rule 4: GSTIN + date + invoice differ, money matches -> Possible Match', r[0].Status === 'Possible Match' && r[0]['Match Rule'] === 4, `${r[0].Status} / ${r[0]['Match Rule']}`);
-
-r = one(base, { ...base, date: '09-04-2026', inv: 'INV-9' });
-check('rule 5: same GSTIN, date + invoice differ -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 5, `${r[0].Status} / ${r[0]['Match Rule']}`);
+r = one(base, { ...base, date: '09-04-2026' });
+check('rule 2: only the date differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 2, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, inv: 'INV-9' });
-check('rule 6: same GSTIN, invoice differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 6, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 3: same GSTIN, invoice no differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 3, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, gstin: B });
+check('rule 4: same invoice no, GSTIN differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 4, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, inv: 'INV-9', date: '09-04-2026' });
+check('rule 5: same GSTIN, invoice no + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 5, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, gstin: B, date: '09-04-2026' });
+check('rule 6: same invoice no, GSTIN + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 6, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, taxable: 9000 });
-check('rule 7: same GSTIN, taxable differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 7, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 7: GSTIN + invoice same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 7, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, inv: 'INV-9', taxable: 9000, igst: 1620 });
+check('rule 8: only the GSTIN is same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, gstin: B, taxable: 9000, igst: 1620 });
+check('rule 9: only the invoice no is same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 9, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, date: '09-04-2026' });
+check('date never decides the status: a date difference still says Date match = No', r[0].Status === 'Match' && r[0]['Date match'] === 'No', `${r[0].Status} / ${r[0]['Date match']}`);
 
 // invoice value differs while taxable and tax agree: only reachable with a
 // real Invoice Value column, so build it explicitly
 const ivPortal = standardize([{ ...{}, 'GSTIN of Supplier': A, 'Invoice Number': 'INV-1', 'Invoice Date': '05-04-2026', 'Taxable Value': 10000, 'Invoice Value': 11800, 'Integrated Tax Amount': 1800 }], pm, {})[0];
 const ivBooks = standardize([{ 'Supplier GSTIN': A, 'Voucher No': 'INV-1', 'Voucher Date': '05-04-2026', 'Taxable Amt': 10000, 'Invoice Value': 12000, 'IGST Amt': 1800 }], bm, {})[0];
 r = compareFrames([ivPortal], [ivBooks], 1);
-check('rule 8: same GSTIN, invoice value differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
-
-r = one(base, { ...base, igst: 1900 });
-check('rule 9: same GSTIN, a tax amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 9, `${r[0].Status} / ${r[0]['Match Rule']}`);
-
-r = one(base, { ...base, date: '09-04-2026' });
-check('same GSTIN + invoice, only date differs -> Match (date shown as No)', r[0].Status === 'Match' && r[0]['Date match'] === 'No', `${r[0].Status} / ${r[0]['Date match']}`);
+check('invoice value alone differs -> Mismatch (rule 7)', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 7, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 // ---------- pairing ----------
 r = one({ ...base, inv: 'ONLY-PORTAL' }, { ...base, inv: 'ONLY-BOOKS' });
-check('same GSTIN, different bill no -> Mismatch (rule 6)', r.length === 1 && r[0]['Match Rule'] === 6, JSON.stringify(r.map((x) => `${x.Status}/${x['Match Rule']}`)));
+check('same GSTIN, different bill no, same amount -> Match (rule 3)', r.length === 1 && r[0]['Match Rule'] === 3, JSON.stringify(r.map((x) => `${x.Status}/${x['Match Rule']}`)));
 
 r = one({ ...base, inv: 'ONLY-PORTAL', gstin: B }, { ...base, inv: 'ONLY-BOOKS', taxable: 7000, igst: 1260 });
 check('nothing in common -> both sides only-in', r.length === 2 && r.every((x) => x.Status.startsWith('Only in')), r.map((x) => x.Status).join(' | '));
@@ -125,7 +130,7 @@ check('the losing portal row is reported', dup.some((x) => x['Invoice Key'] === 
 const recPortal = [portalRow({ ...base, inv: 'A-1', taxable: 5000, igst: 900 })];
 const recBooks = [booksRow({ ...base, inv: 'B-1', taxable: 5000, igst: 900, gstin: A })];
 const rec = compareFrames(recPortal, recBooks, 1);
-check('reciprocal sweep pairs a bill-number difference', rec.length === 1 && rec[0].Status === 'Mismatch', JSON.stringify(rec.map((x) => `${x.Status}/${x['Match Rule']}`)));
+check('reciprocal sweep pairs a bill-number difference', rec.length === 1 && rec[0].Status === 'Match', JSON.stringify(rec.map((x) => `${x.Status}/${x['Match Rule']}`)));
 
 // ---------- period, summary, 3B ----------
 const pRows = [portalRow({ ...base, inv: 'P1', date: '05-04-2026' }), portalRow({ ...base, inv: 'P2', date: '05-05-2026' })];
@@ -136,7 +141,7 @@ check('period: return period column detected', detectReturnPeriodColumn(['GSTIN'
 const sMatch = summarize(compareFrames([portalRow(base)], [booksRow(base)], 1));
 check('summary: counts a match', sMatch.matched === 1, String(sMatch.matched));
 const sPossible = summarize(compareFrames([portalRow(base)], [booksRow({ ...base, gstin: B })], 1));
-check('summary: counts a possible match', sPossible.possible === 1, String(sPossible.possible));
+check('summary: a GSTIN-only difference is a full match, not a possible one', sPossible.matched === 1 && sPossible.possible === 0, `${sPossible.matched}/${sPossible.possible}`);
 
 check('3B: seven particulars', threeBRows({}).length === 7, String(threeBRows({}).length));
 
@@ -151,14 +156,14 @@ check('file types: two books registers', FILE_TYPES.filter((f) => f.books).lengt
 // what a reviewer reads before deciding whether to chase the supplier.
 const oneOfEach: Array<[string, any]> = [
   ['rule 1', one(base, base)[0]],
-  ['rule 1 with a date difference', one(base, { ...base, date: '06-04-2026' })[0]],
-  ['rule 2', one(base, { ...base, gstin: B })[0]],
-  ['rule 3', one(base, { ...base, gstin: B, date: '09-04-2026' })[0]],
-  ['rule 4', one(base, { ...base, gstin: B, inv: 'B-9', date: '09-04-2026' })[0]],
-  ['rule 5', one(base, { ...base, inv: 'B-2', date: '09-04-2026' })[0]],
-  ['rule 6', one(base, { ...base, inv: 'B-3' })[0]],
-  ['rule 7', one(base, { ...base, taxable: 9000, igst: 1620 })[0]],
-  ['rule 9', one(base, { ...base, igst: 1600 })[0]],
+  ['rule 2 (date only)', one(base, { ...base, date: '06-04-2026' })[0]],
+  ['rule 3 (invoice no)', one(base, { ...base, inv: 'B-9' })[0]],
+  ['rule 4 (GSTIN)', one(base, { ...base, gstin: B })[0]],
+  ['rule 5 (invoice no + date)', one(base, { ...base, inv: 'B-9', date: '06-04-2026' })[0]],
+  ['rule 6 (GSTIN + date)', one(base, { ...base, gstin: B, date: '06-04-2026' })[0]],
+  ['rule 7 (amount)', one(base, { ...base, taxable: 9000, igst: 1620 })[0]],
+  ['rule 8 (GSTIN only, amount)', one(base, { ...base, inv: 'B-9', taxable: 9000, igst: 1620 })[0]],
+  ['rule 9 (invoice no only, amount)', one(base, { ...base, gstin: B, taxable: 9000, igst: 1620 })[0]],
   ['only in portal', compareFrames([portalRow({ ...base, inv: 'P-9' })], [], 1)[0]],
   ['only in books', compareFrames([], [booksRow({ ...base, inv: 'B-9' })], 1)[0]],
 ];

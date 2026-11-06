@@ -412,23 +412,25 @@ interface Flags {
 }
 
 /**
- * Matching runs down the priority table, not on a single key. Each pair is
- * scored by the first rule its flags satisfy:
+ * Matching runs down the priority table, not on a single key. A pair is a Match
+ * when at least one of GSTIN and invoice no agrees and the amount agrees; the
+ * date never decides a status, it only shows up in the Reason column. Each pair
+ * is scored by the first rule its flags satisfy, strongest first:
  *
- *  1  all fields match, including date                  -> Match
- *  2  GSTIN differs, date + invoice + taxable + GST      -> Possible Match
- *  3  GSTIN differs, date differs, invoice + taxable     -> Match
- *  4  GSTIN + date + invoice differ, taxable + GST match -> Possible Match
- *  5  GSTIN same, date and invoice differ                -> Mismatch
- *  6  GSTIN same, invoice differs                        -> Mismatch
- *  7  GSTIN same, taxable value differs                  -> Mismatch
- *  8  GSTIN same, invoice value differs                  -> Mismatch
- *  9  GSTIN same, a tax amount differs                   -> Mismatch
+ *  1  GSTIN + invoice no + date + amount            -> Match
+ *  2  GSTIN + invoice no + amount, date differs     -> Match
+ *  3  GSTIN + date + amount, invoice no differs     -> Match
+ *  4  invoice no + date + amount, GSTIN differs     -> Match
+ *  5  GSTIN + amount, invoice no and date differ    -> Match
+ *  6  invoice no + amount, GSTIN and date differ    -> Match
+ *  7  GSTIN + invoice no same, amount differs       -> Mismatch
+ *  8  GSTIN same, amount differs                    -> Mismatch
+ *  9  invoice no same, amount differs               -> Mismatch
+ *     neither GSTIN nor invoice no same             -> no pair, only one side
  *
- * A pair with the same GSTIN and invoice whose amounts all agree but whose
- * date does not is reported as Match under rule 1 (the Date match column shows
- * the difference); the table has no row for it and leaving it unmatched would
- * be wrong.
+ * Amount means taxable value, invoice value and tax (IGST + CGST + SGST + Cess)
+ * within the tolerance. Invoice value is derived from taxable + tax when the
+ * file does not carry it, so a tax difference is not counted twice.
  */
 function flagsOf(a: Agg, b: Agg, close: (x: number, y: number) => boolean): Flags {
   const datesA = Array.from(a.dates).sort().join(',');
@@ -459,27 +461,27 @@ function flagsOf(a: Agg, b: Agg, close: (x: number, y: number) => boolean): Flag
 
 /** Priority of a candidate pair: 1-9 from the table, or 0 when it does not fit. */
 function ruleOf(f: Flags): number {
-  if (f.gstin && f.invoice && f.date && f.allValues) return 1;
-  if (!f.gstin && f.date && f.invoice && f.taxable && f.tax) return 2;
-  if (!f.gstin && !f.date && f.invoice && f.taxable) return 3;
-  if (!f.gstin && !f.date && !f.invoice && f.taxable && f.tax) return 4;
-  if (f.gstin && !f.date && !f.invoice) return 5;
-  if (f.gstin && !f.invoice) return 6;
-  if (f.gstin && !f.taxable) return 7;
-  if (f.gstin && !f.invoiceValue) return 8;
-  if (f.gstin && !f.tax) return 9;
-  // Same GSTIN and invoice, amounts agree, only the date differs.
-  if (f.gstin && f.invoice && f.allValues) return 1;
-  return 0;
+  // One of GSTIN and invoice no has to agree; with neither, there is no pair.
+  if (!f.gstin && !f.invoice) return 0;
+
+  if (f.allValues) {
+    if (f.gstin && f.invoice) return f.date ? 1 : 2;
+    if (f.gstin) return f.date ? 3 : 5;
+    return f.date ? 4 : 6;
+  }
+
+  if (f.gstin && f.invoice) return 7;
+  if (f.gstin) return 8;
+  return 9;
 }
 
 const STATUS_BY_RULE: Record<number, RecoStatus> = {
   1: 'Match',
-  2: 'Possible Match',
+  2: 'Match',
   3: 'Match',
-  4: 'Possible Match',
-  5: 'Mismatch',
-  6: 'Mismatch',
+  4: 'Match',
+  5: 'Match',
+  6: 'Match',
   7: 'Mismatch',
   8: 'Mismatch',
   9: 'Mismatch',
@@ -488,16 +490,16 @@ const STATUS_BY_RULE: Record<number, RecoStatus> = {
 /** One-line reason for every row of the priority table, so the Reason column
  * never falls back to a blank cell for a rule the app can produce. */
 export const RULE_REASON: Record<number, string> = {
-  0: 'No counterpart in the other file',
-  1: 'All fields match',
-  2: 'GSTIN differs, everything else matches',
-  3: 'GSTIN and date differ, invoice no and taxable match',
-  4: 'GSTIN, date and invoice no differ, taxable and tax match',
-  5: 'Invoice no and date differ',
-  6: 'Invoice no differs',
-  7: 'Taxable value differs',
-  8: 'Invoice value differs',
-  9: 'Tax amount differs',
+  0: 'No pair - not in the other file',
+  1: 'GSTIN, invoice no, date and amount match',
+  2: 'GSTIN, invoice no and amount match, date differs',
+  3: 'GSTIN, date and amount match, invoice no differs',
+  4: 'Invoice no, date and amount match, GSTIN differs',
+  5: 'GSTIN and amount match, invoice no and date differ',
+  6: 'Invoice no and amount match, GSTIN and date differ',
+  7: 'Same GSTIN and invoice no, amount differs',
+  8: 'Same GSTIN, amount differs',
+  9: 'Same invoice no, amount differs',
 };
 
 const inr = (v: number) =>
@@ -519,25 +521,27 @@ function pairReason(
   close: (x: number, y: number) => boolean
 ): string {
   const parts: string[] = [RULE_REASON[rule] || 'Matched outside the priority table'];
-
-  if (rule === 1 && !f.date) parts.push(`dates ${datesOf(a)} vs ${datesOf(b)}`);
-  if (rule === 2 || rule === 3 || rule === 4) parts.push(`GSTIN ${a.gstin || '-'} vs ${b.gstin || '-'}`);
-  if (rule === 3 || rule === 4 || rule === 5 || rule === 6) parts.push(`invoice no ${a.key} vs ${b.key}`);
-  if (rule === 5) parts.push(`dates ${datesOf(a)} vs ${datesOf(b)}`);
   const gap = (h: string) => Math.abs((Number(a.values[h]) || 0) - (Number(b.values[h]) || 0));
-  if (rule === 7) {
-    parts.push(`by ${inr(gap('Taxable Value'))} (portal ${inr(a.values['Taxable Value'])} vs books ${inr(b.values['Taxable Value'])})`);
-  }
-  if (rule === 8) {
-    parts.push(`by ${inr(gap('Invoice Value'))} (portal ${inr(a.values['Invoice Value'])} vs books ${inr(b.values['Invoice Value'])})`);
-  }
-  if (rule === 9) {
-    const heads = ['IGST', 'CGST', 'SGST', 'Cess'].filter((h) => !close(a.values[h], b.values[h]));
-    parts.push(
-      heads.length > 0
-        ? heads.map((h) => `${h} by ${inr(gap(h))} (portal ${inr(a.values[h])} vs books ${inr(b.values[h])})`).join(', ')
-        : 'a tax head differs'
-    );
+
+  // A mismatch says which of Taxable / Invoice Value / Tax is off, and by how
+  // much, so the reviewer does not have to compare two files column by column.
+  if (rule >= 7) {
+    if (!f.taxable) {
+      parts.push(
+        `taxable by ${inr(gap('Taxable Value'))} (portal ${inr(a.values['Taxable Value'])} vs books ${inr(b.values['Taxable Value'])})`
+      );
+    }
+    if (!f.tax) {
+      const taxOf = (x: Agg) =>
+        ['IGST', 'CGST', 'SGST', 'Cess'].reduce((s, h) => s + (Number(x.values[h]) || 0), 0);
+      const heads = ['IGST', 'CGST', 'SGST', 'Cess'].filter((h) => !close(a.values[h], b.values[h]));
+      parts.push(
+        `tax by ${inr(Math.abs(taxOf(a) - taxOf(b)))}${heads.length > 0 ? ` (${heads.join(', ')})` : ''}`
+      );
+    }
+    if (f.taxable && f.tax && !f.invoiceValue) {
+      parts.push(`invoice value by ${inr(gap('Invoice Value'))}`);
+    }
   }
 
   return parts.join(' \u00b7 ');
@@ -680,7 +684,7 @@ export function compareFrames(
     rows.push({
       Status: 'Only in Portal',
       'Match Rule': 0,
-      Reason: 'Not found in Books (2B / 2A)',
+      Reason: 'Not in Books / 2B',
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, undefined),
@@ -692,7 +696,7 @@ export function compareFrames(
     rows.push({
       Status: 'Only in Books',
       'Match Rule': 0,
-      Reason: 'Not found in Portal (2A / 2B)',
+      Reason: 'Not in Portal / 2A',
       'Invoice Key': b.key,
       GSTIN: b.gstin,
       ...dateCells(undefined, b),
