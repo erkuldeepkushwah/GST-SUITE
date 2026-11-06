@@ -13,6 +13,7 @@ One unified workspace with five core reconciliation modules:
 | **Bank reco** | Bank statement (.xls/.xlsx), Tally bank ledger | Matched, timing/uncleared cheques, unrecorded bank charges, closing reconciliation |
 | **TDS reco** | Tally TDS ledger, CA TDS return | Monthly tie-out, entry classification (payment, purchase DN, commission, non-TDS check) |
 | **Stock reco** | Tally stock snapshot report, Movement register & closing stock summary | Totals tie-out, opening + inward − outward arithmetic check, negative stock, exceptions |
+| **GST-Reconciliation** | Any portal file (GSTR-2A / 2B / 1) and any books file (Tally purchase or sales), with a column-mapping review step | Invoice-level match, value mismatches, one-sided invoices, GSTR-3B summary compare, exception workbook |
 
 ## Key Features
 

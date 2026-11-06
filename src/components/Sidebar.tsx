@@ -19,7 +19,7 @@ interface Props {
   onCommonPeriodChange: (p: Period) => void;
 }
 
-const MODULE_KEYS: ModuleKey[] = ['gst2a', 'gstr1', 'bank', 'tds', 'stock'];
+const MODULE_KEYS: ModuleKey[] = ['gst2a', 'gstr1', 'gstreco', 'bank', 'tds', 'stock'];
 
 /** Section label with the gold tick taken from the logo. */
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (

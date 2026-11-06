@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { HeaderHero } from './components/HeaderHero';
 import { Gst2aModule } from './components/modules/Gst2aModule';
 import { Gstr1Module } from './components/modules/Gstr1Module';
+import { GstRecoModule } from './components/modules/GstRecoModule';
 import { BankRecoModule } from './components/modules/BankRecoModule';
 import { TdsRecoModule } from './components/modules/TdsRecoModule';
 import { StockRecoModule } from './components/modules/StockRecoModule';
@@ -72,6 +73,10 @@ export const App: React.FC = () => {
             lang={lang}
             onSetGstin={setGstin}
           />
+        )}
+
+        {activeModule === 'gstreco' && (
+          <GstRecoModule commonPeriod={commonPeriod} gstin={gstin} lang={lang} />
         )}
 
         {activeModule === 'bank' && (

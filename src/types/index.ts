@@ -1,6 +1,6 @@
 export type LanguageCode = 'en' | 'hi' | 'zh' | 'es' | 'fr';
 
-export type ModuleKey = 'gst2a' | 'gstr1' | 'bank' | 'tds' | 'stock';
+export type ModuleKey = 'gst2a' | 'gstr1' | 'gstreco' | 'bank' | 'tds' | 'stock';
 
 export type PeriodMode = 'monthly' | 'quarterly' | 'fy' | 'custom';
 

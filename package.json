@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:engines": "esbuild tests/engine-check.ts --bundle --platform=node --format=cjs --outfile=.tmp/engine-check.cjs && node .tmp/engine-check.cjs",
-    "check:export": "esbuild tests/logo-export-check.ts --bundle --platform=node --format=cjs --outfile=.tmp/logo-check.cjs && node .tmp/logo-check.cjs"
+    "check:export": "esbuild tests/logo-export-check.ts --bundle --platform=node --format=cjs --outfile=.tmp/logo-check.cjs && node .tmp/logo-check.cjs",
+    "check:reco": "esbuild tests/gst-reco-check.ts --bundle --platform=node --format=cjs --outfile=.tmp/reco-check.cjs && node .tmp/reco-check.cjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
