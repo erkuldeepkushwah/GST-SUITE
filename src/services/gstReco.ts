@@ -561,7 +561,7 @@ export function compareFrames(
     return out;
   };
 
-  const pairRow = (a: Agg, b: Agg, matchedWith: string): RecoRow => {
+  const pairRow = (a: Agg, b: Agg): RecoRow => {
     const check = checkFields(a, b, close, matchOnDate);
     const status: RecoStatus = check.allMatch
       ? 'Matched'
@@ -574,7 +574,6 @@ export function compareFrames(
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, b),
-      'Matched With': matchedWith,
     };
     return { ...row, ...valueCells(a, b) } as RecoRow;
   };
@@ -585,7 +584,6 @@ export function compareFrames(
       'Invoice Key': (a || b)!.key,
       GSTIN: (a || b)!.gstin,
       ...dateCells(a, b),
-      'Matched With': '',
     };
     return { ...row, ...valueCells(a, b) } as RecoRow;
   };
@@ -598,7 +596,7 @@ export function compareFrames(
   for (const id of new Set([...left.keys(), ...right.keys()])) {
     const a = left.get(id);
     const b = right.get(id);
-    if (a && b) rows.push(pairRow(a, b, ''));
+    if (a && b) rows.push(pairRow(a, b));
     else if (a) portalOnly.push(a);
     else if (b) booksOnly.push(b);
   }
@@ -638,7 +636,7 @@ export function compareFrames(
     if (!candidate) continue;
     usedBooks.add(candidate.id);
     pairedPortal.add(a.id);
-    rows.push(pairRow(a, candidate, `${candidate.gstin} / ${candidate.key}`));
+    rows.push(pairRow(a, candidate));
   }
 
   for (const a of portalOnly) if (!pairedPortal.has(a.id)) rows.push(oneSided(a, undefined));

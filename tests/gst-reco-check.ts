@@ -181,7 +181,7 @@ const gstinCase = compareFrames(
 check('possible: different GSTIN pairs up', gstinCase.length === 1 && gstinCase[0].Status === 'Possible Match', String(gstinCase[0]?.Status));
 check('possible: classified as Possible Match', gstinCase[0].Status === 'Possible Match', String(gstinCase[0]?.Status));
 check('possible: no field columns on the row', !Object.keys(gstinCase[0]).some((k) => k.endsWith(' match')));
-check('possible: shows what it paired with', String(gstinCase[0]['Matched With']).includes('27AABCT1332L1ZZ'), String(gstinCase[0]['Matched With']));
+check('possible: no Matched With column', gstinCase[0]['Matched With'] === undefined);
 
 // Same GSTIN, bill number differs, money agrees -> possible match
 const billCase = compareFrames(
