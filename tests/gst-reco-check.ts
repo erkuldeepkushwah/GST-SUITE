@@ -14,6 +14,7 @@ import {
   standardize,
   compareFrames,
   RULE_REASON,
+  normalizeInvoice,
   summarize,
   threeBRows,
   NOT_MAPPED,
@@ -84,23 +85,50 @@ check('rule 2: only the date differs -> Match', r[0].Status === 'Match' && r[0][
 r = one(base, { ...base, inv: 'INV-9' });
 check('rule 3: same GSTIN, invoice no differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 3, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
-r = one(base, { ...base, gstin: B });
-check('rule 4: same invoice no, GSTIN differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 4, `${r[0].Status} / ${r[0]['Match Rule']}`);
-
 r = one(base, { ...base, inv: 'INV-9', date: '09-04-2026' });
-check('rule 5: same GSTIN, invoice no + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 5, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 4: same GSTIN, invoice no + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 4, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+r = one(base, { ...base, gstin: B });
+check('rule 5: same invoice no, GSTIN differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 5, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, gstin: B, date: '09-04-2026' });
 check('rule 6: same invoice no, GSTIN + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 6, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
-r = one(base, { ...base, taxable: 9000 });
-check('rule 7: GSTIN + invoice same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 7, `${r[0].Status} / ${r[0]['Match Rule']}`);
+r = one(base, { ...base, taxable: 9000, igst: 1620 });
+check('rule 8: GSTIN + invoice same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, inv: 'INV-9', taxable: 9000, igst: 1620 });
 check('rule 8: only the GSTIN is same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, gstin: B, taxable: 9000, igst: 1620 });
-check('rule 9: only the invoice no is same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 9, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 8: only the invoice no is same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
+
+// row 7: nothing but the date agrees -> still no pair
+r = one({ ...base, inv: 'P-1', gstin: B }, { ...base, inv: 'B-1' });
+check('rule 7: neither GSTIN nor invoice no same -> no pair, even with the same date', r.length === 2 && r.every((x) => x.Status.startsWith('Only in')), r.map((x) => x.Status).join(' | '));
+
+// rule 2 of the sheet: amount = taxable + tax, so a tax head split is not a
+// difference when the total agrees (IGST vs CGST + SGST across a GSTIN change)
+const splitPortal = [portalRow({ ...base, gstin: B, igst: 1800 })];
+const splitBooks = [booksRow({ ...base, gstin: A, igst: 0, cgst: 900, sgst: 900 })];
+const split = compareFrames(splitPortal, splitBooks, 1);
+check('tax head split with the same total is a Match, not a Mismatch', split[0].Status === 'Match' && split[0]['Match Rule'] === 5, `${split[0].Status} / ${split[0]['Match Rule']}`);
+
+// rule 6 of the sheet: invoice numbers differing only by slash / dash / space
+check('invoice key ignores slashes, dashes and spaces', normalizeInvoice('INV/26-27/001') === normalizeInvoice('inv 26 27 001'), normalizeInvoice('INV/26-27/001'));
+const slashPortal = [portalRow({ ...base, inv: 'INV/001' })];
+const slashBooks = [booksRow({ ...base, inv: 'inv-001' })];
+check('the same bill with a slash vs a dash is one invoice', compareFrames(slashPortal, slashBooks, 1)[0]['Match Rule'] === 1);
+
+// rule 4 of the sheet: with two candidates at the same rule, take the closer value
+const tiePortal = [portalRow({ ...base, inv: 'P-1', date: '05-04-2026' })];
+const tieBooks = [
+  booksRow({ ...base, inv: 'B-FAR', date: '25-04-2026' }),
+  booksRow({ ...base, inv: 'B-NEAR', date: '06-04-2026' }),
+];
+const tieRows = compareFrames(tiePortal, tieBooks, 1);
+const tie = tieRows.find((x) => x.Status === 'Match');
+check('one row pairs once, and the closest date is the pair reported', Boolean(tie) && tie?.['Date (books)'] === '2026-04-06', JSON.stringify(tieRows.map((x) => `${x.Status}:${x['Date (books)']}`)));
 
 r = one(base, { ...base, date: '09-04-2026' });
 check('date never decides the status: a date difference still says Date match = No', r[0].Status === 'Match' && r[0]['Date match'] === 'No', `${r[0].Status} / ${r[0]['Date match']}`);
@@ -110,7 +138,7 @@ check('date never decides the status: a date difference still says Date match = 
 const ivPortal = standardize([{ ...{}, 'GSTIN of Supplier': A, 'Invoice Number': 'INV-1', 'Invoice Date': '05-04-2026', 'Taxable Value': 10000, 'Invoice Value': 11800, 'Integrated Tax Amount': 1800 }], pm, {})[0];
 const ivBooks = standardize([{ 'Supplier GSTIN': A, 'Voucher No': 'INV-1', 'Voucher Date': '05-04-2026', 'Taxable Amt': 10000, 'Invoice Value': 12000, 'IGST Amt': 1800 }], bm, {})[0];
 r = compareFrames([ivPortal], [ivBooks], 1);
-check('invoice value alone differs -> Mismatch (rule 7)', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 7, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('invoice value alone differs -> Mismatch (rule 8)', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 // ---------- pairing ----------
 r = one({ ...base, inv: 'ONLY-PORTAL' }, { ...base, inv: 'ONLY-BOOKS' });
@@ -123,8 +151,8 @@ const dupPortal = [portalRow(base), portalRow({ ...base, inv: 'INV-2' })];
 const dupBooks = [booksRow(base)];
 const dup = compareFrames(dupPortal, dupBooks, 1);
 check('one books row is never matched twice', dup.filter((x) => x.Status !== 'Only in Portal').length === 1, JSON.stringify(dup.map((x) => `${x.Status}:${x['Invoice Key']}`)));
-check('the exact invoice wins over the bill-number-only candidate', dup.find((x) => x['Invoice Key'] === 'INV-1')?.Status === 'Match', JSON.stringify(dup.map((x) => `${x.Status}:${x['Invoice Key']}`)));
-check('the losing portal row is reported', dup.some((x) => x['Invoice Key'] === 'INV-2' && x.Status === 'Only in Portal'), JSON.stringify(dup.map((x) => `${x.Status}:${x['Invoice Key']}`)));
+check('the exact invoice wins over the bill-number-only candidate', dup.find((x) => x['Invoice Key'] === 'INV1')?.Status === 'Match', JSON.stringify(dup.map((x) => `${x.Status}:${x['Invoice Key']}`)));
+check('the losing portal row is reported', dup.some((x) => x['Invoice Key'] === 'INV2' && x.Status === 'Only in Portal'), JSON.stringify(dup.map((x) => `${x.Status}:${x['Invoice Key']}`)));
 
 // reciprocal: the books side gets a chance to pair what the portal sweep left
 const recPortal = [portalRow({ ...base, inv: 'A-1', taxable: 5000, igst: 900 })];
@@ -158,12 +186,10 @@ const oneOfEach: Array<[string, any]> = [
   ['rule 1', one(base, base)[0]],
   ['rule 2 (date only)', one(base, { ...base, date: '06-04-2026' })[0]],
   ['rule 3 (invoice no)', one(base, { ...base, inv: 'B-9' })[0]],
-  ['rule 4 (GSTIN)', one(base, { ...base, gstin: B })[0]],
-  ['rule 5 (invoice no + date)', one(base, { ...base, inv: 'B-9', date: '06-04-2026' })[0]],
+  ['rule 4 (invoice no + date)', one(base, { ...base, inv: 'B-9', date: '06-04-2026' })[0]],
+  ['rule 5 (GSTIN)', one(base, { ...base, gstin: B })[0]],
   ['rule 6 (GSTIN + date)', one(base, { ...base, gstin: B, date: '06-04-2026' })[0]],
-  ['rule 7 (amount)', one(base, { ...base, taxable: 9000, igst: 1620 })[0]],
-  ['rule 8 (GSTIN only, amount)', one(base, { ...base, inv: 'B-9', taxable: 9000, igst: 1620 })[0]],
-  ['rule 9 (invoice no only, amount)', one(base, { ...base, gstin: B, taxable: 9000, igst: 1620 })[0]],
+  ['rule 8 (amount)', one(base, { ...base, taxable: 9000, igst: 1620 })[0]],
   ['only in portal', compareFrames([portalRow({ ...base, inv: 'P-9' })], [], 1)[0]],
   ['only in books', compareFrames([], [booksRow({ ...base, inv: 'B-9' })], 1)[0]],
 ];
@@ -172,7 +198,7 @@ for (const [label, row] of oneOfEach) {
 }
 check(
   'reason: every priority rule has a headline',
-  [1, 2, 3, 4, 5, 6, 7, 8, 9].every((r) => Boolean(RULE_REASON[r])),
+  [1, 2, 3, 4, 5, 6, 8].every((r) => Boolean(RULE_REASON[r])),
   JSON.stringify(Object.keys(RULE_REASON))
 );
 check(
