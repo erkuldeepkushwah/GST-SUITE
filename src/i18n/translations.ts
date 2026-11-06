@@ -296,7 +296,7 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   reco_kpi_only_one_side: ["Not matched", "बिना मिलान", "未匹配", "Sin coincidencia", "Non rapproché"],
   reco_kpi_only_split: ["{portal} only in portal | {books} only in books", "{portal} सिर्फ़ पोर्टल में | {books} सिर्फ़ बुक्स में", "{portal} 仅门户 | {books} 仅账簿", "{portal} solo en el portal | {books} solo en libros", "{portal} portail seulement | {books} livres seulement"],
   reco_kpi_matched: ["Matched", "मिले", "已匹配", "Coinciden", "Concordantes"],
-  reco_kpi_mismatch: ["Mismatch", "मिलान नहीं", "不符", "No coincide", "Non concordant"],
+  reco_kpi_mismatch: ["Not Mismatch", "मिलान नहीं", "不符", "No coincide", "Non concordant"],
   reco_kpi_only_portal: ["Only in portal", "सिर्फ़ पोर्टल में", "仅门户有", "Solo en el portal", "Portail seulement"],
   reco_kpi_only_books: ["Only in books", "सिर्फ़ बुक्स में", "仅账簿有", "Solo en libros", "Livres seulement"],
   reco_kpi_invoices: ["invoice level", "इनवॉइस स्तर", "发票级", "a nivel de factura", "au niveau facture"],
