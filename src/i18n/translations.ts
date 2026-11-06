@@ -280,16 +280,23 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   reco_done: ["{n} invoices compared.", "{n} इनवॉइस मिलाए गए।", "已核对 {n} 张发票。", "{n} facturas comparadas.", "{n} factures rapprochées."],
   reco_kpi_possible: ["Possible match", "संभावित मिलान", "可能匹配", "Coincidencia posible", "Correspondance possible"],
   reco_kpi_possible_sub: [
-    "GSTIN {gstin} | Bill No {bill} | Date {date}",
-    "GSTIN {gstin} | बिल नं {bill} | तारीख {date}",
-    "GSTIN {gstin} | 单据号 {bill} | 日期 {date}",
-    "GSTIN {gstin} | Factura {bill} | Fecha {date}",
-    "GSTIN {gstin} | Facture {bill} | Date {date}"
+    "GSTIN {gstin} mismatch",
+    "GSTIN {gstin} में अंतर",
+    "GSTIN {gstin} 处不符",
+    "GSTIN {gstin} no coincide",
+    "GSTIN {gstin} différents"
+  ],
+  reco_kpi_field_mismatch: [
+    "Bill No {bill} | Taxable {taxable} | Tax {tax}",
+    "बिल नं {bill} | टैक्सेबल {taxable} | टैक्स {tax}",
+    "单据号 {bill} | 应税值 {taxable} | 税额 {tax}",
+    "Factura {bill} | Base {taxable} | Impuesto {tax}",
+    "Facture {bill} | Base {taxable} | Taxe {tax}"
   ],
   reco_kpi_only_one_side: ["Not matched", "बिना मिलान", "未匹配", "Sin coincidencia", "Non rapproché"],
   reco_kpi_only_split: ["{portal} only in portal | {books} only in books", "{portal} सिर्फ़ पोर्टल में | {books} सिर्फ़ बुक्स में", "{portal} 仅门户 | {books} 仅账簿", "{portal} solo en el portal | {books} solo en libros", "{portal} portail seulement | {books} livres seulement"],
   reco_kpi_matched: ["Matched", "मिले", "已匹配", "Coinciden", "Concordantes"],
-  reco_kpi_mismatch: ["Value mismatch", "राशि में अंतर", "金额不符", "Diferencia de importe", "Écart de montant"],
+  reco_kpi_mismatch: ["Mismatch", "मिलान नहीं", "不符", "No coincide", "Non concordant"],
   reco_kpi_only_portal: ["Only in portal", "सिर्फ़ पोर्टल में", "仅门户有", "Solo en el portal", "Portail seulement"],
   reco_kpi_only_books: ["Only in books", "सिर्फ़ बुक्स में", "仅账簿有", "Solo en libros", "Livres seulement"],
   reco_kpi_invoices: ["invoice level", "इनवॉइस स्तर", "发票级", "a nivel de factura", "au niveau facture"],
