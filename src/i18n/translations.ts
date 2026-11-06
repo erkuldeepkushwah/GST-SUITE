@@ -259,13 +259,6 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
     "Comparar también por fecha de factura",
     "Rapprocher aussi par date de facture"
   ],
-  reco_done_date_diff: [
-    "{n} invoices compared on GSTIN + bill number; {d} of them carry a different invoice date on the two sides - see the Date match column.",
-    "{n} इनवॉइस GSTIN + बिल नंबर पर मिलाए गए; इनमें {d} की तारीख दोनों तरफ़ अलग है - 'Date match' कॉलम देखें।",
-    "已按 GSTIN + 单据号核对 {n} 张发票；其中 {d} 张两侧日期不同——请看 Date match 列。",
-    "Se compararon {n} facturas por GSTIN + número de factura; en {d} la fecha difiere entre los dos lados: vea la columna Date match.",
-    "{n} factures rapprochées sur GSTIN + numéro ; pour {d} d'entre elles la date diffère entre les deux côtés — voir la colonne Date match."
-  ],
   err_reco_period_empty: [
     "Nothing falls inside {period}: portal {portal}/{portalTotal} rows, books {books}/{booksTotal} rows. Change the reporting period in the sidebar, or check the file type.",
     "{period} में कुछ नहीं आता: पोर्टल {portal}/{portalTotal} पंक्तियाँ, बुक्स {books}/{booksTotal} पंक्तियाँ। sidebar में रिपोर्टिंग अवधि बदलें या फ़ाइल का प्रकार जाँचें।",
