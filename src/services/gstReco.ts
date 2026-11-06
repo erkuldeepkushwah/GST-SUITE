@@ -457,17 +457,36 @@ function checkFields(
     IGST: close(a.values['IGST'], b.values['IGST']) ? 'Yes' : 'No',
   };
 
+  // Say what does not match *and* by how much, so the reason is actionable
+  // without opening the two files again.
+  const inr = (v: number) =>
+    (Number(v) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const shown = (field: MatchField, x: Agg): string => {
+    if (field === 'GSTIN') return x.gstin || '(blank)';
+    if (field === 'Bill No') return x.key || '(blank)';
+    return inr(x.values[field]);
+  };
+
   const reasons: string[] = [];
   for (const field of MATCH_FIELDS) {
-    if (flags[field] === 'No') reasons.push(`${field} mismatch`);
+    if (flags[field] === 'No') {
+      reasons.push(`${field} mismatch (${shown(field, a)} vs ${shown(field, b)})`);
+    }
   }
   // Cess is not one of the seven headline fields, but it must not be ignored.
   const cessDiffers = !close(a.values['Cess'], b.values['Cess']);
-  if (cessDiffers) reasons.push('Cess mismatch');
+  if (cessDiffers) reasons.push(`Cess mismatch (${inr(a.values['Cess'])} vs ${inr(b.values['Cess'])})`);
 
   const datesDiffer =
     matchOnDate && Array.from(a.dates).sort().join(',') !== Array.from(b.dates).sort().join(',');
-  if (datesDiffer) reasons.push('Date mismatch');
+  if (datesDiffer) {
+    reasons.push(
+      `Date mismatch (${Array.from(a.dates).sort().join(', ') || '(blank)'} vs ${
+        Array.from(b.dates).sort().join(', ') || '(blank)'
+      })`
+    );
+  }
 
   const failed = MATCH_FIELDS.filter((f) => flags[f] === 'No');
   const gstinOnly = failed.length === 1 && failed[0] === 'GSTIN' && !cessDiffers && !datesDiffer;
@@ -554,7 +573,7 @@ export function compareFrames(
 
     const row: Record<string, any> = {
       Status: status,
-      'Mismatch Reason': check.reasons.join('; '),
+      'Mismatch Reason': check.reasons.length ? check.reasons.join('; ') : 'All fields match',
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, b),
@@ -567,7 +586,9 @@ export function compareFrames(
   const oneSided = (a: Agg | undefined, b: Agg | undefined): RecoRow => {
     const row: Record<string, any> = {
       Status: a ? 'Only in Portal' : 'Only in Books',
-      'Mismatch Reason': 'No pair found',
+      'Mismatch Reason': a
+        ? 'No pair found (no books row with this GSTIN + bill no, and no row whose amounts agree)'
+        : 'No pair found (no portal row with this GSTIN + bill no, and no row whose amounts agree)',
       'Invoice Key': (a || b)!.key,
       GSTIN: (a || b)!.gstin,
       ...dateCells(a, b),
