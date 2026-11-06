@@ -21,7 +21,7 @@ One unified workspace with five core reconciliation modules:
 - **GSTIN Validation**: Real-time validation of the company GSTIN in the sidebar, with the exact reason when it fails (length, character set, format, PAN holder type, state code, check digit). Pasted GSTINs are cleaned of spaces and hyphens automatically.
 - **GSTIN Audit on Imports**: Every GSTIN in the uploaded GSTR-2A/2B and GSTR-1 rows is checked for state code, PAN holder type and check digit. The audit panel shows valid / invalid / missing counts, lists the GSTINs that need attention, suggests the intended GSTIN when one is a single character off a valid one, and adds a **GSTIN Audit** sheet to the exported workbook.
 - **Client-Side Spreadsheet Engine**: Fast, in-browser parsing of `.xlsx`, `.xlsm`, `.json` and `.csv` files using SheetJS.
-- **Multi-Sheet Excel Reports**: Direct download of formatted `.xlsx` workbooks with firm headers, summary dashboards, and detail tabs.
+- **Multi-Sheet Excel Reports**: Direct download of formatted `.xlsx` workbooks with firm headers, summary dashboards, and detail tabs. Every sheet carries the firm logo in A1, locked by sheet protection so it cannot be moved, resized or deleted after the report is shared.
 - **Demo / Sample Data**: One-click demo data loader for each module to immediately test and verify reconciliation workflows.
 - **Streamlit-Faithful Design**: Clean signature navy and gold styling, KPI metric cards, and responsive tabbed navigation.
 
