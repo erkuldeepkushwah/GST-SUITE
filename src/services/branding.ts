@@ -2,8 +2,12 @@ export const FIRM_NAME = "Fingenuity Associates";
 export const FIRM_TAGLINE = "Streamlining GST, Empowering Businesses, GST Compliance Made Simple.";
 export const FIRM_LOCATION = "Indore, Madhya Pradesh";
 
-/** Vite's base ('/' or '/GST-SUITE/') so the assets resolve on any host. */
-const BASE = import.meta.env.BASE_URL || '/';
+/**
+ * Vite's base ('/' or '/GST-SUITE/app/') so the assets resolve on any host.
+ * The test scripts bundle this file for node, where import.meta.env does not
+ * exist, hence the optional access.
+ */
+const BASE = ((import.meta as any).env?.BASE_URL as string) || '/';
 
 export const LOGO_PATH = `${BASE}assets/logo.png`;
 export const SIDEBAR_BANNER_PATH = `${BASE}assets/logo_banner.png`;
