@@ -18,7 +18,8 @@ One unified workspace with five core reconciliation modules:
 
 - **Languages**: 5 UI languages supported out-of-the-box (English, हिन्दी / Hindi, 中文 / Mandarin Chinese, Español / Spanish, Français / French).
 - **Flexible Reporting Period**: Common reporting period picker (Monthly, Indian Financial Year Quarters, FY, Custom date range) with optional module-level overrides.
-- **GSTIN Validation**: Real-time 15-character GSTIN validation and formatting.
+- **GSTIN Validation**: Real-time validation of the company GSTIN in the sidebar, with the exact reason when it fails (length, character set, format, PAN holder type, state code, check digit). Pasted GSTINs are cleaned of spaces and hyphens automatically.
+- **GSTIN Audit on Imports**: Every GSTIN in the uploaded GSTR-2A/2B and GSTR-1 rows is checked for state code, PAN holder type and check digit. The audit panel shows valid / invalid / missing counts, lists the GSTINs that need attention, suggests the intended GSTIN when one is a single character off a valid one, and adds a **GSTIN Audit** sheet to the exported workbook.
 - **Client-Side Spreadsheet Engine**: Fast, in-browser parsing of `.xlsx`, `.xlsm`, `.json` and `.csv` files using SheetJS.
 - **Multi-Sheet Excel Reports**: Direct download of formatted `.xlsx` workbooks with firm headers, summary dashboards, and detail tabs.
 - **Demo / Sample Data**: One-click demo data loader for each module to immediately test and verify reconciliation workflows.

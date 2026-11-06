@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { periodBounds, tryDate, formatDateIso } from '../src/services/periodManager';
-import { isValidGstin, gstinChecksum } from '../src/services/validation';
+import { isValidGstin, gstinChecksum, validateGstin, normalizeGstin } from '../src/services/validation';
+import { auditGstins, gstinAuditRows } from '../src/services/gstinAudit';
 import { parseGstr1JsonFile, parseBooksGstr1File, runGstr1MultiReconciliation } from '../src/services/gstr1Engine';
 import { parseWorkbookSheets, runGst2aReconciliation } from '../src/services/recoCore';
 import { getSampleGst2aRows } from '../src/services/sampleData';
@@ -23,6 +24,63 @@ async function engineChecks() {
   const known = ['27AAPFU0939F1ZV', '29AAGCB7383J1Z4', '23AAOFT2395R1ZA'];
   console.log('GSTIN check:', known.map(g => `${g}=${isValidGstin(g)}`).join(' '));
 
+  // ---------- 1b. GSTIN validation reasons ----------
+  const good = '23AAOFT2395R1ZA';
+  const badCheck = good.slice(0, 14) + (good[14] === 'A' ? 'B' : 'A');
+  const badState = '39' + good.slice(2);
+  const badPan = good.slice(0, 5) + 'X' + good.slice(6);
+  const cases: Array<[string, string]> = [
+    [good, 'valid'],
+    ['23 aa oft 2395 r1za', 'valid (spaces/lowercase normalised)'],
+    [badCheck, 'checksum'],
+    [badState, 'state'],
+    [badPan, 'pan'],
+    ['23AAOFT', 'length'],
+    [good + '-EXTRA', 'length'],
+    ['', 'empty'],
+  ];
+  console.log('GSTIN reasons:');
+  for (const [input, expected] of cases) {
+    const res = validateGstin(input);
+    const got = res.status === 'invalid' ? res.issue : res.status;
+    console.log(`  ${JSON.stringify(input)} -> ${got} (expected ${expected})`);
+  }
+  console.log('  normalise:', normalizeGstin(' 27-aapfu-0939f-1zv '));
+
+  // ---------- 1c. GSTIN audit over imported rows ----------
+  const okGstin = '27AABCT1332L1ZE';
+  const typo = okGstin.slice(0, 13) + (okGstin[13] === 'Z' ? 'Y' : 'Z') + okGstin[14];
+  const audit = auditGstins([
+    {
+      label: 'portal.xlsx',
+      rows: [
+        { 'Supplier GSTIN': okGstin },
+        { 'Supplier GSTIN': okGstin },
+        { 'Supplier GSTIN': typo },                 // one character off the valid one
+        { 'Supplier GSTIN': badCheck },              // bad check digit, no near match
+        { 'Supplier GSTIN': '' },                    // missing
+        { 'Supplier GSTIN': 'URP' },                 // unregistered
+      ],
+    },
+    {
+      label: 'books.xlsx',
+      rows: [{ GSTIN: '29AAACH6789K1ZU' }, { gstin: '24AAACB2233M1ZZ' }],
+    },
+  ]);
+  console.log('GSTIN audit:', JSON.stringify({
+    rows: audit.totalRows,
+    checked: audit.checkedRows,
+    validRows: audit.validRows,
+    invalidRows: audit.invalidRows,
+    missing: audit.missingRows,
+    unregistered: audit.unregisteredRows,
+    unique: audit.unique,
+    invalidGstins: audit.invalid,
+  }));
+  console.log('  expected: 8 rows, 6 checked, 4 valid rows, 2 invalid rows, 1 missing, 1 unregistered');
+  console.log('  expected: 5 unique GSTINs, 2 of them invalid; the typo suggests', okGstin);
+  for (const row of gstinAuditRows(audit)) console.log('  ', JSON.stringify(row));
+
   // ---------- 2. Period bounds ----------
   console.log('Q4 of FY26-27:', JSON.stringify(periodBounds('quarterly', { fyStartYear: 2026, quarter: 4 })));
   console.log('Q1 of FY26-27:', JSON.stringify(periodBounds('quarterly', { fyStartYear: 2026, quarter: 1 })));
@@ -35,7 +93,7 @@ async function engineChecks() {
     version: 'GSTR1_1.1.0',
     b2b: [
       {
-        ctin: '27AABCT1332L1ZV',
+        ctin: '27AABCT1332L1ZE',
         inv: [
           {
             inum: 'INV-001', idt: '05-04-2026', val: 118000, pos: '23', rchrg: 'N', inv_typ: 'R', etin: '',
@@ -50,7 +108,7 @@ async function engineChecks() {
     b2cs: [{ sply_ty: 'INTER', pos: '27', typ: 'OE', rt: 18, txval: 50000, iamt: 9000, camt: 0, samt: 0, csamt: 0 }],
     cdnr: [
       {
-        ctin: '27AABCT1332L1ZV',
+        ctin: '27AABCT1332L1ZE',
         nt: [
           { ntty: 'C', nt_num: 'CN-01', nt_dt: '12-04-2026', val: 11800, pos: '23', typ: 'C', itms: [{ num: 1, itm_det: { rt: 18, txval: 10000, iamt: 0, camt: 900, samt: 900, csamt: 0 } }] },
           { ntty: 'D', nt_num: 'DN-01', nt_dt: '14-04-2026', val: 5900, pos: '23', typ: 'D', itms: [{ num: 1, itm_det: { rt: 18, txval: 5000, iamt: 0, camt: 450, samt: 450, csamt: 0 } }] },
@@ -67,7 +125,7 @@ async function engineChecks() {
 
   // ---------- 4. GSTR-1 reco with 3B labels typed differently ----------
   const booksGstr1 = {
-    b2b: [{ GSTIN: '27AABCT1332L1ZV', 'Invoice No': 'INV-001', Date: '05-04-2026', 'Invoice Value': 118000, POS: '23', Rate: '18', Taxable: 100000, Tax: 18000 }],
+    b2b: [{ GSTIN: '27AABCT1332L1ZE', 'Invoice No': 'INV-001', Date: '05-04-2026', 'Invoice Value': 118000, POS: '23', Rate: '18', Taxable: 100000, Tax: 18000 }],
     cdnr: [], b2cs: [], hsn: [],
   };
   const r1 = runGstr1MultiReconciliation([p], [booksGstr1], '2026-04-01', '2026-04-30',
@@ -134,17 +192,17 @@ async function parserChecks() {
     ['GSTR-2A B2B', '', '', '', '', '', '', '', '', '', '', ''],
     ['', '', '', '', '', '', '', '', '', '', '', ''],
     ['Supplier GSTIN', 'Supplier Name', 'Invoice No', 'Invoice Date', 'Invoice Type', 'Taxable Value', 'IGST', 'CGST', 'SGST', 'Cess', 'Return Period', ''],
-    ['27AABCT1332L1ZV', 'Tata Steel Ltd', 'TSL/26/10041', '12-04-2026', 'Regular', 450000, 81000, 0, 0, 0, 'Apr-2026', ''],
-    ['24AAACB2233M1Z9', 'BPCL', 'BPCL/9921', '18-04-2026', 'Regular', 185000, 0, 16650, 16650, 0, 'Apr-2026', ''],
+    ['27AABCT1332L1ZE', 'Tata Steel Ltd', 'TSL/26/10041', '12-04-2026', 'Regular', 450000, 81000, 0, 0, 0, 'Apr-2026', ''],
+    ['24AAACB2233M1ZZ', 'BPCL', 'BPCL/9921', '18-04-2026', 'Regular', 185000, 0, 16650, 16650, 0, 'Apr-2026', ''],
     ['', '', '', '', '', '', '', '', '', '', '', ''],
     ['Total', '', '', '', '', 635000, 81000, 16650, 16650, 0, '', ''],
   ];
   const books = [
     ['Purchase Register'],
     ['GSTIN of Supplier', 'Supplier Name', 'Invoice Number', 'Invoice date', 'Taxable Value', 'Integrated Tax Paid', 'Central Tax Paid', 'State UT Tax Paid', 'Cess Paid', 'Eligibility For ITC'],
-    ['27AABCT1332L1ZV', 'Tata Steel Ltd', 'TSL/26/10041', '12-04-2026', 450000, 81000, 0, 0, 0, 'Inputs'],
-    ['24AAACB2233M1Z9', 'BPCL', 'BPCL/9921', '18-04-2026', 185000, 0, 16650, 16650, 0, 'Inputs'],
-    ['23AABCS8899Q1ZQ', 'Standard Hardware', 'SH/26-27/045', '24-04-2026', 54000, 0, 4860, 4860, 0, 'Capital goods'],
+    ['27AABCT1332L1ZE', 'Tata Steel Ltd', 'TSL/26/10041', '12-04-2026', 450000, 81000, 0, 0, 0, 'Inputs'],
+    ['24AAACB2233M1ZZ', 'BPCL', 'BPCL/9921', '18-04-2026', 185000, 0, 16650, 16650, 0, 'Inputs'],
+    ['23AABCS8899Q1ZB', 'Standard Hardware', 'SH/26-27/045', '24-04-2026', 54000, 0, 4860, 4860, 0, 'Capital goods'],
   ];
 
   const pRows = await parseWorkbookSheets(xlsxSheets({ 'B2B': portal }, 'portal.xlsx'), 'GSTR-2A');
@@ -163,7 +221,7 @@ async function parserChecks() {
       ['Period: Apr-2026'],
       [''],
       ['GSTIN/UIN of Recipient', 'Receiver Name', 'Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Rate', 'Taxable Value'],
-      ['27AABCT1332L1ZV', 'Tata Steel', 'INV-001', '05-04-2026', 118000, '23', 18, 100000],
+      ['27AABCT1332L1ZE', 'Tata Steel', 'INV-001', '05-04-2026', 118000, '23', 18, 100000],
       ['', '', '', '', '', '', '', ''],
     ],
     'HSN Summary': [

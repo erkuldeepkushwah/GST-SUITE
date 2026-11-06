@@ -13,6 +13,9 @@ import {
 } from '../../services/gstr1Engine';
 import { exportToExcel } from '../../services/excelEngine';
 import { getSampleGstr1Pack, SAMPLE_GSTIN } from '../../services/sampleData';
+import { auditGstins, gstinAuditRows, GstinAuditSummary } from '../../services/gstinAudit';
+import { gstinIssueKey, validateGstin } from '../../services/validation';
+import { GstinHealthPanel } from '../GstinHealthPanel';
 import { Upload, Play, Download, Sparkles, Check, AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 interface Props {
@@ -39,7 +42,22 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [resultsPeriod, setResultsPeriod] = useState<string>('');
   const [results, setResults] = useState<Gstr1RecoResult | null>(null);
+  const [audit, setAudit] = useState<GstinAuditSummary | null>(null);
   const [activeTab, setActiveTab] = useState<'dash' | 'month' | 'tieout' | 'b2b' | 'cdnr' | 'hsn' | 'download'>('dash');
+
+  /** Portal JSON and Books sheets both carry the counterparty GSTIN; flatten
+   *  them so the audit sees every imported row, not just the reco output. */
+  const auditSources = (portals: any[], books: any[]) =>
+    auditGstins([
+      {
+        label: 'GSTR-1 portal',
+        rows: portals.flatMap((p) => [...(p.b2b || []), ...(p.cdnr || [])]),
+      },
+      {
+        label: 'Books',
+        rows: books.flatMap((b) => [...(b.b2b || []), ...(b.cdnr || [])]),
+      },
+    ]);
 
   const activePeriod = overridePeriod ? localPeriod : commonPeriod;
 
@@ -56,6 +74,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
       threeB
     );
     setResults(res);
+    setAudit(auditSources(portalFiles, booksFiles));
     setErrorMsg(null);
     setSuccessMsg("Loaded sample GSTR-1 & 3B reconciliation dataset!");
   };
@@ -64,6 +83,15 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const companyCheck = validateGstin(gstin);
+    if (companyCheck.status !== 'valid') {
+      const reason =
+        companyCheck.status === 'invalid'
+          ? t(gstinIssueKey(companyCheck.issue), lang, { code: companyCheck.stateCode })
+          : t('gstin_caption', lang);
+      setErrorMsg(t('err_gstin_reason', lang, { reason }));
+      return;
+    }
     if (jsonFiles.length === 0 || booksFiles.length === 0) {
       setErrorMsg("Please upload both GSTR-1 Portal JSON and Books Excel files, or click 'Load Sample / Demo Data' to test immediately.");
       return;
@@ -92,6 +120,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
       );
 
       setResults(res);
+      setAudit(auditSources(parsedPortals, parsedBooksList));
       setSuccessMsg("GSTR-1 & 3B reconciliation completed successfully!");
       setResultsPeriod(activePeriod.label);
       recordImport({ gstin, module: 'gstr1', period: activePeriod.label, files: [...jsonFiles.map(f => f.name), ...booksFiles.map(f => f.name)], rows: res.b2bReco.length + res.cdnrReco.length });
@@ -133,6 +162,7 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
         'B2B Reco': results.b2bReco,
         'CDNR Reco': results.cdnrReco.length > 0 ? results.cdnrReco : [{ Info: t('no_cdnr_rows', lang) }],
         'HSN Summary': results.hsnReco.length > 0 ? results.hsnReco : [{ Info: 'No HSN lines found in the uploaded files.' }],
+        ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
       },
       `GSTR1_Reco_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
       { gstin, period: activePeriod.label, title: 'GSTR-1 & 3B Reconciliation' }
@@ -398,6 +428,9 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
               },
             ]}
           />
+
+          {/* GSTIN health of everything that was imported */}
+          <GstinHealthPanel audit={audit} lang={lang} exportName={`GSTIN_Audit_${gstin}`} />
 
           <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
             <div className="flex border-b border-slate-200 bg-slate-50/50 px-2 overflow-x-auto">

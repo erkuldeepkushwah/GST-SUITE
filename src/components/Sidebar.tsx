@@ -5,7 +5,7 @@ import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
 import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION, SIDEBAR_BANNER_PATH, LOGO_PATH } from '../services/branding';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { isValidGstin } from '../services/validation';
+import { describeGstin, gstinIssueKey, validateGstin } from '../services/validation';
 import { ImportHistory } from './ImportHistory';
 
 interface Props {
@@ -33,7 +33,12 @@ export const Sidebar: React.FC<Props> = ({
   commonPeriod,
   onCommonPeriodChange,
 }) => {
-  const isGstinValid = isValidGstin(gstin);
+  const gstinCheck = validateGstin(gstin);
+  const isGstinValid = gstinCheck.status === 'valid';
+  const gstinProblem =
+    gstinCheck.status === 'invalid'
+      ? t(gstinIssueKey(gstinCheck.issue), lang, { code: gstinCheck.stateCode })
+      : '';
 
   if (!isOpen) {
     return null;
@@ -92,7 +97,25 @@ export const Sidebar: React.FC<Props> = ({
               type="text"
               value={gstin}
               maxLength={15}
-              onChange={(e) => onGstinChange(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+              onChange={(e) =>
+                onGstinChange(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^0-9A-Z]/g, '')
+                    .slice(0, 15)
+                )
+              }
+              onPaste={(e) => {
+                // Portals often copy GSTINs with spaces or hyphens in them.
+                const text = e.clipboardData.getData('text');
+                if (/[^0-9A-Za-z]/.test(text)) {
+                  e.preventDefault();
+                  onGstinChange(text.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15));
+                }
+              }}
+              spellCheck={false}
+              autoComplete="off"
+              aria-invalid={gstinCheck.status === 'invalid'}
               placeholder={t('gstin_label', lang)}
               className={`w-full text-xs font-mono tracking-wider bg-white border rounded-lg px-3 py-2 text-slate-800 uppercase focus:ring-1 focus:ring-[#1f4e79] ${
                 gstin.length > 0 && !isGstinValid
@@ -109,9 +132,15 @@ export const Sidebar: React.FC<Props> = ({
               <AlertCircle className="w-4 h-4 text-amber-500 absolute right-2.5 top-2.5" />
             )}
           </div>
-          <div className="flex justify-between items-center mt-1 text-[11px] text-slate-500">
-            <span>{gstin.length === 15 && !isGstinValid ? t('gstin_invalid', lang) : t('gstin_caption', lang)}</span>
-            <span>{gstin.length}/15</span>
+          <div className="flex justify-between items-start gap-2 mt-1 text-[11px] text-slate-500">
+            <span className={gstinProblem ? 'text-amber-700 font-medium' : ''}>
+              {gstinProblem
+                ? gstinProblem
+                : isGstinValid
+                ? describeGstin(gstin)
+                : t('gstin_caption', lang)}
+            </span>
+            <span className="shrink-0">{gstin.length}/15</span>
           </div>
         </div>
 

@@ -2,6 +2,37 @@ import React, { useState, useMemo } from 'react';
 import { Search, Download, ChevronLeft, ChevronRight, FileSpreadsheet, FileText } from 'lucide-react';
 import { downloadCsv, exportToExcel } from '../services/excelEngine';
 import { downloadPdf } from '../services/pdfEngine';
+import { validateGstin } from '../services/validation';
+
+/**
+ * A GSTIN cell shows the value plus a dot: green when the state code, PAN and
+ * check digit all pass, amber when something is off. The tooltip names the
+ * exact failure so a typo can be fixed without leaving the table.
+ */
+const GstinCell: React.FC<{ value: any }> = ({ value }) => {
+  const check = validateGstin(value);
+  const text = String(value ?? '').trim();
+  if (check.status === 'valid') {
+    return (
+      <span className="inline-flex items-center gap-1.5 font-mono tracking-wide">
+        {text}
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-emerald-500"
+          title={`${check.stateCode} - ${check.stateName}`}
+        />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 font-mono tracking-wide text-rose-700">
+      {text}
+      <span
+        className="w-1.5 h-1.5 rounded-full bg-rose-500"
+        title={check.status === 'invalid' ? check.issue : 'missing'}
+      />
+    </span>
+  );
+};
 
 interface Props {
   data: Array<Record<string, any>>;
@@ -95,6 +126,8 @@ export const DataTable: React.FC<Props> = ({
     }
     return String(val);
   };
+
+  const isGstinCol = (colName: string) => /gstin|ctin/i.test(colName);
 
   const isNumericCol = (colName: string) => {
     const norm = colName.toLowerCase();
@@ -228,6 +261,8 @@ export const DataTable: React.FC<Props> = ({
                           </select>
                         ) : col.toLowerCase() === 'status' ? (
                           getStatusBadge(val)
+                        ) : isGstinCol(col) && val !== null && val !== undefined && String(val).trim() !== '' ? (
+                          <GstinCell value={val} />
                         ) : typeof val === 'number' ? (
                           val.toLocaleString('en-IN', {
                             minimumFractionDigits: val % 1 !== 0 ? 2 : 0,

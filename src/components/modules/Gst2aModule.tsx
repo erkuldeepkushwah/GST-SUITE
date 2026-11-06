@@ -15,6 +15,9 @@ import {
 } from '../../services/recoCore';
 import { exportToExcel, downloadCsv } from '../../services/excelEngine';
 import { getSampleGst2aRows, SAMPLE_GSTIN } from '../../services/sampleData';
+import { auditGstins, gstinAuditRows, GstinAuditSummary } from '../../services/gstinAudit';
+import { gstinIssueKey, validateGstin } from '../../services/validation';
+import { GstinHealthPanel } from '../GstinHealthPanel';
 import { Upload, Play, Download, Sparkles, Check, AlertCircle } from 'lucide-react';
 
 interface Props {
@@ -37,6 +40,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [resultsPeriod, setResultsPeriod] = useState<string>('');
   const [results, setResults] = useState<Gst2aRecoResult | null>(null);
+  const [audit, setAudit] = useState<GstinAuditSummary | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'b2b' | 'cdn' | 'gstr9' | 'confirm' | 'download'>('overview');
 
   // Manual note types review state
@@ -56,6 +60,12 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     });
     setResults(res);
     setReviewRows(res.cdnReview);
+    setAudit(
+      auditGstins([
+        { label: 'GSTR-2A sample', rows: portal },
+        { label: 'Books sample', rows: books },
+      ])
+    );
     setResultsPeriod(activePeriod.label);
     setErrorMsg(null);
     setSuccessMsg("Loaded sample reconciliation dataset!");
@@ -65,8 +75,16 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (gstin.length !== 15) {
-      setErrorMsg("Please enter a valid 15-character GSTIN in the sidebar (e.g. 23AAOFT2395R1ZA), or click 'Load Sample / Demo Data' to test immediately.");
+    const companyCheck = validateGstin(gstin);
+    if (companyCheck.status !== 'valid') {
+      const reason =
+        companyCheck.status === 'invalid'
+          ? t(gstinIssueKey(companyCheck.issue), lang, { code: companyCheck.stateCode })
+          : t('gstin_caption', lang);
+      setErrorMsg(
+        t('err_gstin_reason', lang, { reason }) +
+          " (e.g. 23AAOFT2395R1ZA), or click 'Load Sample / Demo Data' to test immediately."
+      );
       return;
     }
     if (!portalFile || !booksFile) {
@@ -96,6 +114,12 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
 
       setResults(res);
       setReviewRows(res.cdnReview);
+      setAudit(
+        auditGstins([
+          { label: portalFile.name, rows: portalRows },
+          { label: booksFile.name, rows: booksRows },
+        ])
+      );
       setSuccessMsg("Reconciliation completed successfully!");
       setResultsPeriod(activePeriod.label);
       recordImport({ gstin, module: 'gst2a', period: activePeriod.label, files: [portalFile.name, booksFile.name], rows: res.b2bReco.length + res.cdnReco.length });
@@ -189,6 +213,7 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
         'CDN Reco': results.cdnReco,
         'GSTR-9 ITC': results.gstr9Itc,
         'CDN Review': results.cdnReview,
+        ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
       },
       `GST_2A_Reco_${gstin}_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
       { gstin, period: activePeriod.label, title: 'GST 2A/2B Reconciliation' }
@@ -435,6 +460,9 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
               },
             ]}
           />
+
+          {/* GSTIN health of everything that was imported */}
+          <GstinHealthPanel audit={audit} lang={lang} exportName={`GSTIN_Audit_${gstin}`} />
 
           {/* Streamlit-style Tabs navigation */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">

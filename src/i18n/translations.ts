@@ -31,6 +31,81 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   gstin_invalid: ["Checksum does not match - please re-check", "चेकसम मेल नहीं खा रहा - दोबारा जाँचें", "校验位不匹配，请重新核对", "La suma de verificación no coincide: revísalo", "La clé de contrôle ne correspond pas : vérifiez"],
   gstin_label: ["GSTIN (15 characters)", "GSTIN (15 अक्षर)", "GSTIN（15 位）", "GSTIN (15 caracteres)", "GSTIN (15 caractères)"],
   gstin_caption: ["Enter GSTIN", "GSTIN दर्ज करें", "输入 GSTIN", "Ingrese el GSTIN", "Saisissez le GSTIN"],
+  gstin_reason_length: [
+    "GSTIN must be exactly 15 characters",
+    "GSTIN ठीक 15 अक्षरों का होना चाहिए",
+    "GSTIN 必须正好是 15 位",
+    "El GSTIN debe tener exactamente 15 caracteres",
+    "Le GSTIN doit comporter exactement 15 caractères"
+  ],
+  gstin_reason_charset: [
+    "Only letters A-Z and digits 0-9 are allowed",
+    "सिर्फ़ A-Z अक्षर और 0-9 अंक मान्य हैं",
+    "只允许 A-Z 字母和 0-9 数字",
+    "Solo se permiten letras A-Z y dígitos 0-9",
+    "Seules les lettres A-Z et les chiffres 0-9 sont autorisés"
+  ],
+  gstin_reason_pattern: [
+    "Wrong GSTIN format: state code + PAN + entity + Z + check digit",
+    "GSTIN का ढाँचा गलत: राज्य कोड + PAN + एंटिटी + Z + चेक अंक",
+    "GSTIN 格式错误：州代码 + PAN + 实体号 + Z + 校验位",
+    "Formato de GSTIN incorrecto: código de estado + PAN + entidad + Z + dígito de control",
+    "Format GSTIN incorrect : code d'État + PAN + entité + Z + clé de contrôle"
+  ],
+  gstin_reason_pan: [
+    "The 4th PAN character is not a valid holder type",
+    "PAN का चौथा अक्षर मान्य धारक प्रकार नहीं है",
+    "PAN 的第 4 位不是有效的持有人类型",
+    "El 4.º carácter del PAN no es un tipo de titular válido",
+    "Le 4e caractère du PAN n'est pas un type de titulaire valide"
+  ],
+  gstin_reason_state: [
+    "State code {code} is not a valid GST state code",
+    "राज्य कोड {code} मान्य GST राज्य कोड नहीं है",
+    "州代码 {code} 不是有效的 GST 州代码",
+    "El código de estado {code} no es un código GST válido",
+    "Le code d'État {code} n'est pas un code GST valide"
+  ],
+  gstin_reason_checksum: [
+    "Check digit does not match - please re-check",
+    "चेक अंक मेल नहीं खा रहा - दोबारा जाँचें",
+    "校验位不匹配，请重新核对",
+    "El dígito de control no coincide: revísalo",
+    "La clé de contrôle ne correspond pas : vérifiez"
+  ],
+  gstin_health_title: ["GSTIN check", "GSTIN जाँच", "GSTIN 检查", "Verificación de GSTIN", "Contrôle des GSTIN"],
+  gstin_health_note: [
+    "Every GSTIN in the imported rows is checked for format, state code, PAN holder type and check digit. Fix these before you file - one wrong character splits a single party into two in the reconciliation.",
+    "आयात की गई पंक्तियों के हर GSTIN का ढाँचा, राज्य कोड, PAN धारक प्रकार और चेक अंक जाँचा गया है। फ़ाइलिंग से पहले इन्हें ठीक करें - एक ग़लत अक्षर से मिलान में एक ही पार्टी दो हो जाती है।",
+    "已检查导入行中每个 GSTIN 的格式、州代码、PAN 持有人类型和校验位。申报前请先修正这些项——一个错误的字符会让同一交易方在核对中变成两个。",
+    "Se revisa el formato, código de estado, tipo de titular del PAN y dígito de control de cada GSTIN importado. Corríjalos antes de presentar: un solo carácter erróneo divide a una parte en dos en la conciliación.",
+    "Le format, le code d'État, le type de titulaire du PAN et la clé de contrôle de chaque GSTIN importé sont vérifiés. Corrigez-les avant le dépôt : un seul caractère erroné dédouble une partie dans le rapprochement."
+  ],
+  gstin_health_clean: [
+    "All {checked} GSTINs in the imported rows are valid.",
+    "आयात की गई पंक्तियों के सभी {checked} GSTIN मान्य हैं।",
+    "导入行中的全部 {checked} 个 GSTIN 均有效。",
+    "Los {checked} GSTIN de las filas importadas son válidos.",
+    "Les {checked} GSTIN des lignes importées sont valides."
+  ],
+  gstin_stat_valid: ["Valid rows", "मान्य पंक्तियाँ", "有效行", "Filas válidas", "Lignes valides"],
+  gstin_stat_invalid: ["Invalid rows", "अमान्य पंक्तियाँ", "无效行", "Filas no válidas", "Lignes non valides"],
+  gstin_stat_missing: ["Missing GSTIN", "GSTIN नहीं है", "缺少 GSTIN", "Sin GSTIN", "GSTIN absent"],
+  gstin_stat_unique: ["Unique GSTINs", "अलग-अलग GSTIN", "不同 GSTIN", "GSTIN distintos", "GSTIN distincts"],
+  gstin_issues_title: [
+    "GSTINs that need attention",
+    "ध्यान देने योग्य GSTIN",
+    "需要处理的 GSTIN",
+    "GSTIN que requieren atención",
+    "GSTIN à vérifier"
+  ],
+  gstin_audit_download: [
+    "Download GSTIN issues (CSV)",
+    "GSTIN समस्याएँ डाउनलोड करें (CSV)",
+    "下载 GSTIN 问题清单（CSV）",
+    "Descargar incidencias de GSTIN (CSV)",
+    "Télécharger les anomalies GSTIN (CSV)"
+  ],
   common_period: ["Common reporting period", "सामान्य रिपोर्टिंग अवधि", "通用报告期间", "Período de informe común", "Période de rapport commune"],
   period_caption: ["{label}: {start} to {end}", "{label}: {start} से {end}", "{label}：{start} 至 {end}", "{label}: {start} a {end}", "{label} : {start} au {end}"],
   period_type: ["Period type", "अवधि का प्रकार", "期间类型", "Tipo de período", "Type de période"],
@@ -70,6 +145,13 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
     "请输入有效的 15 位 GSTIN（侧边栏）。",
     "Ingrese un GSTIN válido de 15 caracteres (barra lateral).",
     "Saisissez un GSTIN valide de 15 caractères (barre latérale)."
+  ],
+  err_gstin_reason: [
+    "Company GSTIN is not valid: {reason}. Fix it in the sidebar",
+    "कंपनी GSTIN मान्य नहीं है: {reason}। इसे sidebar में ठीक करें",
+    "公司 GSTIN 无效：{reason}。请在侧边栏修正",
+    "El GSTIN de la empresa no es válido: {reason}. Corríjalo en la barra lateral",
+    "Le GSTIN de l'entreprise n'est pas valide : {reason}. Corrigez-le dans la barre latérale"
   ],
   err_period: [
     "Please choose a valid period.",
