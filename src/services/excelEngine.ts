@@ -7,12 +7,23 @@ import { FIRM_NAME, FIRM_LOCATION, LOGO_PATH } from './branding';
  * failure simply returns null and the sheets are written without a logo.
  */
 let logoDataUrlPromise: Promise<string | null> | null = null;
+
+/** Test hook: forget the cached logo so the next export fetches it again. */
+export function resetLogoCache(): void {
+  logoDataUrlPromise = null;
+}
 function loadLogoDataUrl(): Promise<string | null> {
   if (!logoDataUrlPromise) {
     logoDataUrlPromise = (async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
       try {
-        const res = await fetch(LOGO_PATH);
+        const res = await fetch(LOGO_PATH, { signal: controller.signal });
         if (!res.ok) return null;
+        // A single-page host may answer a missing asset with index.html and a
+        // 200; embedding that as a PNG would corrupt the workbook.
+        const type = res.headers?.get?.('content-type') || '';
+        if (type && !type.startsWith('image/')) return null;
         const blob = await res.blob();
         return await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -22,6 +33,8 @@ function loadLogoDataUrl(): Promise<string | null> {
         });
       } catch {
         return null;
+      } finally {
+        clearTimeout(timer);
       }
     })();
   }
@@ -62,8 +75,19 @@ export async function exportToExcel(
   meta?: { gstin?: string; period?: string; title?: string; password?: string }
 ): Promise<void> {
   // Loaded on demand: the export library is only needed when a download is clicked.
-  const mod: any = await import('exceljs');
-  const ExcelJS = mod?.default ?? mod;
+  // After a redeploy the old chunk URL no longer exists, and a tab that was left
+  // open fails here with an opaque "dynamically imported module" error - say what
+  // to do instead of leaving the click with no effect.
+  let ExcelJS: any;
+  try {
+    const mod: any = await import('exceljs');
+    ExcelJS = mod?.default ?? mod;
+  } catch (e: any) {
+    throw new Error(
+      'the export library could not be loaded, usually because this page was open during an update - ' +
+        'refresh the page (Ctrl+Shift+R) and try again'
+    );
+  }
   const wb = new ExcelJS.Workbook();
   wb.creator = FIRM_NAME;
   wb.created = new Date();

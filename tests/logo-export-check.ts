@@ -1,14 +1,30 @@
 /**
- * Regression check for the Excel export: every sheet must carry the firm logo
- * in A1 and must be protected in a way that locks that logo in place.
- * Runs the real exporter under node with small shims for the browser APIs.
+ * Regression checks for the Excel export.
+ *
+ * 1. A logo that never loads must not block the download (it did: the fetch had
+ *    no timeout, so a stalled request left the button doing nothing forever).
+ * 2. When the logo does load, every sheet carries it in A1 and sheet protection
+ *    locks it (objects="1"), so it cannot be dragged, resized or deleted.
  */
 import * as fs from 'fs';
-import { exportToExcel } from '../src/services/excelEngine';
+import { exportToExcel, resetLogoCache } from '../src/services/excelEngine';
 
-(globalThis as any).fetch = async (url: string) => {
-  const buf = fs.readFileSync('public' + url);
-  return { ok: true, blob: async () => new Blob([buf], { type: 'image/png' }) };
+const logoBytes = fs.readFileSync('public/assets/logo.png');
+let mode: 'ok' | 'hang' = 'ok';
+
+(globalThis as any).fetch = (url: string, opts?: any) => {
+  if (mode === 'hang') {
+    // A real fetch rejects when the abort signal fires; mimic that.
+    return new Promise((_resolve: any, reject: any) => {
+      const signal = opts?.signal;
+      if (signal) signal.addEventListener('abort', () => reject(new Error('The operation was aborted')));
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    headers: { get: () => 'image/png' },
+    blob: async () => new Blob([logoBytes], { type: 'image/png' }),
+  });
 };
 (globalThis as any).FileReader = class {
   result: any = null;
@@ -34,28 +50,55 @@ let captured: Blob | null = null;
   body: { appendChild() {}, removeChild() {} },
 };
 
+const SHEETS = {
+  Dashboard: [{ Section: 'B2B', Status: 'Matched', Count: 1100 }],
+  'B2B Reco': [{ GSTIN: '23AAOFT2395R1ZA', 'Invoice No': 'INV-1', Taxable: 1000 }],
+};
+
+async function runExport() {
+  captured = null;
+  await exportToExcel(SHEETS, 'logo-test.xlsx', { gstin: '23AAOFT2395R1ZA', period: 'FY 2026-27' });
+  return Buffer.from(await (captured as Blob).arrayBuffer());
+}
+
 async function main() {
-  await exportToExcel(
-    {
-      Dashboard: [{ Section: 'B2B', Status: 'Matched', Count: 1100 }],
-      'B2B Reco': [{ GSTIN: '23AAOFT2395R1ZA', 'Invoice No': 'INV-1', Taxable: 1000 }],
-    },
-    'logo-test.xlsx',
-    { gstin: '23AAOFT2395R1ZA', period: 'FY 2026-27', title: 'GST 2A' }
-  );
-  const buffer = Buffer.from(await (captured as Blob).arrayBuffer());
-  fs.writeFileSync('logo-test.xlsx', buffer);
+  let failures = 0;
+  console.log('export checks: starting');
+
+  // --- 1. logo request never answers: the export must still finish ---
+  mode = 'hang';
+  resetLogoCache();
+  const started = Date.now();
+  let buffer: Buffer;
+  try {
+    buffer = await runExport();
+  } catch (e: any) {
+    console.log('FAIL logo timeout: export threw', e?.message || e);
+    process.exit(1);
+  }
+  const elapsed = Date.now() - started;
+  const timedOutOk = elapsed < 10000;
+  console.log(`${timedOutOk ? 'PASS' : 'FAIL'} logo hang: export finished in ${elapsed} ms without waiting for the logo`);
+  if (!timedOutOk) failures++;
 
   const mod: any = await import('exceljs');
   const ExcelJS = mod?.default ?? mod;
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buffer);
+  const wbNoLogo = new ExcelJS.Workbook();
+  await wbNoLogo.xlsx.load(buffer);
+  const noLogoImages = wbNoLogo.worksheets.reduce((n: number, ws: any) => n + ws.getImages().length, 0);
+  const noLogoOk = noLogoImages === 0;
+  console.log(`${noLogoOk ? 'PASS' : 'FAIL'} logo hang: workbook written without images (found ${noLogoImages})`);
+  if (!noLogoOk) failures++;
 
-  let failures = 0;
+  // --- 2. logo loads: every sheet has it, locked ---
+  mode = 'ok';
+  resetLogoCache();
+  const withLogo = await runExport();
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(withLogo);
   wb.eachSheet((ws: any) => {
     const images = ws.getImages();
-    const protection = ws.sheetProtection || {};
-    const objectsLocked = protection.objects === false;
+    const objectsLocked = (ws.sheetProtection || {}).objects === false;
     const b1 = ws.getCell('B1').value;
     const a1 = ws.getCell('A1').value;
     const ok = images.length === 1 && objectsLocked && !!b1 && !a1;
@@ -66,7 +109,7 @@ async function main() {
     );
   });
 
-  console.log(failures === 0 ? 'ALL SHEETS OK' : `${failures} SHEET(S) FAILED`);
+  console.log(failures === 0 ? 'ALL EXPORT CHECKS OK' : `${failures} CHECK(S) FAILED`);
   if (failures) process.exit(1);
 }
 

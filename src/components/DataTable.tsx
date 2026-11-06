@@ -58,6 +58,8 @@ export const DataTable: React.FC<Props> = ({
   period = '',
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -94,21 +96,33 @@ export const DataTable: React.FC<Props> = ({
 
   const baseName = (title || 'export').replace(/[\\/:*?"<>|]/g, '_');
 
-  const handleDownloadCsv = () => {
-    downloadCsv(data, `${baseName}.csv`);
+  // Every export can fail (blocked blob URL, a stale chunk after a redeploy,
+  // an unsupported value). Say so instead of leaving the click with no effect.
+  const runExport = async (label: string, task: () => Promise<void> | void) => {
+    setExporting(label);
+    setExportError(null);
+    try {
+      await task();
+    } catch (e: any) {
+      setExportError(`Could not create the file: ${e?.message || String(e)}`);
+    } finally {
+      setExporting(null);
+    }
   };
 
-  const handleDownloadExcel = () => {
-    exportToExcel({ [title || 'Report']: data }, `${baseName}.xlsx`, {
-      gstin,
-      period,
-      title: title || 'Report',
-    });
-  };
+  const handleDownloadCsv = () => runExport('csv', () => downloadCsv(data, `${baseName}.csv`));
 
-  const handleDownloadPdf = () => {
-    downloadPdf(data, `${baseName}.pdf`, { title: title || 'Report', gstin, period });
-  };
+  const handleDownloadExcel = () =>
+    runExport('excel', () =>
+      exportToExcel({ [title || 'Report']: data }, `${baseName}.xlsx`, {
+        gstin,
+        period,
+        title: title || 'Report',
+      })
+    );
+
+  const handleDownloadPdf = () =>
+    runExport('pdf', () => downloadPdf(data, `${baseName}.pdf`, { title: title || 'Report', gstin, period }));
 
   const getStatusBadge = (val: any) => {
     const s = String(val).toLowerCase();
@@ -186,6 +200,7 @@ export const DataTable: React.FC<Props> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={handleDownloadCsv}
+              disabled={exporting !== null}
               title="Download CSV"
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-slate-700 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors font-medium shadow-2xs"
             >
@@ -194,6 +209,7 @@ export const DataTable: React.FC<Props> = ({
             </button>
             <button
               onClick={handleDownloadExcel}
+              disabled={exporting !== null}
               title="Download Excel (.xlsx, password protected)"
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-emerald-800 border border-emerald-300 rounded-md hover:bg-emerald-50 transition-colors font-medium shadow-2xs"
             >
@@ -202,6 +218,7 @@ export const DataTable: React.FC<Props> = ({
             </button>
             <button
               onClick={handleDownloadPdf}
+              disabled={exporting !== null}
               title="Download PDF"
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-white text-rose-800 border border-rose-300 rounded-md hover:bg-rose-50 transition-colors font-medium shadow-2xs"
             >
@@ -210,6 +227,14 @@ export const DataTable: React.FC<Props> = ({
             </button>
           </div>
         </div>
+        {exportError && (
+          <div className="w-full text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+            {exportError}
+          </div>
+        )}
+        {exporting && !exportError && (
+          <div className="w-full text-[11px] text-slate-500">Preparing file...</div>
+        )}
       </div>
 
       {/* Table container */}

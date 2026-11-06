@@ -128,18 +128,22 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
     }
   };
 
-  const handleDownloadFullExcel = () => {
+  const handleDownloadFullExcel = async () => {
     if (!results) return;
-    exportToExcel(
-      {
-        Summary: results.summary,
-        'Closing Reconciliation': results.closingReconciliation,
-        Exceptions: results.exceptions,
-        'All Entries': results.allEntries,
-      },
-      `Bank_Reco_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
-      { gstin, period: `Bank reco ${activePeriod.label}`, title: 'Bank Reconciliation' }
-    );
+    try {
+      await exportToExcel(
+        {
+          Summary: results.summary,
+          'Closing Reconciliation': results.closingReconciliation,
+          Exceptions: results.exceptions,
+          'All Entries': results.allEntries,
+        },
+        `Bank_Reco_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,
+        { gstin, period: `Bank reco ${activePeriod.label}`, title: 'Bank Reconciliation' }
+      );
+    } catch (e: any) {
+      setErrorMsg(t('err_export', lang, { error: e?.message || String(e) }));
+    }
   };
 
   const matchedCount = results?.allEntries.filter(r => r.Status === 'Matched').length || 0;
