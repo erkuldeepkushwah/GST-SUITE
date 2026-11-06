@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { LanguageCode, Period, BankRecoResult } from '../../types';
 import { t } from '../../i18n/translations';
 import { PeriodPicker } from '../PeriodPicker';
-import { recordImport } from '../../services/importHistory';
 import { KPICards } from '../KPICards';
 import { DataTable } from '../DataTable';
 import { lakh, formatDateDisplay } from '../../services/periodManager';
@@ -122,7 +121,6 @@ export const BankRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =
       setResults(res);
       setSuccessMsg("Bank reconciliation completed successfully!");
       setResultsPeriod(activePeriod.label);
-      recordImport({ gstin, module: 'bank', period: activePeriod.label, files: [stmtFile.name, ledgerFile.name], rows: res.allEntries.length });
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
     } finally {

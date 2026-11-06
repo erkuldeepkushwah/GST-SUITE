@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { LanguageCode, Period, Gstr1RecoResult } from '../../types';
 import { t } from '../../i18n/translations';
 import { PeriodPicker } from '../PeriodPicker';
-import { recordImport } from '../../services/importHistory';
 import { KPICards } from '../KPICards';
 import { DataTable } from '../DataTable';
 import {
@@ -123,7 +122,6 @@ export const Gstr1Module: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
       setAudit(auditSources(parsedPortals, parsedBooksList));
       setSuccessMsg("GSTR-1 & 3B reconciliation completed successfully!");
       setResultsPeriod(activePeriod.label);
-      recordImport({ gstin, module: 'gstr1', period: activePeriod.label, files: [...jsonFiles.map(f => f.name), ...booksFiles.map(f => f.name)], rows: res.b2bReco.length + res.cdnrReco.length });
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
     } finally {

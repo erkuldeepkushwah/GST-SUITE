@@ -6,7 +6,6 @@ import { formatDateDisplay } from '../services/periodManager';
 import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION, SIDEBAR_BANNER_PATH, LOGO_PATH } from '../services/branding';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { describeGstin, gstinIssueKey, validateGstin } from '../services/validation';
-import { ImportHistory } from './ImportHistory';
 
 interface Props {
   isOpen: boolean;
@@ -143,9 +142,6 @@ export const Sidebar: React.FC<Props> = ({
             <span className="shrink-0">{gstin.length}/15</span>
           </div>
         </div>
-
-        {/* Import history */}
-        <ImportHistory lang={lang} />
 
         {/* Common Reporting Period */}
         <div>

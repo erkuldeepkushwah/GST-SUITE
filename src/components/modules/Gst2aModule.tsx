@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { LanguageCode, Period, BasisOption, Gst2aRecoResult, ManualNoteType } from '../../types';
 import { t } from '../../i18n/translations';
 import { PeriodPicker } from '../PeriodPicker';
-import { recordImport } from '../../services/importHistory';
 import { KPICards } from '../KPICards';
 import { DataTable } from '../DataTable';
 import { lakh, formatDateDisplay } from '../../services/periodManager';
@@ -122,7 +121,6 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
       );
       setSuccessMsg("Reconciliation completed successfully!");
       setResultsPeriod(activePeriod.label);
-      recordImport({ gstin, module: 'gst2a', period: activePeriod.label, files: [portalFile.name, booksFile.name], rows: res.b2bReco.length + res.cdnReco.length });
     } catch (e: any) {
       setErrorMsg(t('err_gst2a_failed', lang, { error: e.message || String(e) }));
     } finally {
