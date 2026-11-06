@@ -186,6 +186,152 @@ function cleanText(v: unknown): string {
   return BLANKS.indexOf(s.toLowerCase()) !== -1 ? '' : s;
 }
 
+
+/* ------------------------------------------------------------------ *
+ * File types and reconciliation pairs (mirrors the source app's
+ * "File type / source" and "Reconciliation" dropdowns)
+ * ------------------------------------------------------------------ */
+
+export type FileType =
+  | 'GSTR-2A'
+  | 'GSTR-2B'
+  | 'GSTR-1'
+  | 'BOOKS-PURCHASE'
+  | 'BOOKS-SALES'
+  | 'GSTR-3B';
+
+export interface FileTypeOption {
+  /** Internal type stored on every imported row. */
+  type: FileType;
+  /** Label shown in the dropdown, same wording as the source app. */
+  label: string;
+  /** True for the books side (Tally registers). */
+  books: boolean;
+  /** Summary files carry no invoice rows, so no invoice mapping is needed. */
+  summary?: boolean;
+}
+
+export const FILE_TYPES: FileTypeOption[] = [
+  { type: 'GSTR-2A', label: 'GSTR-2A', books: false },
+  { type: 'GSTR-2B', label: 'GSTR-2B', books: false },
+  { type: 'GSTR-1', label: 'GSTR-1', books: false },
+  { type: 'BOOKS-PURCHASE', label: 'Books - Purchase Register', books: true },
+  { type: 'BOOKS-SALES', label: 'Books - Sales Register', books: true },
+  { type: 'GSTR-3B', label: 'GSTR-3B', books: false, summary: true },
+];
+
+export interface RecoPair {
+  id: '2A-purchase' | '2B-purchase' | '1-sales';
+  label: string;
+  portal: FileType;
+  books: FileType;
+}
+
+export const RECO_PAIRS: RecoPair[] = [
+  { id: '2A-purchase', label: 'GSTR-2A vs Books Purchase', portal: 'GSTR-2A', books: 'BOOKS-PURCHASE' },
+  { id: '2B-purchase', label: 'GSTR-2B vs Books Purchase', portal: 'GSTR-2B', books: 'BOOKS-PURCHASE' },
+  { id: '1-sales', label: 'GSTR-1 vs Books Sales', portal: 'GSTR-1', books: 'BOOKS-SALES' },
+];
+
+export function findPair(id: string): RecoPair {
+  return RECO_PAIRS.find((p) => p.id === id) || RECO_PAIRS[1];
+}
+
+export function fileTypeOption(type: FileType): FileTypeOption {
+  return FILE_TYPES.find((f) => f.type === type) || FILE_TYPES[1];
+}
+
+/** Which books register a reconciliation pair expects. */
+export function expectedBooksLabel(pair: RecoPair): string {
+  return fileTypeOption(pair.books).label;
+}
+
+/* ------------------------------------------------------------------ *
+ * Period filtering: the portal side is filtered by return period, the
+ * books side by invoice date - exactly as the source app does it.
+ * ------------------------------------------------------------------ */
+
+export function monthPeriods(startISO: string, endISO: string): string[] {
+  const s = startISO.split('-').map(Number);
+  const e = endISO.split('-').map(Number);
+  let y = s[0];
+  let m = s[1];
+  const out: string[] = [];
+  while (y < e[0] || (y === e[0] && m <= e[1])) {
+    out.push(`${pad2(m)}${y}`);
+    if (m === 12) {
+      y += 1;
+      m = 1;
+    } else m += 1;
+    if (out.length > 240) break;
+  }
+  return out;
+}
+
+/** Return periods arrive as MMYYYY, 042026, Apr-2026, 2026-04 ... */
+export function periodToMmyyyy(value: unknown): string {
+  const s = String(value ?? '').trim();
+  if (!s) return '';
+  const digits = s.replace(/[^0-9]/g, '');
+  if (/^\d{6}$/.test(digits)) {
+    const mm = Number(digits.slice(0, 2));
+    const yyyy = Number(digits.slice(2));
+    if (mm >= 1 && mm <= 12 && yyyy > 1900) return digits;
+    const mm2 = Number(digits.slice(4));
+    const yyyy2 = Number(digits.slice(0, 4));
+    if (mm2 >= 1 && mm2 <= 12 && yyyy2 > 1900) return `${pad2(mm2)}${yyyy2}`;
+  }
+  const named = s.match(/([A-Za-z]{3,9})[\s\-/]*([0-9]{4})/);
+  if (named) {
+    const m = MONTHS[named[1].slice(0, 3).toLowerCase()];
+    if (m) return `${pad2(m)}${named[2]}`;
+  }
+  const iso = s.match(/([0-9]{4})-([0-9]{2})/);
+  if (iso) return `${iso[2]}${iso[1]}`;
+  return '';
+}
+
+/**
+ * Keep the rows that belong to the reporting window.
+ * Books: invoice date inside the window.
+ * Portal: return period inside the window, falling back to invoice date when
+ * the file carries no return period column.
+ */
+export function filterRowsForPeriod(
+  rows: StandardRow[],
+  type: FileType,
+  startISO: string,
+  endISO: string
+): StandardRow[] {
+  if (!startISO || !endISO || !rows.length) return rows;
+  const option = fileTypeOption(type);
+  const inWindow = (d: string) => !!d && d >= startISO && d <= endISO;
+
+  if (option.books) return rows.filter((r) => inWindow(String(r['Invoice Date'] || '')));
+
+  const periods = new Set(monthPeriods(startISO, endISO));
+  const hasReturnPeriod = rows.some((r) => String(r['Return Period'] || '').trim() !== '');
+  if (!hasReturnPeriod) return rows.filter((r) => inWindow(String(r['Invoice Date'] || '')));
+
+  return rows.filter((r) => {
+    const period = periodToMmyyyy(r['Return Period']);
+    if (period) return periods.has(period);
+    return inWindow(String(r['Invoice Date'] || ''));
+  });
+}
+
+/** Column that carries the portal return period, if the file has one. */
+const RETURN_PERIOD_ALIASES = ['return period', 'tax period', 'rtnprd', 'period', 'return month', 'taxperiod'];
+
+export function detectReturnPeriodColumn(headers: string[]): string {
+  const normalized = headers.map((h) => ({ col: h, nc: normCol(h) }));
+  for (const alias of RETURN_PERIOD_ALIASES.map(normCol)) {
+    const hit = normalized.find((n) => n.nc === alias);
+    if (hit) return hit.col;
+  }
+  return '';
+}
+
 export interface StandardRow extends Record<string, any> {
   'Invoice Key': string;
 }
@@ -195,6 +341,8 @@ export interface StandardizeContext {
   period?: string;
   returnType?: string;
   sourceName?: string;
+  /** Column holding the portal return period (MMYYYY), if the file has one. */
+  returnPeriodColumn?: string;
 }
 
 /** Turn raw source rows into the standard invoice schema. */
@@ -218,6 +366,9 @@ export function standardize(
     if (out['Total Tax'] === 0 && taxSum !== 0) out['Total Tax'] = taxSum;
 
     out['Invoice Key'] = normalizeInvoice(out['Invoice No']);
+    if (ctx.returnPeriodColumn) {
+      out['Return Period'] = cleanText(row?.[ctx.returnPeriodColumn]);
+    }
     out['App GSTIN'] = ctx.gstin || '';
     out['Period'] = ctx.period || '';
     out['Return Type'] = ctx.returnType || '';

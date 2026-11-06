@@ -236,6 +236,22 @@ export const RAW_STRINGS: Record<string, [string, string, string, string, string
   reco_import: ["Import these rows", "इन पंक्तियों को आयात करें", "导入这些行", "Importar estas filas", "Importer ces lignes"],
   reco_reimport: ["Re-import ({n} rows)", "फिर आयात करें ({n} पंक्तियाँ)", "重新导入（{n} 行）", "Reimportar ({n} filas)", "Réimporter ({n} lignes)"],
   reco_imported: ["{n} rows imported from {name}", "{name} से {n} पंक्तियाँ आयात हुईं", "已从 {name} 导入 {n} 行", "Se importaron {n} filas de {name}", "{n} lignes importées depuis {name}"],
+  reco_pair_label: ["Reconciliation", "मिलान का प्रकार", "核对类型", "Tipo de conciliación", "Type de rapprochement"],
+  reco_file_type: ["File type / source", "फ़ाइल का प्रकार / स्रोत", "文件类型 / 来源", "Tipo de archivo / origen", "Type de fichier / source"],
+  err_reco_wrong_type: [
+    "{side} is imported as {actual}, but this reconciliation needs {expected}. Change its file type, or import the right file.",
+    "{side} {actual} के रूप में आयात हुई है, पर इस मिलान के लिए {expected} चाहिए। फ़ाइल का प्रकार बदलें या सही फ़ाइल आयात करें।",
+    "{side} 已按 {actual} 导入，但此核对需要 {expected}。请更改文件类型或导入正确的文件。",
+    "{side} se importó como {actual}, pero esta conciliación necesita {expected}. Cambie el tipo de archivo o importe el correcto.",
+    "{side} a été importé comme {actual}, mais ce rapprochement exige {expected}. Changez le type de fichier ou importez le bon."
+  ],
+  reco_done_filtered: [
+    "{n} invoices compared - portal {portal}/{portalTotal} rows and books {books}/{booksTotal} rows fall inside this period.",
+    "{n} इनवॉइस मिलाए गए - इस अवधि में पोर्टल की {portal}/{portalTotal} और बुक्स की {books}/{booksTotal} पंक्तियाँ आती हैं।",
+    "已核对 {n} 张发票——本期间内门户 {portal}/{portalTotal} 行、账簿 {books}/{booksTotal} 行。",
+    "{n} facturas comparadas: del portal {portal}/{portalTotal} filas y de libros {books}/{booksTotal} caen en este período.",
+    "{n} factures rapprochées : {portal}/{portalTotal} lignes du portail et {books}/{booksTotal} lignes comptables dans cette période."
+  ],
   reco_run: ["Run reconciliation", "मिलान चलाएँ", "运行核对", "Ejecutar conciliación", "Lancer le rapprochement"],
   reco_tolerance: ["Tolerance (Rs)", "सहनशीलता (रु)", "容差（卢比）", "Tolerancia (Rs)", "Tolérance (Rs)"],
   reco_load_sample: ["Load sample data", "सैंपल डेटा लोड करें", "加载示例数据", "Cargar datos de ejemplo", "Charger des données d'exemple"],
