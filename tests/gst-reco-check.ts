@@ -3,6 +3,13 @@
  * app: column auto-mapping, standardisation and invoice comparison.
  */
 import {
+  RECO_PAIRS,
+  FILE_TYPES,
+  findPair,
+  fileTypeOption,
+  filterRowsForPeriod,
+  periodToMmyyyy,
+  detectReturnPeriodColumn,
   autoMapColumns,
   standardize,
   compareFrames,
@@ -92,6 +99,43 @@ check('summary: portal taxable total', s.portalTaxable === 175000, String(s.port
 const threeB = threeBRows({ igst: { portal: 90000, books: 86400 } });
 check('3B: seven particulars', threeB.length === 7, String(threeB.length));
 check('3B: difference is books minus portal', threeB[1].Difference === -3600, String(threeB[1].Difference));
+
+// ---------- 6. dropdowns: file types and reconciliation pairs ----------
+check('pairs: three options', RECO_PAIRS.length === 3, String(RECO_PAIRS.length));
+check('pairs: 2A -> books purchase', findPair('2A-purchase').portal === 'GSTR-2A' && findPair('2A-purchase').books === 'BOOKS-PURCHASE');
+check('pairs: 2B -> books purchase', findPair('2B-purchase').portal === 'GSTR-2B' && findPair('2B-purchase').books === 'BOOKS-PURCHASE');
+check('pairs: 1 -> books sales', findPair('1-sales').portal === 'GSTR-1' && findPair('1-sales').books === 'BOOKS-SALES');
+check('pairs: unknown id falls back to 2B', findPair('nonsense').id === '2B-purchase');
+check('file types: six options', FILE_TYPES.length === 6, String(FILE_TYPES.length));
+check('file types: labels match the source app', fileTypeOption('BOOKS-SALES').label === 'Books - Sales Register', fileTypeOption('BOOKS-SALES').label);
+check('file types: GSTR-3B is a summary type', fileTypeOption('GSTR-3B').summary === true);
+
+// ---------- 7. period filtering ----------
+check('period: 042026', periodToMmyyyy('042026') === '042026', periodToMmyyyy('042026'));
+check('period: Apr-2026', periodToMmyyyy('Apr-2026') === '042026', periodToMmyyyy('Apr-2026'));
+check('period: 2026-04', periodToMmyyyy('2026-04') === '042026', periodToMmyyyy('2026-04'));
+check('period: blank', periodToMmyyyy('') === '');
+
+const periodRows = [
+  { ...standardize([{ 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'A1', 'Invoice Date': '05-04-2026', 'Taxable Value': 100 }], m2, {})[0], 'Return Period': '042026' },
+  { ...standardize([{ 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'A2', 'Invoice Date': '05-05-2026', 'Taxable Value': 100 }], m2, {})[0], 'Return Period': '052026' },
+];
+const inApril = filterRowsForPeriod(periodRows, 'GSTR-2B', '2026-04-01', '2026-04-30');
+check('filter: portal keeps only the April return period', inApril.length === 1 && inApril[0]['Invoice Key'] === 'A1', String(inApril.length));
+
+const bookRows3 = standardize([
+  { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'B1', 'Voucher Date': '05-04-2026', 'Taxable Amt': 100 },
+  { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'B2', 'Voucher Date': '05-05-2026', 'Taxable Amt': 100 },
+], m1, {});
+const booksApril = filterRowsForPeriod(bookRows3, 'BOOKS-PURCHASE', '2026-04-01', '2026-04-30');
+check('filter: books keep only April invoice dates', booksApril.length === 1 && booksApril[0]['Invoice Key'] === 'B1', String(booksApril.length));
+
+const noPeriodColumn = periodRows.map((r) => ({ ...r, 'Return Period': '' }));
+const fallback = filterRowsForPeriod(noPeriodColumn, 'GSTR-2B', '2026-04-01', '2026-04-30');
+check('filter: portal without a return period falls back to invoice date', fallback.length === 1 && fallback[0]['Invoice Key'] === 'A1', String(fallback.length));
+
+check('detect: return period column', detectReturnPeriodColumn(['GSTIN', 'Return Period', 'Taxable Value']) === 'Return Period');
+check('detect: none present', detectReturnPeriodColumn(['GSTIN', 'Taxable Value']) === '');
 
 console.log(failures === 0 ? 'ALL GST-RECO CHECKS OK' : `${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

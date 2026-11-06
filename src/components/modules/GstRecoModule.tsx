@@ -7,6 +7,14 @@ import { readExcelFile, getRawSheetRows, exportToExcel } from '../../services/ex
 import {
   RECO_FIELDS,
   NOT_MAPPED,
+  FILE_TYPES,
+  RECO_PAIRS,
+  FileType,
+  findPair,
+  fileTypeOption,
+  expectedBooksLabel,
+  filterRowsForPeriod,
+  detectReturnPeriodColumn,
   ColumnMapping,
   StandardRow,
   autoMapColumns,
@@ -71,6 +79,10 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
   const portalWb = useRef<any>(null);
   const booksWb = useRef<any>(null);
   const [tolerance, setTolerance] = useState<string>('1');
+  // Which two return types to compare, and what each uploaded file is.
+  const [pairId, setPairId] = useState<string>('2B-purchase');
+  const [portalType, setPortalType] = useState<FileType>('GSTR-2B');
+  const [booksType, setBooksType] = useState<FileType>('BOOKS-PURCHASE');
   const [results, setResults] = useState<Array<Record<string, any>> | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -136,19 +148,23 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
 
   const importSide = (side: Side) => {
     const current = getSide(side);
+    const type = side === 'portal' ? portalType : booksType;
+    const option = fileTypeOption(type);
     if (!current.rows.length) {
       setErrorMsg(t('err_reco_no_file', lang));
       return;
     }
-    if (current.mapping['Invoice No'] === NOT_MAPPED) {
+    // A summary file has no invoice rows, so the invoice mapping is not needed.
+    if (!option.summary && current.mapping['Invoice No'] === NOT_MAPPED) {
       setErrorMsg(t('err_reco_no_invoice_col', lang));
       return;
     }
     const rows = standardize(current.rows, current.mapping, {
       gstin,
       period: commonPeriod.label,
-      returnType: side === 'portal' ? 'Portal' : 'Books',
+      returnType: type,
       sourceName: current.fileName,
+      returnPeriodColumn: detectReturnPeriodColumn(current.headers),
     });
     setSide(side, { ...current, imported: rows });
     setSuccessMsg(t('reco_imported', lang, { n: rows.length, name: current.fileName }));
@@ -162,11 +178,45 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
       setErrorMsg(t('err_reco_import_first', lang));
       return;
     }
+    const pair = findPair(pairId);
+    const portalActual = portal.imported[0]?.['Return Type'];
+    const booksActual = books.imported[0]?.['Return Type'];
+    if (portalActual !== pair.portal) {
+      setErrorMsg(
+        t('err_reco_wrong_type', lang, {
+          side: t('reco_portal_file', lang),
+          expected: fileTypeOption(pair.portal).label,
+          actual: fileTypeOption(portalActual as FileType).label || String(portalActual),
+        })
+      );
+      return;
+    }
+    if (booksActual !== pair.books) {
+      setErrorMsg(
+        t('err_reco_wrong_type', lang, {
+          side: t('reco_books_file', lang),
+          expected: expectedBooksLabel(pair),
+          actual: fileTypeOption(booksActual as FileType).label || String(booksActual),
+        })
+      );
+      return;
+    }
+
     setIsRunning(true);
     try {
-      const rows = compareFrames(portal.imported, books.imported, Number(tolerance) || 0);
+      const portalRows = filterRowsForPeriod(portal.imported, pair.portal, commonPeriod.start, commonPeriod.end);
+      const booksRows = filterRowsForPeriod(books.imported, pair.books, commonPeriod.start, commonPeriod.end);
+      const rows = compareFrames(portalRows, booksRows, Number(tolerance) || 0);
       setResults(rows as any);
-      setSuccessMsg(t('reco_done', lang, { n: rows.length }));
+      setSuccessMsg(
+        t('reco_done_filtered', lang, {
+          n: rows.length,
+          portal: portalRows.length,
+          portalTotal: portal.imported.length,
+          books: booksRows.length,
+          booksTotal: books.imported.length,
+        })
+      );
       setActiveTab('reco');
     } catch (e: any) {
       setErrorMsg(e?.message || String(e));
@@ -198,8 +248,9 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
         imported: standardize(rows, autoMapColumns(headers), {
           gstin,
           period: commonPeriod.label,
-          returnType: name,
+          returnType: name.includes('2A') ? 'GSTR-2A' : 'BOOKS-PURCHASE',
           sourceName: name,
+          returnPeriodColumn: detectReturnPeriodColumn(headers),
         }),
       };
     };
@@ -207,6 +258,9 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
     const b = build(booksRows, 'sample_books.xlsx');
     setPortal(p);
     setBooks(b);
+    setPairId('2A-purchase');
+    setPortalType('GSTR-2A');
+    setBooksType('BOOKS-PURCHASE');
     setResults(null);
     setErrorMsg(null);
     setSuccessMsg(t('reco_sample_loaded', lang));
@@ -298,6 +352,28 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
             </span>
           )}
         </div>
+        <label className="flex items-center gap-2 text-[11px] text-[#64748B]">
+          <span className="shrink-0">{t('reco_file_type', lang)}</span>
+          <select
+            value={side === 'portal' ? portalType : booksType}
+            onChange={(e) => {
+              const type = e.target.value as FileType;
+              if (side === 'portal') setPortalType(type);
+              else setBooksType(type);
+              // The return type decides how the rows are filtered later, so a
+              // change has to be re-imported.
+              setSide(side, { ...current, imported: [] });
+              setResults(null);
+            }}
+            className="flex-1 min-w-0 text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#165DFC]/30 focus:border-[#165DFC]"
+          >
+            {FILE_TYPES.map((f) => (
+              <option key={f.type} value={f.type}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="flex flex-col items-center justify-center gap-1.5 cursor-pointer py-3 bg-white border border-[#DDE4EE] rounded-lg hover:border-[#8AC4FF] transition-colors">
           <Upload className="w-4 h-4 text-[#94A3B8]" />
           <span className="text-xs text-[#64748B] font-medium truncate max-w-[240px]">
@@ -351,6 +427,25 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end gap-4">
+          <label className="flex items-center gap-2 text-[11px] text-[#47566B]">
+            <span className="shrink-0 font-semibold">{t('reco_pair_label', lang)}</span>
+            <select
+              value={pairId}
+              onChange={(e) => {
+                setPairId(e.target.value);
+                setResults(null);
+                setErrorMsg(null);
+              }}
+              className="text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#165DFC]/30 focus:border-[#165DFC]"
+            >
+              {RECO_PAIRS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex items-center gap-2 text-[11px] text-[#47566B]">
             <span>{t('reco_tolerance', lang)}</span>
             <input
@@ -361,6 +456,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               className="w-24 text-xs font-mono bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#165DFC]/30"
             />
           </label>
+          </div>
           <button
             onClick={handleRun}
             disabled={isRunning}
