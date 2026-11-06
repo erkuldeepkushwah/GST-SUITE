@@ -390,24 +390,40 @@ export interface RecoRow extends Record<string, any> {
  * Values are summed per invoice, so a multi-line invoice on either side still
  * compares cleanly.
  */
+export interface CompareOptions {
+  /**
+   * Also require the invoice date to agree before calling two rows a match.
+   * Off by default: GSTIN + bill number identifies an invoice, and a date
+   * written differently on the two sides (05-04-2026 vs 2026-04-05, or the
+   * books carrying the entry date) would otherwise break a real match.
+   */
+  matchOnDate?: boolean;
+}
+
 export function compareFrames(
   portal: StandardRow[],
   books: StandardRow[],
-  tolerance = 0
+  tolerance = 0,
+  options: CompareOptions = {}
 ): RecoRow[] {
+  const matchOnDate = options.matchOnDate === true;
+
   const aggregate = (rows: StandardRow[]) => {
     const map = new Map<string, Record<string, any>>();
     for (const r of rows) {
       const key = String(r['Invoice Key'] || '').trim().toUpperCase();
       if (!key) continue;
       const gstin = String(r['GSTIN'] || '').trim().toUpperCase();
-      const id = `${key}\u0001${gstin}`;
+      const date = String(r['Invoice Date'] || '').trim();
+      // GSTIN + bill number is the key; the date joins it only when asked for.
+      const id = matchOnDate ? `${key}\u0001${gstin}\u0001${date}` : `${key}\u0001${gstin}`;
       let acc = map.get(id);
       if (!acc) {
-        acc = { 'Invoice Key': key, GSTIN: gstin };
+        acc = { 'Invoice Key': key, GSTIN: gstin, dates: new Set<string>() };
         for (const f of VALUE_FIELDS) acc[f] = 0;
         map.set(id, acc);
       }
+      if (date) acc.dates.add(date);
       for (const f of VALUE_FIELDS) acc[f] += Number(r[f]) || 0;
     }
     return map;
@@ -429,12 +445,19 @@ export function compareFrames(
       status = diffs.length === 0 ? 'Matched' : `Value mismatch: ${diffs.join(', ')}`;
     }
 
+    const portalDates = a ? Array.from(a.dates as Set<string>).sort() : [];
+    const booksDates = b ? Array.from(b.dates as Set<string>).sort() : [];
+    const dateMatch = !a || !b ? '' : portalDates.join(',') === booksDates.join(',') ? 'Yes' : 'No';
+
     // Status first: the table scrolls sideways, and this is the column that
     // decides what the user does next.
     const row: Record<string, any> = {
       Status: status,
       'Invoice Key': (a || b)!['Invoice Key'],
       GSTIN: (a || b)!.GSTIN,
+      'Date (portal)': portalDates.join(', '),
+      'Date (books)': booksDates.join(', '),
+      'Date match': dateMatch,
     };
     for (const f of VALUE_FIELDS) {
       row[`${f}_Portal`] = a ? a[f] : 0;
@@ -464,6 +487,8 @@ export interface RecoSummary {
   onlyPortal: number;
   onlyBooks: number;
   mismatched: number;
+  /** Matched on GSTIN + bill number, but the dates disagree. */
+  dateMismatched: number;
   portalTaxable: number;
   booksTaxable: number;
 }
@@ -479,6 +504,7 @@ export function summarize(rows: RecoRow[]): RecoSummary {
     onlyPortal: rows.filter((r) => r.Status === 'Only in Portal').length,
     onlyBooks: rows.filter((r) => r.Status === 'Only in Books').length,
     mismatched: rows.filter((r) => String(r.Status).startsWith('Value mismatch')).length,
+    dateMismatched: rows.filter((r) => r['Date match'] === 'No').length,
     portalTaxable: sum('Portal'),
     booksTaxable: sum('Books'),
   };

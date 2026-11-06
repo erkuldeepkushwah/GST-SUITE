@@ -137,5 +137,31 @@ check('filter: portal without a return period falls back to invoice date', fallb
 check('detect: return period column', detectReturnPeriodColumn(['GSTIN', 'Return Period', 'Taxable Value']) === 'Return Period');
 check('detect: none present', detectReturnPeriodColumn(['GSTIN', 'Taxable Value']) === '');
 
+
+// ---------- 8. match key: GSTIN + bill no, date only when asked ----------
+const datePortal = standardize([
+  { 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'INV-9', 'Invoice Date': '05-04-2026', 'Taxable Value': 1000, 'Integrated Tax Amount': 180 },
+], m2, {});
+const dateBooks = standardize([
+  { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-9', 'Voucher Date': '07-04-2026', 'Taxable Amt': 1000, 'IGST Amt': 180 },
+], m1, {});
+
+const looseDate = compareFrames(datePortal, dateBooks, 1);
+check('key: same GSTIN + bill no matches even with a different date', looseDate.length === 1 && looseDate[0].Status === 'Matched', String(looseDate[0]?.Status));
+check('key: date difference is still reported', looseDate[0]['Date match'] === 'No', String(looseDate[0]['Date match']));
+check('key: both dates are shown', looseDate[0]['Date (portal)'] === '2026-04-05' && looseDate[0]['Date (books)'] === '2026-04-07', `${looseDate[0]['Date (portal)']} / ${looseDate[0]['Date (books)']}`);
+check('summary: counts date differences', summarize(looseDate).dateMismatched === 1, String(summarize(looseDate).dateMismatched));
+
+const strictDate = compareFrames(datePortal, dateBooks, 1, { matchOnDate: true });
+check('key: with date matching the same invoice splits', strictDate.length === 2, String(strictDate.length));
+check('key: one side only each', strictDate.every((r) => r.Status === 'Only in Portal' || r.Status === 'Only in Books'), strictDate.map((r) => r.Status).join(' | '));
+
+const sameDateBooks = standardize([
+  { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-9', 'Voucher Date': '05-04-2026', 'Taxable Amt': 1000, 'IGST Amt': 180 },
+], m1, {});
+const strictSame = compareFrames(datePortal, sameDateBooks, 1, { matchOnDate: true });
+check('key: with date matching, equal dates still match', strictSame.length === 1 && strictSame[0].Status === 'Matched', String(strictSame[0]?.Status));
+check('key: same-date row reports Date match Yes', strictSame[0]['Date match'] === 'Yes', String(strictSame[0]['Date match']));
+
 console.log(failures === 0 ? 'ALL GST-RECO CHECKS OK' : `${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

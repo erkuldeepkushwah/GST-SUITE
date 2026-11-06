@@ -79,6 +79,8 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
   const portalWb = useRef<any>(null);
   const booksWb = useRef<any>(null);
   const [tolerance, setTolerance] = useState<string>('1');
+  // Match key: GSTIN + bill number always; the invoice date joins it on demand.
+  const [matchOnDate, setMatchOnDate] = useState<boolean>(false);
   // Which two return types to compare, and what each uploaded file is.
   const [pairId, setPairId] = useState<string>('2B-purchase');
   const [portalType, setPortalType] = useState<FileType>('GSTR-2B');
@@ -206,16 +208,34 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
     try {
       const portalRows = filterRowsForPeriod(portal.imported, pair.portal, commonPeriod.start, commonPeriod.end);
       const booksRows = filterRowsForPeriod(books.imported, pair.books, commonPeriod.start, commonPeriod.end);
-      const rows = compareFrames(portalRows, booksRows, Number(tolerance) || 0);
+      if (!portalRows.length || !booksRows.length) {
+        // Everything was filtered out: the files are for another period.
+        setErrorMsg(
+          t('err_reco_period_empty', lang, {
+            period: commonPeriod.label,
+            portal: portalRows.length,
+            portalTotal: portal.imported.length,
+            books: booksRows.length,
+            booksTotal: books.imported.length,
+          })
+        );
+        setResults(null);
+        setIsRunning(false);
+        return;
+      }
+      const rows = compareFrames(portalRows, booksRows, Number(tolerance) || 0, { matchOnDate });
       setResults(rows as any);
+      const dateDiffs = summarize(rows as any).dateMismatched;
       setSuccessMsg(
-        t('reco_done_filtered', lang, {
-          n: rows.length,
-          portal: portalRows.length,
-          portalTotal: portal.imported.length,
-          books: booksRows.length,
-          booksTotal: books.imported.length,
-        })
+        dateDiffs > 0 && !matchOnDate
+          ? t('reco_done_date_diff', lang, { n: rows.length, d: dateDiffs })
+          : t('reco_done_filtered', lang, {
+              n: rows.length,
+              portal: portalRows.length,
+              portalTotal: portal.imported.length,
+              books: booksRows.length,
+              booksTotal: books.imported.length,
+            })
       );
       setActiveTab('reco');
     } catch (e: any) {
@@ -226,15 +246,26 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
   };
 
   const handleLoadSample = () => {
+    // Dates come from the selected reporting period, otherwise the period
+    // filter would drop every sample row and the run would report 0 invoices.
+    const dayIn = (offset: number) => {
+      const d = new Date(`${commonPeriod.start}T00:00:00`);
+      d.setDate(d.getDate() + offset);
+      const end = new Date(`${commonPeriod.end}T00:00:00`);
+      return (d > end ? end : d).toISOString().slice(0, 10).split('-').reverse().join('-');
+    };
+    const d0 = dayIn(3);
+    const d1 = dayIn(10);
+    const d2 = dayIn(17);
     const portalRows = [
-      { 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'INV-001', 'Invoice Date': '05-04-2026', 'Taxable Value': 100000, 'Integrated Tax Amount': 18000 },
-      { 'GSTIN of Supplier': '24AAACB2233M1ZZ', 'Invoice Number': 'INV-002', 'Invoice Date': '12-04-2026', 'Taxable Value': 50000, 'Integrated Tax Amount': 9000 },
-      { 'GSTIN of Supplier': '23AACCF4455P1ZD', 'Invoice Number': 'INV-003', 'Invoice Date': '20-04-2026', 'Taxable Value': 25000, 'Integrated Tax Amount': 4500 },
+      { 'GSTIN of Supplier': '27AABCT1332L1ZE', 'Invoice Number': 'INV-001', 'Invoice Date': d0, 'Taxable Value': 100000, 'Integrated Tax Amount': 18000 },
+      { 'GSTIN of Supplier': '24AAACB2233M1ZZ', 'Invoice Number': 'INV-002', 'Invoice Date': d1, 'Taxable Value': 50000, 'Integrated Tax Amount': 9000 },
+      { 'GSTIN of Supplier': '23AACCF4455P1ZD', 'Invoice Number': 'INV-003', 'Invoice Date': d2, 'Taxable Value': 25000, 'Integrated Tax Amount': 4500 },
     ];
     const booksRows = [
-      { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-001', 'Voucher Date': '05-04-2026', 'Taxable Amt': 100000, 'IGST Amt': 18000 },
-      { 'Supplier GSTIN': '24AAACB2233M1ZZ', 'Voucher No': 'INV-002', 'Voucher Date': '12-04-2026', 'Taxable Amt': 48000, 'IGST Amt': 8640 },
-      { 'Supplier GSTIN': '23AABCS8899Q1ZB', 'Voucher No': 'INV-004', 'Voucher Date': '25-04-2026', 'Taxable Amt': 30000, 'IGST Amt': 5400 },
+      { 'Supplier GSTIN': '27AABCT1332L1ZE', 'Voucher No': 'INV-001', 'Voucher Date': d0, 'Taxable Amt': 100000, 'IGST Amt': 18000 },
+      { 'Supplier GSTIN': '24AAACB2233M1ZZ', 'Voucher No': 'INV-002', 'Voucher Date': d1, 'Taxable Amt': 48000, 'IGST Amt': 8640 },
+      { 'Supplier GSTIN': '23AABCS8899Q1ZB', 'Voucher No': 'INV-004', 'Voucher Date': d2, 'Taxable Amt': 30000, 'IGST Amt': 5400 },
     ];
     const build = (rows: Array<Record<string, any>>, name: string): SideState => {
       const headers = Object.keys(rows[0]);
@@ -455,6 +486,19 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               onChange={(e) => setTolerance(e.target.value)}
               className="w-24 text-xs font-mono bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#165DFC]/30"
             />
+          </label>
+          <label className="flex items-center gap-2 text-[11px] text-[#47566B] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={matchOnDate}
+              onChange={(e) => {
+                setMatchOnDate(e.target.checked);
+                setResults(null);
+                setErrorMsg(null);
+              }}
+              className="accent-[#165DFC] rounded"
+            />
+            <span>{t('reco_match_on_date', lang)}</span>
           </label>
           </div>
           <button
