@@ -549,7 +549,6 @@ export function compareFrames(
     return {
       'Date (portal)': portalDates.join(', '),
       'Date (books)': booksDates.join(', '),
-      'Date match': !a || !b ? '' : portalDates.join(',') === booksDates.join(',') ? 'Yes' : 'No',
     };
   };
 
@@ -575,9 +574,8 @@ export function compareFrames(
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, b),
+      'Matched With': matchedWith,
     };
-    for (const field of MATCH_FIELDS) row[`${field} match`] = check.flags[field];
-    row['Matched With'] = matchedWith;
     return { ...row, ...valueCells(a, b) } as RecoRow;
   };
 
@@ -587,9 +585,8 @@ export function compareFrames(
       'Invoice Key': (a || b)!.key,
       GSTIN: (a || b)!.gstin,
       ...dateCells(a, b),
+      'Matched With': '',
     };
-    for (const field of MATCH_FIELDS) row[`${field} match`] = '';
-    row['Matched With'] = '';
     return { ...row, ...valueCells(a, b) } as RecoRow;
   };
 
@@ -675,10 +672,6 @@ export interface RecoSummary {
   mismatch: number;
   onlyPortal: number;
   onlyBooks: number;
-  /** Matched on GSTIN + bill number, but the dates disagree. */
-  dateMismatched: number;
-  /** How many rows carry each field-level mismatch. */
-  fieldMismatches: Record<string, number>;
   portalTaxable: number;
   booksTaxable: number;
 }
@@ -687,19 +680,12 @@ export function summarize(rows: RecoRow[]): RecoSummary {
   const sum = (side: 'Portal' | 'Books') =>
     rows.reduce((total, r) => total + (Number(r[`Taxable Value_${side}`]) || 0), 0);
 
-  const fieldMismatches: Record<string, number> = {};
-  for (const field of MATCH_FIELDS) {
-    fieldMismatches[field] = rows.filter((r) => r[`${field} match`] === 'No').length;
-  }
-
   return {
     matched: rows.filter((r) => r.Status === 'Matched').length,
     possible: rows.filter((r) => r.Status === 'Possible Match').length,
     mismatch: rows.filter((r) => r.Status === 'Not Mismatch').length,
     onlyPortal: rows.filter((r) => r.Status === 'Only in Portal').length,
     onlyBooks: rows.filter((r) => r.Status === 'Only in Books').length,
-    dateMismatched: rows.filter((r) => r['Date match'] === 'No').length,
-    fieldMismatches,
     portalTaxable: sum('Portal'),
     booksTaxable: sum('Books'),
   };
