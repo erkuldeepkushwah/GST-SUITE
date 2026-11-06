@@ -385,7 +385,7 @@ export function standardize(
   });
 }
 
-export type RecoStatus = 'Matched' | 'Possible Match' | 'Mismatch' | 'Only in Portal' | 'Only in Books';
+export type RecoStatus = 'Matched' | 'Possible Match' | 'Not Mismatch' | 'Only in Portal' | 'Only in Books';
 
 /** Every field that is compared, in the order it is reported. */
 export const MATCH_FIELDS = [
@@ -568,7 +568,7 @@ export function compareFrames(
       ? 'Matched'
       : check.gstinOnly
       ? 'Possible Match'
-      : 'Mismatch';
+      : 'Not Mismatch';
 
     const row: Record<string, any> = {
       Status: status,
@@ -648,7 +648,7 @@ export function compareFrames(
   for (const b of booksOnly) if (!usedBooks.has(b.id)) rows.push(oneSided(undefined, b));
 
   const rank: Record<string, number> = {
-    Mismatch: 0,
+    'Not Mismatch': 0,
     'Possible Match': 1,
     'Only in Portal': 2,
     'Only in Books': 3,
@@ -695,7 +695,7 @@ export function summarize(rows: RecoRow[]): RecoSummary {
   return {
     matched: rows.filter((r) => r.Status === 'Matched').length,
     possible: rows.filter((r) => r.Status === 'Possible Match').length,
-    mismatch: rows.filter((r) => r.Status === 'Mismatch').length,
+    mismatch: rows.filter((r) => r.Status === 'Not Mismatch').length,
     onlyPortal: rows.filter((r) => r.Status === 'Only in Portal').length,
     onlyBooks: rows.filter((r) => r.Status === 'Only in Books').length,
     dateMismatched: rows.filter((r) => r['Date match'] === 'No').length,
