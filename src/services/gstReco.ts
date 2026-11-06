@@ -402,7 +402,6 @@ export type MatchField = (typeof MATCH_FIELDS)[number];
 
 export interface RecoRow extends Record<string, any> {
   Status: RecoStatus;
-  'Mismatch Reason': string;
   'Invoice Key': string;
   GSTIN: string;
 }
@@ -573,7 +572,6 @@ export function compareFrames(
 
     const row: Record<string, any> = {
       Status: status,
-      'Mismatch Reason': check.reasons.length ? check.reasons.join('; ') : 'All fields match',
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, b),
@@ -586,9 +584,6 @@ export function compareFrames(
   const oneSided = (a: Agg | undefined, b: Agg | undefined): RecoRow => {
     const row: Record<string, any> = {
       Status: a ? 'Only in Portal' : 'Only in Books',
-      'Mismatch Reason': a
-        ? 'No pair found (no books row with this GSTIN + bill no, and no row whose amounts agree)'
-        : 'No pair found (no portal row with this GSTIN + bill no, and no row whose amounts agree)',
       'Invoice Key': (a || b)!.key,
       GSTIN: (a || b)!.gstin,
       ...dateCells(a, b),
