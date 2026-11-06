@@ -13,6 +13,7 @@ import {
   autoMapColumns,
   standardize,
   compareFrames,
+  RULE_REASON,
   summarize,
   threeBRows,
   NOT_MAPPED,
@@ -144,6 +145,36 @@ check('pairs: three options', RECO_PAIRS.length === 3, String(RECO_PAIRS.length)
 check('pairs: GSTR-1 goes with books sales', findPair('1-sales').books === 'BOOKS-SALES');
 check('file types: six options', FILE_TYPES.length === 6, String(FILE_TYPES.length));
 check('file types: two books registers', FILE_TYPES.filter((f) => f.books).length === 2);
+
+// ---------- reason column ----------
+// Every row of the priority table must explain itself: the Reason column is
+// what a reviewer reads before deciding whether to chase the supplier.
+const oneOfEach: Array<[string, any]> = [
+  ['rule 1', one(base, base)[0]],
+  ['rule 1 with a date difference', one(base, { ...base, date: '06-04-2026' })[0]],
+  ['rule 2', one(base, { ...base, gstin: B })[0]],
+  ['rule 3', one(base, { ...base, gstin: B, date: '09-04-2026' })[0]],
+  ['rule 4', one(base, { ...base, gstin: B, inv: 'B-9', date: '09-04-2026' })[0]],
+  ['rule 5', one(base, { ...base, inv: 'B-2', date: '09-04-2026' })[0]],
+  ['rule 6', one(base, { ...base, inv: 'B-3' })[0]],
+  ['rule 7', one(base, { ...base, taxable: 9000, igst: 1620 })[0]],
+  ['rule 9', one(base, { ...base, igst: 1600 })[0]],
+  ['only in portal', compareFrames([portalRow({ ...base, inv: 'P-9' })], [], 1)[0]],
+  ['only in books', compareFrames([], [booksRow({ ...base, inv: 'B-9' })], 1)[0]],
+];
+for (const [label, row] of oneOfEach) {
+  check(`reason: ${label} explains itself`, Boolean(row && String(row.Reason || '').trim()), String(row?.Reason));
+}
+check(
+  'reason: every priority rule has a headline',
+  [1, 2, 3, 4, 5, 6, 7, 8, 9].every((r) => Boolean(RULE_REASON[r])),
+  JSON.stringify(Object.keys(RULE_REASON))
+);
+check(
+  'reason: a mismatch quotes the amount',
+  String(one(base, { ...base, taxable: 9000, igst: 1620 })[0]?.Reason || '').includes('1,000.00'),
+  String(one(base, { ...base, taxable: 9000, igst: 1620 })[0]?.Reason)
+);
 
 console.log(failures === 0 ? 'ALL GST-RECO CHECKS OK' : `${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

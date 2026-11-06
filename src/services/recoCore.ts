@@ -408,7 +408,8 @@ export function runGst2aReconciliation(
         'Taxable': r['Taxable_BK'],
         'Total Tax': r['Total Tax_BK'],
         'Type (CN / DN)': (r['Doc_BK'] === 'CN' || r['Doc_BK'] === 'DN') ? r['Doc_BK'] : 'CN',
-        'Source': r['DocSrc_BK'] || 'Unmatched'
+        'Source': r['DocSrc_BK'] || 'Unmatched',
+        'Reason': r['Reason'] || 'Credit/debit note needs manual confirmation'
       });
     }
   }
@@ -433,6 +434,7 @@ export function runGst2aReconciliation(
   dashboard.push({
     Section: 'B2B',
     Status: 'Left out by period filter (2A)',
+    Reason: 'Invoice date falls outside the selected period',
     Count: pLeft.length,
     'Taxable as per 2A': round(pLeft.reduce((s, r) => s + (r.taxable || 0), 0)),
     'Taxable as per Books': 0,
@@ -441,6 +443,7 @@ export function runGst2aReconciliation(
   dashboard.push({
     Section: 'B2B',
     Status: 'Left out by period filter (Books)',
+    Reason: 'Invoice date falls outside the selected period',
     Count: bLeft.length,
     'Taxable as per 2A': 0,
     'Taxable as per Books': round(bLeft.reduce((s, r) => s + (r.taxable || 0), 0)),
@@ -537,6 +540,7 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
     if (p && !b) {
       rows.push({
         Status: 'Only in 2A',
+        Reason: 'Not found in Books',
         GSTIN: gstin,
         Party: party,
         'Invoice No': invoiceNo,
@@ -558,6 +562,7 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
     } else if (!p && b) {
       rows.push({
         Status: 'Only in Books',
+        Reason: 'Not found in GSTR-2A/2B',
         GSTIN: gstin,
         Party: party,
         'Invoice No': invoiceNo,
@@ -616,8 +621,20 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
 
       const isMatch = amountCodes.length === 0;
 
+      const reasonParts: string[] = [];
+      if (Math.abs(diffTaxable) > tolerance) {
+        reasonParts.push(`Taxable value differs by ${inr(diffTaxable)}`);
+      }
+      if (Math.abs(diffTax) > tolerance) {
+        reasonParts.push(`Total tax differs by ${inr(diffTax)}`);
+      }
+      if (isMatch) reasonParts.push('Taxable value and total tax agree');
+      if (nameNote) reasonParts.push(nameNote);
+      const reason = reasonParts.join(' \u00b7 ');
+
       rows.push({
         Status: isMatch ? 'Matched' : 'Mismatch',
+        Reason: reason,
         GSTIN: gstin,
         Party: party,
         'Invoice No': invoiceNo,
@@ -777,4 +794,9 @@ function buildGst2aDashboard(b2bReco: Array<Record<string, any>>, cdnReco: Array
 
 function round(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+/** Rupee amount for the Reason column, so a difference reads as money. */
+function inr(num: number): string {
+  return `\u20b9${round(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

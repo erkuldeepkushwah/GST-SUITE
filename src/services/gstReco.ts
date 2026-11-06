@@ -385,6 +385,8 @@ export interface RecoRow extends Record<string, any> {
   Status: RecoStatus;
   /** Which row of the priority table produced this verdict (0 = no pair). */
   'Match Rule': number;
+  /** Why this row got its verdict, in plain language. */
+  Reason: string;
   'Invoice Key': string;
   GSTIN: string;
 }
@@ -482,6 +484,64 @@ const STATUS_BY_RULE: Record<number, RecoStatus> = {
   8: 'Mismatch',
   9: 'Mismatch',
 };
+
+/** One-line reason for every row of the priority table, so the Reason column
+ * never falls back to a blank cell for a rule the app can produce. */
+export const RULE_REASON: Record<number, string> = {
+  0: 'No counterpart in the other file',
+  1: 'All fields match',
+  2: 'GSTIN differs, everything else matches',
+  3: 'GSTIN and date differ, invoice no and taxable match',
+  4: 'GSTIN, date and invoice no differ, taxable and tax match',
+  5: 'Invoice no and date differ',
+  6: 'Invoice no differs',
+  7: 'Taxable value differs',
+  8: 'Invoice value differs',
+  9: 'Tax amount differs',
+};
+
+const inr = (v: number) =>
+  `\u20b9${money(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const datesOf = (x: Agg) => Array.from(x.dates).sort().join(', ') || 'not given';
+
+/**
+ * Reason for a matched pair: the rule's headline plus the actual values that
+ * were compared, so the reviewer can see the evidence without opening both
+ * files. A rule 1 pair whose dates differ says so, because the priority table
+ * has no row for it.
+ */
+function pairReason(
+  rule: number,
+  f: Flags,
+  a: Agg,
+  b: Agg,
+  close: (x: number, y: number) => boolean
+): string {
+  const parts: string[] = [RULE_REASON[rule] || 'Matched outside the priority table'];
+
+  if (rule === 1 && !f.date) parts.push(`dates ${datesOf(a)} vs ${datesOf(b)}`);
+  if (rule === 2 || rule === 3 || rule === 4) parts.push(`GSTIN ${a.gstin || '-'} vs ${b.gstin || '-'}`);
+  if (rule === 3 || rule === 4 || rule === 5 || rule === 6) parts.push(`invoice no ${a.key} vs ${b.key}`);
+  if (rule === 5) parts.push(`dates ${datesOf(a)} vs ${datesOf(b)}`);
+  const gap = (h: string) => Math.abs((Number(a.values[h]) || 0) - (Number(b.values[h]) || 0));
+  if (rule === 7) {
+    parts.push(`by ${inr(gap('Taxable Value'))} (portal ${inr(a.values['Taxable Value'])} vs books ${inr(b.values['Taxable Value'])})`);
+  }
+  if (rule === 8) {
+    parts.push(`by ${inr(gap('Invoice Value'))} (portal ${inr(a.values['Invoice Value'])} vs books ${inr(b.values['Invoice Value'])})`);
+  }
+  if (rule === 9) {
+    const heads = ['IGST', 'CGST', 'SGST', 'Cess'].filter((h) => !close(a.values[h], b.values[h]));
+    parts.push(
+      heads.length > 0
+        ? heads.map((h) => `${h} by ${inr(gap(h))} (portal ${inr(a.values[h])} vs books ${inr(b.values[h])})`).join(', ')
+        : 'a tax head differs'
+    );
+  }
+
+  return parts.join(' \u00b7 ');
+}
 
 export function compareFrames(
   portal: StandardRow[],
@@ -608,6 +668,7 @@ export function compareFrames(
   const rows: RecoRow[] = pairs.map(({ a, b, rule }) => ({
     Status: STATUS_BY_RULE[rule],
     'Match Rule': rule,
+    Reason: pairReason(rule, flagsOf(a, b, close), a, b, close),
     'Invoice Key': a.key,
     GSTIN: a.gstin,
     ...dateCells(a, b),
@@ -619,6 +680,7 @@ export function compareFrames(
     rows.push({
       Status: 'Only in Portal',
       'Match Rule': 0,
+      Reason: 'Not found in Books (2B / 2A)',
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, undefined),
@@ -630,6 +692,7 @@ export function compareFrames(
     rows.push({
       Status: 'Only in Books',
       'Match Rule': 0,
+      Reason: 'Not found in Portal (2A / 2B)',
       'Invoice Key': b.key,
       GSTIN: b.gstin,
       ...dateCells(undefined, b),

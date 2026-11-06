@@ -147,25 +147,39 @@ export async function runTdsReconciliation(
     const pMatch = payRows.filter(t => t.rawDate.getFullYear() === currYear && t.rawDate.getMonth() === currMonth);
     const tPayments = round(pMatch.reduce((s, t) => s + t.Debit, 0));
 
+    const monthDiff = round(tCredited - caPayable);
     monthlyReco.push({
       Month: moLabel,
       'CA TDS payable': caPayable,
       'Tally TDS credited': tCredited,
-      Difference: round(tCredited - caPayable),
+      Difference: monthDiff,
       'CA TDS paid': caPaid,
       'Tally payments (same month)': tPayments,
+      Reason:
+        monthDiff === 0
+          ? 'Tally TDS credited matches CA payable'
+          : monthDiff > 0
+          ? `Tally TDS credited is ${inr(monthDiff)} more than CA payable`
+          : `Tally TDS credited is ${inr(Math.abs(monthDiff))} less than CA payable`,
     });
 
     curr.setMonth(curr.getMonth() + 1);
   }
 
+  const periodDiff = round(monthlyReco.reduce((s, m) => s + m.Difference, 0));
   const periodTotal = {
     Month: 'Period total',
     'CA TDS payable': round(monthlyReco.reduce((s, m) => s + m['CA TDS payable'], 0)),
     'Tally TDS credited': round(monthlyReco.reduce((s, m) => s + m['Tally TDS credited'], 0)),
-    Difference: round(monthlyReco.reduce((s, m) => s + m.Difference, 0)),
+    Difference: periodDiff,
     'CA TDS paid': round(monthlyReco.reduce((s, m) => s + m['CA TDS paid'], 0)),
     'Tally payments (same month)': round(monthlyReco.reduce((s, m) => s + m['Tally payments (same month)'], 0)),
+    Reason:
+      periodDiff === 0
+        ? 'Tally TDS and CA working sheet agree for the period'
+        : periodDiff > 0
+        ? `Tally shows ${inr(periodDiff)} more TDS than the CA working sheet`
+        : `Tally shows ${inr(Math.abs(periodDiff))} less TDS than the CA working sheet`,
   };
   monthlyReco.push(periodTotal);
 
@@ -187,6 +201,11 @@ export async function runTdsReconciliation(
     monthlyReco,
     tallyEntries: tQuarter.map(({ rawDate, ...rest }) => rest),
   };
+}
+
+/** Rupee amount for the Reason column. */
+function inr(num: number): string {
+  return `\u20b9${round(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function round(num: number): number {
