@@ -126,7 +126,9 @@ export function toNumber(value: unknown): number {
 
 export function normalizeInvoice(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const s = String(value).replace(/\s+/g, '').trim().toUpperCase();
+  // Rule 6 of the matching sheet: capital letters, and spaces / slashes / dashes
+  // removed, so INV/26-27/001, INV 26 27 001 and inv2627001 are one bill.
+  const s = String(value).replace(/[\s/\\-]+/g, '').trim().toUpperCase();
   return BLANKS.indexOf(s.toLowerCase()) !== -1 ? '' : s;
 }
 
@@ -385,6 +387,8 @@ export interface RecoRow extends Record<string, any> {
   Status: RecoStatus;
   /** Which row of the priority table produced this verdict (0 = no pair). */
   'Match Rule': number;
+  /** Why this row got its verdict, in plain language. */
+  Reason: string;
   'Invoice Key': string;
   GSTIN: string;
 }
@@ -410,33 +414,38 @@ interface Flags {
 }
 
 /**
- * Matching runs down the priority table, not on a single key. Each pair is
- * scored by the first rule its flags satisfy:
+ * Matching runs down the priority table, not on a single key. A pair is a Match
+ * when at least one of GSTIN and invoice no agrees and the amount agrees; the
+ * date never decides a status, it only shows up in the Reason column. Each pair
+ * is scored by the first rule its flags satisfy, strongest first:
  *
- *  1  all fields match, including date                  -> Match
- *  2  GSTIN differs, date + invoice + taxable + GST      -> Possible Match
- *  3  GSTIN differs, date differs, invoice + taxable     -> Match
- *  4  GSTIN + date + invoice differ, taxable + GST match -> Possible Match
- *  5  GSTIN same, date and invoice differ                -> Mismatch
- *  6  GSTIN same, invoice differs                        -> Mismatch
- *  7  GSTIN same, taxable value differs                  -> Mismatch
- *  8  GSTIN same, invoice value differs                  -> Mismatch
- *  9  GSTIN same, a tax amount differs                   -> Mismatch
+ *  1  GSTIN + invoice no + date + amount            -> Match
+ *  2  GSTIN + invoice no + amount, date differs     -> Match
+ *  3  GSTIN + date + amount, invoice no differs     -> Match
+ *  4  invoice no + date + amount, GSTIN differs     -> Match
+ *  5  GSTIN + amount, invoice no and date differ    -> Match
+ *  6  invoice no + amount, GSTIN and date differ    -> Match
+ *  7  neither GSTIN nor invoice no same             -> no pair (even if the date
+ *                                                      is the same)
+ *  8  GSTIN or invoice no same, amount differs      -> Mismatch
+ *  9  neither GSTIN nor invoice no same, amount off -> no pair
  *
- * A pair with the same GSTIN and invoice whose amounts all agree but whose
- * date does not is reported as Match under rule 1 (the Date match column shows
- * the difference); the table has no row for it and leaving it unmatched would
- * be wrong.
+ * Amount means taxable value and total tax (IGST + CGST + SGST + Cess) within
+ * the tolerance, plus the invoice value when the file carries it. Tax is compared
+ * as a total, not head by head: a supplier who filed IGST where the books have
+ * CGST + SGST has still billed the same amount, so that pair is a Match with a
+ * GSTIN mismatch, not a Mismatch.
  */
+const taxTotal = (x: Agg) =>
+  ['IGST', 'CGST', 'SGST', 'Cess'].reduce((s, h) => s + (Number(x.values[h]) || 0), 0);
+
 function flagsOf(a: Agg, b: Agg, close: (x: number, y: number) => boolean): Flags {
   const datesA = Array.from(a.dates).sort().join(',');
   const datesB = Array.from(b.dates).sort().join(',');
   const taxable = close(a.values['Taxable Value'], b.values['Taxable Value']);
-  const tax =
-    close(a.values['IGST'], b.values['IGST']) &&
-    close(a.values['CGST'], b.values['CGST']) &&
-    close(a.values['SGST'], b.values['SGST']) &&
-    close(a.values['Cess'], b.values['Cess']);
+  // Amount = Taxable + CGST + SGST + IGST, so the tax total is what counts, not
+  // the head split.
+  const tax = close(taxTotal(a), taxTotal(b));
 
   // Invoice Value is derived from taxable + tax when the file does not carry it,
   // so a tax difference would always look like an invoice-value difference too.
@@ -455,33 +464,89 @@ function flagsOf(a: Agg, b: Agg, close: (x: number, y: number) => boolean): Flag
   };
 }
 
-/** Priority of a candidate pair: 1-9 from the table, or 0 when it does not fit. */
+/** Priority of a candidate pair: 1-8 from the table, or 0 when there is no pair. */
 function ruleOf(f: Flags): number {
-  if (f.gstin && f.invoice && f.date && f.allValues) return 1;
-  if (!f.gstin && f.date && f.invoice && f.taxable && f.tax) return 2;
-  if (!f.gstin && !f.date && f.invoice && f.taxable) return 3;
-  if (!f.gstin && !f.date && !f.invoice && f.taxable && f.tax) return 4;
-  if (f.gstin && !f.date && !f.invoice) return 5;
-  if (f.gstin && !f.invoice) return 6;
-  if (f.gstin && !f.taxable) return 7;
-  if (f.gstin && !f.invoiceValue) return 8;
-  if (f.gstin && !f.tax) return 9;
-  // Same GSTIN and invoice, amounts agree, only the date differs.
-  if (f.gstin && f.invoice && f.allValues) return 1;
-  return 0;
+  // Rows 7 and 9: with neither GSTIN nor invoice no agreeing there is no pair,
+  // whatever the amount says.
+  if (!f.gstin && !f.invoice) return 0;
+
+  if (f.allValues) {
+    if (f.gstin && f.invoice) return f.date ? 1 : 2;
+    if (f.gstin) return f.date ? 3 : 4;
+    return f.date ? 5 : 6;
+  }
+
+  // Row 8: one key agrees but the amount does not.
+  return 8;
 }
+
+/** Rule order for pairing, strongest first (the sheet's row order). */
+const RULE_ORDER = [1, 2, 3, 4, 5, 6, 8];
 
 const STATUS_BY_RULE: Record<number, RecoStatus> = {
   1: 'Match',
-  2: 'Possible Match',
+  2: 'Match',
   3: 'Match',
-  4: 'Possible Match',
-  5: 'Mismatch',
-  6: 'Mismatch',
-  7: 'Mismatch',
+  4: 'Match',
+  5: 'Match',
+  6: 'Match',
   8: 'Mismatch',
-  9: 'Mismatch',
 };
+
+/** One-line reason for every row of the priority table, so the Reason column
+ * never falls back to a blank cell for a rule the app can produce. */
+export const RULE_REASON: Record<number, string> = {
+  0: 'No pair',
+  1: 'GSTIN, invoice no, date and amount match',
+  2: 'GSTIN, invoice no and amount match - date mismatch',
+  3: 'GSTIN, date and amount match - invoice no mismatch',
+  4: 'GSTIN and amount match - invoice no and date mismatch',
+  5: 'Invoice no, date and amount match - GSTIN mismatch',
+  6: 'Invoice no and amount match - GSTIN and date mismatch',
+  8: 'Amount mismatch - GSTIN or invoice no matches',
+};
+
+const inr = (v: number) =>
+  `\u20b9${money(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const datesOf = (x: Agg) => Array.from(x.dates).sort().join(', ') || 'not given';
+
+/**
+ * Reason for a matched pair: the rule's headline plus the actual values that
+ * were compared, so the reviewer can see the evidence without opening both
+ * files. A rule 1 pair whose dates differ says so, because the priority table
+ * has no row for it.
+ */
+function pairReason(
+  rule: number,
+  f: Flags,
+  a: Agg,
+  b: Agg,
+  close: (x: number, y: number) => boolean
+): string {
+  const parts: string[] = [RULE_REASON[rule] || 'Matched outside the priority table'];
+  const gap = (h: string) => Math.abs((Number(a.values[h]) || 0) - (Number(b.values[h]) || 0));
+
+  // A mismatch says which of Taxable / Inv Value / Tax is off, and by how much,
+  // so the reviewer does not have to compare two files column by column.
+  if (rule === 8) {
+    if (!f.taxable) {
+      parts.push(
+        `taxable by ${inr(gap('Taxable Value'))} (portal ${inr(a.values['Taxable Value'])} vs books ${inr(b.values['Taxable Value'])})`
+      );
+    }
+    if (!f.tax) {
+      parts.push(
+        `tax by ${inr(Math.abs(taxTotal(a) - taxTotal(b)))} (portal ${inr(taxTotal(a))} vs books ${inr(taxTotal(b))})`
+      );
+    }
+    if (f.taxable && f.tax && !f.invoiceValue) {
+      parts.push(`invoice value by ${inr(gap('Invoice Value'))}`);
+    }
+  }
+
+  return parts.join(' \u00b7 ');
+}
 
 export function compareFrames(
   portal: StandardRow[],
@@ -551,15 +616,53 @@ export function compareFrames(
     return out;
   };
 
+  // Rule 4 of the sheet: when a row has more than one candidate at the same rule,
+  // pair it with the one whose invoice value and date are closest.
+  const dayGap = (x: Set<string>, y: Set<string>) => {
+    const toDay = (d: string) => {
+      const t = Date.parse(`${d}T00:00:00Z`);
+      return isNaN(t) ? null : t;
+    };
+    let best = Number.MAX_SAFE_INTEGER;
+    for (const dx of x) {
+      const tx = toDay(dx);
+      if (tx === null) continue;
+      for (const dy of y) {
+        const ty = toDay(dy);
+        if (ty === null) continue;
+        best = Math.min(best, Math.abs(tx - ty) / 86400000);
+      }
+    }
+    return best;
+  };
+
+  const closeness = (a: Agg, b: Agg): [number, number] => [
+    Math.abs((Number(a.values['Invoice Value']) || 0) - (Number(b.values['Invoice Value']) || 0)),
+    dayGap(a.dates, b.dates),
+  ];
+
+  const bestCandidate = (a: Agg, rule: number): Agg | undefined => {
+    let winner: Agg | undefined;
+    let bestScore: [number, number] | null = null;
+    for (const b of candidatesFor(a)) {
+      if (usedBooks.has(b.id)) continue;
+      if (ruleOf(flagsOf(a, b, close)) !== rule) continue;
+      const s = closeness(a, b);
+      if (!bestScore || s[0] < bestScore[0] || (s[0] === bestScore[0] && s[1] < bestScore[1])) {
+        bestScore = s;
+        winner = b;
+      }
+    }
+    return winner;
+  };
+
   // Strongest rule first, across every row: a weak rule (say 6, same GSTIN but a
   // different bill number) must never take the books row that rule 1 would have
   // matched exactly. One row per pair, so nothing is matched twice.
-  for (const rule of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+  for (const rule of RULE_ORDER) {
     for (const a of left.values()) {
       if (usedPortal.has(a.id)) continue;
-      const candidate = candidatesFor(a).find(
-        (b) => !usedBooks.has(b.id) && ruleOf(flagsOf(a, b, close)) === rule
-      );
+      const candidate = bestCandidate(a, rule);
       if (!candidate) continue;
       usedPortal.add(a.id);
       usedBooks.add(candidate.id);
@@ -569,15 +672,19 @@ export function compareFrames(
 
   // Reciprocal sweep: a books row gets its turn against whatever portal rows are
   // still free, best rule first.
-  for (const rule of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+  for (const rule of RULE_ORDER) {
     for (const b of right.values()) {
       if (usedBooks.has(b.id)) continue;
       let match: Agg | undefined;
+      let bestScore: [number, number] | null = null;
       for (const a of left.values()) {
         if (usedPortal.has(a.id)) continue;
         if (ruleOf(flagsOf(a, b, close)) !== rule) continue;
-        match = a;
-        break;
+        const s = closeness(a, b);
+        if (!bestScore || s[0] < bestScore[0] || (s[0] === bestScore[0] && s[1] < bestScore[1])) {
+          bestScore = s;
+          match = a;
+        }
       }
       if (!match) continue;
       usedPortal.add(match.id);
@@ -608,6 +715,7 @@ export function compareFrames(
   const rows: RecoRow[] = pairs.map(({ a, b, rule }) => ({
     Status: STATUS_BY_RULE[rule],
     'Match Rule': rule,
+    Reason: pairReason(rule, flagsOf(a, b, close), a, b, close),
     'Invoice Key': a.key,
     GSTIN: a.gstin,
     ...dateCells(a, b),
@@ -619,6 +727,7 @@ export function compareFrames(
     rows.push({
       Status: 'Only in Portal',
       'Match Rule': 0,
+      Reason: 'Not in Books',
       'Invoice Key': a.key,
       GSTIN: a.gstin,
       ...dateCells(a, undefined),
@@ -630,6 +739,7 @@ export function compareFrames(
     rows.push({
       Status: 'Only in Books',
       'Match Rule': 0,
+      Reason: 'Not in 2B',
       'Invoice Key': b.key,
       GSTIN: b.gstin,
       ...dateCells(undefined, b),

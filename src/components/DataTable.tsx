@@ -146,6 +146,10 @@ export const DataTable: React.FC<Props> = ({
 
   const isGstinCol = (colName: string) => /gstin|ctin/i.test(colName);
 
+  // Reason and Action are sentences, not codes: wrap them instead of letting
+  // one long line push every other column off the screen.
+  const isTextCol = (colName: string) => /^(reason|action|remark)$/i.test(colName.trim());
+
   const isNumericCol = (colName: string) => {
     const norm = colName.toLowerCase();
     return (
@@ -248,9 +252,9 @@ export const DataTable: React.FC<Props> = ({
               {columns.map((col) => (
                 <th
                   key={col}
-                  className={`px-3.5 py-2.5 whitespace-nowrap tracking-tight ${
+                  className={`px-3.5 py-2.5 tracking-tight ${
                     isNumericCol(col) ? 'text-right' : 'text-left'
-                  }`}
+                  } ${isTextCol(col) ? 'min-w-[220px]' : 'whitespace-nowrap'}`}
                 >
                   {col}
                 </th>
@@ -271,8 +275,12 @@ export const DataTable: React.FC<Props> = ({
                     return (
                       <td
                         key={col}
-                        className={`px-3.5 py-2 whitespace-nowrap text-xs ${
+                        className={`px-3.5 py-2 text-xs ${
                           isNumericCol(col) ? 'text-right font-mono text-[11.5px]' : 'text-left'
+                        } ${
+                          isTextCol(col)
+                            ? 'whitespace-normal align-top min-w-[220px] max-w-[340px] leading-snug text-slate-600'
+                            : 'whitespace-nowrap'
                         }`}
                       >
                         {isColEditable ? (

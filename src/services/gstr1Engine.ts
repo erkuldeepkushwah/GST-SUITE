@@ -513,6 +513,7 @@ export function runGstr1MultiReconciliation(
         'Tax (GSTR-3B)': '',
         'Tax Difference': '',
         Status: 'No 3B data entered',
+        Reason: 'No GSTR-3B figures for this month yet',
       });
       continue;
     }
@@ -529,6 +530,15 @@ export function runGstr1MultiReconciliation(
       'Tax (GSTR-3B)': round(matching3b.IGST + matching3b.CGST + matching3b.SGST),
       'Tax Difference': diffTax,
       Status: (Math.abs(diffTaxable) <= 1 && Math.abs(diffTax) <= 1) ? 'Tied' : 'Difference',
+      Reason:
+        Math.abs(diffTaxable) <= 1 && Math.abs(diffTax) <= 1
+          ? 'GSTR-1 and GSTR-3B agree within \u20b91'
+          : [
+              Math.abs(diffTaxable) > 1 ? `Taxable differs from 3B by ${inr(diffTaxable)}` : '',
+              Math.abs(diffTax) > 1 ? `Tax differs from 3B by ${inr(diffTax)}` : '',
+            ]
+              .filter(Boolean)
+              .join(' \u00b7 '),
     });
   }
 
@@ -608,6 +618,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
     if (p && !b) {
       results.push({
         Status: 'Only in Portal',
+        Reason: 'Not found in Books (sales register)',
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: p.Date,
@@ -623,6 +634,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
     } else if (!p && b) {
       results.push({
         Status: 'Only in Books',
+        Reason: 'Not found in GSTR-1 (portal)',
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: '',
@@ -640,8 +652,15 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
       const diffTax = round(b.Tax - p.Tax);
       const isMatch = Math.abs(diffTaxable) <= tolerance && Math.abs(diffTax) <= tolerance;
 
+      const reasonParts: string[] = [];
+      if (Math.abs(diffTaxable) > tolerance) reasonParts.push(`Taxable value differs by ${inr(diffTaxable)}`);
+      if (Math.abs(diffTax) > tolerance) reasonParts.push(`Tax differs by ${inr(diffTax)}`);
+      if (isMatch) reasonParts.push('Taxable value and tax agree');
+      if (p.Date && b.Date && p.Date !== b.Date) reasonParts.push(`dates ${p.Date} vs ${b.Date}`);
+
       results.push({
         Status: isMatch ? 'Matched' : 'Mismatch',
+        Reason: reasonParts.join(' \u00b7 '),
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: p.Date,
@@ -697,9 +716,19 @@ function matchHsnSection(portal: any[], books: any[], tolerance: number): Array<
     else if (!br) status = 'Only in Portal';
     else if (Math.abs(bTaxable - pTaxable) > tolerance || Math.abs(bTax - pTax) > tolerance) status = 'Mismatch';
 
+    const hsnReason =
+      status === 'Matched'
+        ? 'Taxable value and tax agree for this HSN'
+        : status === 'Only in Books'
+        ? 'HSN in books, not filed in GSTR-1'
+        : status === 'Only in Portal'
+        ? 'HSN filed in GSTR-1, not in books'
+        : `Taxable differs by ${inr(bTaxable - pTaxable)} and tax by ${inr(bTax - pTax)}`;
+
     out.push({
       HSN: k,
       Status: status,
+      Reason: hsnReason,
       'Qty (Portal)': round(pr?.qty || 0),
       'Qty (Books)': round(br?.qty || 0),
       'Taxable (Portal)': pTaxable,
@@ -727,4 +756,9 @@ function sum(arr: any[], col: string): number {
 
 function round(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+/** Rupee amount for the Reason column. */
+function inr(num: number): string {
+  return `\u20b9${round(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

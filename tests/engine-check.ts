@@ -19,6 +19,15 @@ function xlsxFile(aoa: any[][], name: string): File {
   return new File([buf], name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
+/** Every reconciliation row carries a Reason, so no table shows a blank cell. */
+function requireReason(label: string, rows: Array<Record<string, any>>) {
+  const missing = (rows || []).filter((r) => !String(r?.Reason ?? '').trim());
+  if (missing.length > 0) {
+    throw new Error(`${label}: ${missing.length} row(s) without a Reason`);
+  }
+  console.log(`Reasons present: ${label} (${(rows || []).length} rows)`);
+}
+
 async function engineChecks() {
   // ---------- 1. GSTIN checksum ----------
   const known = ['27AAPFU0939F1ZV', '29AAGCB7383J1Z4', '23AAOFT2395R1ZA'];
@@ -130,6 +139,10 @@ async function engineChecks() {
   };
   const r1 = runGstr1MultiReconciliation([p], [booksGstr1], '2026-04-01', '2026-04-30',
     [{ 'Return Period': 'apr 2026', Taxable: 645000, IGST: 99000, CGST: 8550, SGST: 8550 }]);
+  requireReason('GSTR-1 b2bReco', r1.b2bReco);
+  requireReason('GSTR-1 cdnrReco', r1.cdnrReco);
+  requireReason('GSTR-1 hsnReco', r1.hsnReco);
+  requireReason('GSTR-1 tieOut', r1.tieOut);
   console.log('GSTR1 tie-out row:', JSON.stringify(r1.tieOut[0]));
 
   // ---------- 5. GST 2A sample ----------
@@ -137,6 +150,8 @@ async function engineChecks() {
   const r2 = runGst2aReconciliation(portal, books, '23AAOFT2395R1ZA', {
     startDate: '2026-04-01', endDate: '2026-04-30', basis: 'both', manualTypes: [],
   });
+  requireReason('2A b2bReco', r2.b2bReco);
+  requireReason('2A cdnReco', r2.cdnReco);
   console.log('2A dashboard:');
   for (const d of r2.dashboard) console.log('  ', d.Section, d.Status, d.Count, d['Taxable as per 2A'], d['Taxable as per Books']);
   console.log('2A gstr9 rows:', JSON.stringify(r2.gstr9Itc.filter((x: any) => x.Category.startsWith('ITC eligible') || x.Category.startsWith('Net'))));
@@ -158,6 +173,8 @@ async function engineChecks() {
     ['Total', '', '', '', '', 70650, 63595, 1232500, ''],
   ];
   const st = await runStockSnapshot(xlsxFile(stockAoa, 'stock.xlsx'));
+  requireReason('stock summary', st.summary);
+  requireReason('stock unitTieOut', st.unitTieOut);
   console.log('Stock items=%s tied=%s', st.allItems.length, st.tied);
   console.log('  unitTieOut:', JSON.stringify(st.unitTieOut));
   console.log('  summary:', JSON.stringify(st.summary.map((s: any) => [s.Check, s['Per items'], s['Per report total'], s.Status])));
@@ -176,6 +193,7 @@ async function engineChecks() {
     ['30-04-2026', 'Customer receipt', 'Receipt', 'UTR998877', '2', 25000, ''],
   ];
   const bank = await runBankReconciliation(xlsxFile(stmt, 'stmt.xlsx'), xlsxFile(ledger, 'ledger.xlsx'), '2026-04-01', '2026-04-30');
+  requireReason('bank entries', bank.allEntries);
   console.log('Bank closing reco:', JSON.stringify(bank.closingReconciliation.map((x: any) => [x.Item, x.Amount])));
   console.log('Bank matched:', bank.summary.map((s: any) => `${s.Check}=${s.Value}`).join(' | '));
 }
@@ -253,6 +271,7 @@ async function parserChecks() {
     ['Jun-2026', 0, 0],
   ];
   const tds = await runTdsReconciliation(xlsxSheets({ Tally: tally }, 'tally.xlsx'), xlsxSheets({ CA: ca }, 'ca.xlsx'), '2026-04-01', '2026-06-30');
+  requireReason('TDS monthlyReco', tds.monthlyReco);
   console.log('TDS monthly:');
   for (const m of tds.monthlyReco) console.log('  ', JSON.stringify(m));
   console.log('TDS summary:', JSON.stringify(tds.summary));

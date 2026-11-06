@@ -212,6 +212,9 @@ export async function runBankReconciliation(
     }
 
     if (matched) {
+      const refKey2 = refKey(l.utr);
+      const refHit = refKey2 && (normRef(matched.ref).includes(refKey2) || normRef(matched.narration).includes(refKey2));
+      const dayGap = Math.abs((matched.date.getTime() - l.date.getTime()) / (1000 * 60 * 60 * 24));
       allEntries.push({
         Source: 'Tally',
         'Date (Book)': l.dateStr,
@@ -223,6 +226,9 @@ export async function runBankReconciliation(
         'Amount (Bank)': matched.amount,
         'Narration (Bank)': matched.narration,
         Status: 'Matched',
+        Reason: refHit
+          ? 'Same UTR/reference, amount matches'
+          : `Same amount, ${dayGap === 0 ? 'same date' : `date within ${Math.round(dayGap)} day(s)`}`,
         Action: '',
       });
     } else {
@@ -237,6 +243,7 @@ export async function runBankReconciliation(
         'Amount (Bank)': 0,
         'Narration (Bank)': '',
         Status: 'In Books, not in Bank',
+        Reason: 'No bank entry with this amount in the selected period (uncleared cheque or timing)',
         Action: 'Entry in Books but missing from Bank statement. Verify cheque clearing status or date window.',
       });
     }
@@ -255,6 +262,7 @@ export async function runBankReconciliation(
         'Amount (Bank)': s.amount,
         'Narration (Bank)': s.narration,
         Status: 'In Bank, not in Books',
+        Reason: 'No matching Tally entry for this bank amount (unrecorded charge, interest or direct deposit)',
         Action: 'Transaction appears in Bank statement but not recorded in Books. Record journal entry or verify narration.',
       });
     }
