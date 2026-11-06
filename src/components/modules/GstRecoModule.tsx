@@ -398,7 +398,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
             }}
             className="flex-1 min-w-0 text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#165DFC]/30 focus:border-[#165DFC]"
           >
-            {FILE_TYPES.map((f) => (
+            {(side === 'portal' ? FILE_TYPES.filter((f) => !f.books) : FILE_TYPES.filter((f) => f.books)).map((f) => (
               <option key={f.type} value={f.type}>
                 {f.label}
               </option>
@@ -464,7 +464,18 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
             <select
               value={pairId}
               onChange={(e) => {
-                setPairId(e.target.value);
+                const next = findPair(e.target.value);
+                setPairId(next.id);
+                // The pair decides what each side must be, so keep the two
+                // file types in step; a changed type has to be re-imported.
+                if (next.portal !== portalType) {
+                  setPortalType(next.portal);
+                  setPortal((prev) => ({ ...prev, imported: [] }));
+                }
+                if (next.books !== booksType) {
+                  setBooksType(next.books);
+                  setBooks((prev) => ({ ...prev, imported: [] }));
+                }
                 setResults(null);
                 setErrorMsg(null);
               }}
