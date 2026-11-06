@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { LanguageCode, Period, TdsRecoResult } from '../../types';
 import { t } from '../../i18n/translations';
 import { PeriodPicker } from '../PeriodPicker';
-import { recordImport } from '../../services/importHistory';
 import { KPICards } from '../KPICards';
 import { DataTable } from '../DataTable';
 import { lakh, formatDateDisplay } from '../../services/periodManager';
@@ -82,7 +81,6 @@ export const TdsRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
       setResults(res);
       setSuccessMsg("TDS reconciliation completed successfully!");
       setResultsPeriod(activePeriod.label);
-      recordImport({ gstin, module: 'tds', period: activePeriod.label, files: [tallyFile.name, caFile.name], rows: res.tallyEntries.length });
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
     } finally {
