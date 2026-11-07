@@ -155,7 +155,7 @@ export async function runTdsReconciliation(
       Difference: monthDiff,
       'CA TDS paid': caPaid,
       'Tally payments (same month)': tPayments,
-      Reason:
+      Note:
         monthDiff === 0
           ? 'Tally TDS credited matches CA payable'
           : monthDiff > 0
@@ -174,7 +174,7 @@ export async function runTdsReconciliation(
     Difference: periodDiff,
     'CA TDS paid': round(monthlyReco.reduce((s, m) => s + m['CA TDS paid'], 0)),
     'Tally payments (same month)': round(monthlyReco.reduce((s, m) => s + m['Tally payments (same month)'], 0)),
-    Reason:
+    Note:
       periodDiff === 0
         ? 'Tally TDS and CA working sheet agree for the period'
         : periodDiff > 0
@@ -203,7 +203,7 @@ export async function runTdsReconciliation(
   };
 }
 
-/** Rupee amount for the Reason column. */
+/** Rupee amount for the Note column. */
 function inr(num: number): string {
   return `\u20b9${round(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

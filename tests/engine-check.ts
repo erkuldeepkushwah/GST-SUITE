@@ -19,13 +19,13 @@ function xlsxFile(aoa: any[][], name: string): File {
   return new File([buf], name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
-/** Every reconciliation row carries a Reason, so no table shows a blank cell. */
+/** Every reconciliation row carries a Note, so no table shows a blank cell. */
 function requireReason(label: string, rows: Array<Record<string, any>>) {
-  const missing = (rows || []).filter((r) => !String(r?.Reason ?? '').trim());
+  const missing = (rows || []).filter((r) => !String(r?.Note ?? '').trim());
   if (missing.length > 0) {
-    throw new Error(`${label}: ${missing.length} row(s) without a Reason`);
+    throw new Error(`${label}: ${missing.length} row(s) without a Note`);
   }
-  console.log(`Reasons present: ${label} (${(rows || []).length} rows)`);
+  console.log(`Notes present: ${label} (${(rows || []).length} rows)`);
 }
 
 async function engineChecks() {

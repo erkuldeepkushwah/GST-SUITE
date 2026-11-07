@@ -49,10 +49,7 @@ export const FIELD_ALIASES: Record<string, string[]> = {
   'Invoice Value': ['invoice value', 'invoice amount', 'bill amount', 'invoice total', 'total invoice value', 'grand total'],
   IGST: ['igst', 'integrated tax', 'igst amount', 'integrated tax amount'],
   CGST: ['cgst', 'central tax', 'cgst amount', 'central tax amount'],
-  SGST: [
-    'sgst', 'utgst', 'state tax', 'sgst amount', 'state tax amount', 'utgst amount',
-    'state ut tax', 'state ut tax amount', 'state ut tax paid', 'ut tax', 'ut tax paid',
-  ],
+  SGST: ['sgst', 'utgst', 'state tax', 'sgst amount', 'state tax amount', 'utgst amount'],
   Cess: ['cess', 'cess amount'],
   'Total Tax': ['total tax', 'tax amount', 'total gst', 'gst amount', 'total tax amount'],
 };
@@ -66,9 +63,6 @@ const TOKEN_EXPAND: Record<string, string> = {
 };
 
 const BLANKS = ['', 'nan', 'none', 'null', '-', 'na', 'n/a'];
-
-/** Columns that hold one tax component rather than the tax total. */
-const COMPONENT_COLUMN = /(igst|cgst|sgst|utgst|integrated tax|central tax|state tax|state ut tax|ut tax|cess)/;
 
 /** Normalise a heading and expand abbreviations: "GST Amt" -> "gst amount". */
 export function normCol(value: unknown): string {
@@ -106,8 +100,6 @@ export function autoMapColumns(headers: string[]): ColumnMapping {
       for (const n of normalized) {
         if (found !== null) break;
         if (used.has(n.col)) continue;
-        // Total Tax must not swallow a single component; it is derived instead.
-        if (field === 'Total Tax' && COMPONENT_COLUMN.test(n.nc)) continue;
         const hit = aliasNorms.some(
           (a) => a.length >= 4 && (n.nc.indexOf(a) !== -1 || a.indexOf(n.nc) !== -1)
         );
@@ -118,6 +110,217 @@ export function autoMapColumns(headers: string[]): ColumnMapping {
     mapped[field] = found === null ? NOT_MAPPED : found;
   }
   return mapped;
+}
+
+/** A GSTIN as the law defines it: state code, PAN, entity number, Z, check digit. */
+const GSTIN_RE = /^[0-3][0-9][A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const GSTIN_IN_TEXT_RE = /[0-3][0-9][A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]/;
+
+const DATE_TEXT_RE = /^\d{1,4}\s*[-/. ]\s*\d{1,2}\s*[-/. ]\s*\d{1,4}$/;
+
+/** True when the whole cell is a GSTIN. */
+export function isGstinValue(value: unknown): boolean {
+  const s = String(value ?? '').replace(/\s+/g, '').toUpperCase();
+  return GSTIN_RE.test(s);
+}
+
+/**
+ * "07ABCDE1234F1Z5/INV-101" carries two fields in one cell. Returns both parts,
+ * or null when the cell holds only a GSTIN or no GSTIN at all.
+ */
+export function splitGstinInvoice(value: unknown): { gstin: string; invoice: string } | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  const upper = raw.toUpperCase();
+  const match = upper.match(GSTIN_IN_TEXT_RE);
+  if (!match) return null;
+  const gstin = match[0];
+  const at = upper.indexOf(gstin);
+  const rest = raw.slice(0, at) + ' ' + raw.slice(at + gstin.length);
+  const invoice = rest.replace(/^[\s/\\|:;,-]+|[\s/\\|:;,-]+$/g, '').trim();
+  return invoice ? { gstin, invoice } : null;
+}
+
+interface ColumnProfile {
+  col: string;
+  filled: number;
+  gstin: number;
+  combined: number;
+  date: number;
+  numeric: number;
+  invoiceLike: number;
+}
+
+const share = (hit: number, total: number) => (total === 0 ? 0 : hit / total);
+
+function profileColumns(rows: Array<Record<string, any>>, headers: string[], sample = 80): ColumnProfile[] {
+  const head = rows.slice(0, sample);
+  return headers.map((col) => {
+    const headerLooksDate = /date|dt\b|din/i.test(col);
+    let filled = 0;
+    let gstin = 0;
+    let combined = 0;
+    let date = 0;
+    let numeric = 0;
+    let invoiceLike = 0;
+
+    for (const row of head) {
+      const v = row?.[col];
+      const text = String(v ?? '').trim();
+      if (!text || BLANKS.indexOf(text.toLowerCase()) !== -1) continue;
+      filled++;
+
+      if (isGstinValue(text)) {
+        gstin++;
+        continue;
+      }
+      const split = splitGstinInvoice(text);
+      if (split) {
+        combined++;
+        continue;
+      }
+      if (DATE_TEXT_RE.test(text) || v instanceof Date) {
+        date++;
+        continue;
+      }
+      const asNumber = typeof v === 'number' ? v : Number(text.replace(/[,\u20b9\s]/g, ''));
+      if (isFinite(asNumber) && text.replace(/[,\u20b9\s]/g, '') !== '') {
+        numeric++;
+        // A serial date only counts when the heading says it is a date; an
+        // amount of 45000 must never be mistaken for 15-Dec-2023.
+        if (headerLooksDate && asNumber > 20000 && asNumber < 80000) date++;
+        continue;
+      }
+      if (text.length <= 40 && /[0-9]/.test(text)) invoiceLike++;
+    }
+
+    return {
+      col,
+      filled,
+      gstin: share(gstin, filled),
+      combined: share(combined, filled),
+      date: share(date, filled),
+      numeric: share(numeric, filled),
+      invoiceLike: share(invoiceLike, filled),
+    };
+  });
+}
+
+/**
+ * Spec step 1: read the values, not the headings. A sheet whose columns are
+ * called "CTIN", "No.", "Dt." and "Amt" still maps correctly, and a column that
+ * packs the GSTIN and the bill number together is reported so it can be split.
+ */
+export function detectColumnRoles(
+  rows: Array<Record<string, any>>,
+  headers: string[]
+): { mapping: ColumnMapping; combined: string[] } {
+  const profiles = profileColumns(rows, headers);
+  const mapping: ColumnMapping = {};
+  const used = new Set<string>();
+  const best = (score: (p: ColumnProfile) => number, floor: number): string | null => {
+    let winner: ColumnProfile | null = null;
+    for (const p of profiles) {
+      if (used.has(p.col) || p.filled === 0) continue;
+      const value = score(p);
+      if (value < floor) continue;
+      if (!winner || value > score(winner)) winner = p;
+    }
+    return winner ? winner.col : null;
+  };
+
+  const combined = profiles.filter((p) => p.combined >= 0.5 && p.gstin < 0.5).map((p) => p.col);
+  combined.forEach((c) => used.add(c));
+
+  const gstinCol = best((p) => p.gstin, 0.5);
+  if (gstinCol) used.add(gstinCol);
+
+  const dateCol = best((p) => p.date, 0.5);
+  if (dateCol) used.add(dateCol);
+
+  const invoiceCol = best((p) => p.invoiceLike, 0.4);
+  if (invoiceCol) used.add(invoiceCol);
+
+  // Amounts: the headings are still the best guide, so start from them and only
+  // fill what they left unmapped.
+  const headerMap = autoMapColumns(headers);
+  for (const field of ['Taxable Value', 'Invoice Value', 'IGST', 'CGST', 'SGST', 'Cess', 'Total Tax'] as RecoField[]) {
+    const fromHeader = headerMap[field];
+    if (fromHeader && fromHeader !== NOT_MAPPED && !used.has(fromHeader)) {
+      mapping[field] = fromHeader;
+      used.add(fromHeader);
+    }
+  }
+
+  const numericCols = profiles
+    .filter((p) => p.numeric >= 0.5 && !used.has(p.col))
+    .map((p) => p.col);
+
+  if (!mapping['Taxable Value'] && numericCols.length > 0) {
+    // The taxable value is the largest figure on the sheet, bar the invoice total.
+    const avg = (col: string) => {
+      const vals = rows.slice(0, 80).map((r) => toNumber(r?.[col])).filter((n) => n !== 0);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    };
+    const ranked = [...numericCols].sort((x, y) => avg(y) - avg(x));
+    mapping['Taxable Value'] = ranked[0];
+    used.add(ranked[0]);
+  }
+  if (!mapping['CGST'] && !mapping['SGST']) {
+    const rest = numericCols.filter((c) => !used.has(c));
+    if (rest.length >= 2) {
+      mapping['CGST'] = rest[0];
+      mapping['SGST'] = rest[1];
+      used.add(rest[0]);
+      used.add(rest[1]);
+    }
+  }
+  if (!mapping['IGST']) {
+    const rest = numericCols.filter((c) => !used.has(c));
+    if (rest.length > 0) {
+      mapping['IGST'] = rest[0];
+      used.add(rest[0]);
+    }
+  }
+
+  for (const field of RECO_FIELDS) {
+    if (mapping[field]) continue;
+    if (field === 'GSTIN' && gstinCol) mapping[field] = gstinCol;
+    else if (field === 'Invoice No' && invoiceCol) mapping[field] = invoiceCol;
+    else if (field === 'Invoice Date' && dateCol) mapping[field] = dateCol;
+    else mapping[field] = headerMap[field] && headerMap[field] !== NOT_MAPPED && !used.has(headerMap[field])
+      ? headerMap[field]
+      : NOT_MAPPED;
+    if (mapping[field] !== NOT_MAPPED) used.add(mapping[field]);
+  }
+
+  return { mapping, combined };
+}
+
+/**
+ * Split every "GSTIN/INV-101" column into two derived columns and return the
+ * widened header list, so the rest of the app only ever sees one field per cell.
+ */
+export function splitCombinedColumns(
+  rows: Array<Record<string, any>>,
+  headers: string[],
+  combined: string[]
+): { rows: Array<Record<string, any>>; headers: string[] } {
+  if (combined.length === 0) return { rows, headers };
+  const extra: string[] = [];
+  for (const col of combined) {
+    extra.push(`${col} \u00b7 GSTIN`, `${col} \u00b7 Invoice No`);
+  }
+  const next = rows.map((row) => {
+    const out: Record<string, any> = { ...row };
+    for (const col of combined) {
+      const split = splitGstinInvoice(row?.[col]);
+      out[`${col} \u00b7 GSTIN`] = split ? split.gstin : '';
+      out[`${col} \u00b7 Invoice No`] = split ? split.invoice : '';
+    }
+    return out;
+  });
+  return { rows: next, headers: [...headers, ...extra] };
 }
 
 export function toNumber(value: unknown): number {
@@ -134,10 +337,13 @@ export function toNumber(value: unknown): number {
 
 export function normalizeInvoice(value: unknown): string {
   if (value === null || value === undefined) return '';
-  // Rule 6 of the matching sheet: capital letters, and spaces / slashes / dashes
-  // removed, so INV/26-27/001, INV 26 27 001 and inv2627001 are one bill.
-  const s = String(value).replace(/[\s/\\-]+/g, '').trim().toUpperCase();
-  return BLANKS.indexOf(s.toLowerCase()) !== -1 ? '' : s;
+  const raw = String(value).trim();
+  if (!raw || BLANKS.indexOf(raw.toLowerCase()) !== -1) return '';
+  // Spec step 2: spaces, special characters and leading zeros are not part of
+  // the bill, so INV/26-27/001, inv 26 27 001 and 0012627001 all compare equal.
+  const cleaned = raw.replace(/[^A-Za-z0-9]+/g, '').toUpperCase();
+  const trimmed = cleaned.replace(/^0+/, '');
+  return trimmed || cleaned;
 }
 
 const pad2 = (n: number) => (n < 10 ? '0' : '') + n;
@@ -389,21 +595,30 @@ export function standardize(
   });
 }
 
-export type RecoStatus = 'Match' | 'Possible Match' | 'Mismatch' | 'Only in Portal' | 'Only in Books';
+export type RecoStatus = 'Match' | 'Possible Match' | 'Mismatch' | 'Not in Books' | 'Not in 2B';
 
+/**
+ * One row of the output table, in the order the spec asks for it:
+ * GSTIN, Invoice No, Date, Total (Books), Total (2B), Status, Note.
+ */
 export interface RecoRow extends Record<string, any> {
+  GSTIN: string;
+  'Invoice No': string;
+  Date: string;
+  'Total (Books)': number;
+  'Total (2B)': number;
   Status: RecoStatus;
+  Note: string;
   /** Which row of the priority table produced this verdict (0 = no pair). */
   'Match Rule': number;
-  /** Why this row got its verdict, in plain language. */
-  Reason: string;
   'Invoice Key': string;
-  GSTIN: string;
 }
 
 interface Agg {
   id: string;
   key: string;
+  /** The invoice number as the file printed it, for display. */
+  label: string;
   gstin: string;
   dates: Set<string>;
   values: Record<string, number>;
@@ -474,22 +689,30 @@ function flagsOf(a: Agg, b: Agg, close: (x: number, y: number) => boolean): Flag
 
 /** Priority of a candidate pair: 1-8 from the table, or 0 when there is no pair. */
 function ruleOf(f: Flags): number {
-  // Rows 7 and 9: with neither GSTIN nor invoice no agreeing there is no pair,
-  // whatever the amount says.
-  if (!f.gstin && !f.invoice) return 0;
+  const keyed = f.gstin || f.invoice;
 
-  if (f.allValues) {
+  if (keyed && f.allValues) {
     if (f.gstin && f.invoice) return f.date ? 1 : 2;
     if (f.gstin) return f.date ? 3 : 4;
     return f.date ? 5 : 6;
   }
 
   // Row 8: one key agrees but the amount does not.
-  return 8;
+  if (keyed) return 8;
+
+  // Row 7: the amount agrees but neither GSTIN nor invoice no does.
+  if (f.allValues) return 7;
+
+  return 0;
 }
 
-/** Rule order for pairing, strongest first (the sheet's row order). */
-const RULE_ORDER = [1, 2, 3, 4, 5, 6, 8];
+/**
+ * Rule order for pairing, strongest first. A key match with a wrong amount (8)
+ * is tried before an amount-only coincidence (7): a supplier's own bill number
+ * is stronger evidence than two invoices that happen to add up to the same
+ * figure, so the real exception is not hidden behind a guess.
+ */
+const RULE_ORDER = [1, 2, 3, 4, 5, 6, 8, 7];
 
 const STATUS_BY_RULE: Record<number, RecoStatus> = {
   1: 'Match',
@@ -498,6 +721,7 @@ const STATUS_BY_RULE: Record<number, RecoStatus> = {
   4: 'Match',
   5: 'Match',
   6: 'Match',
+  7: 'Possible Match',
   8: 'Mismatch',
 };
 
@@ -511,6 +735,7 @@ export const RULE_REASON: Record<number, string> = {
   4: 'GSTIN and amount match - invoice no and date mismatch',
   5: 'Invoice no, date and amount match - GSTIN mismatch',
   6: 'Invoice no and amount match - GSTIN and date mismatch',
+  7: 'Amount matches - GSTIN and invoice no both differ',
   8: 'Amount mismatch - GSTIN or invoice no matches',
 };
 
@@ -534,6 +759,11 @@ function pairReason(
 ): string {
   const parts: string[] = [RULE_REASON[rule] || 'Matched outside the priority table'];
   const gap = (h: string) => Math.abs((Number(a.values[h]) || 0) - (Number(b.values[h]) || 0));
+
+  // A Possible Match rests on the amount alone, so name both sides.
+  if (rule === 7) {
+    parts.push(`portal ${a.gstin || '-'} / ${a.label || '-'} vs books ${b.gstin || '-'} / ${b.label || '-'}`);
+  }
 
   // A mismatch says which of Taxable / Inv Value / Tax is off, and by how much,
   // so the reviewer does not have to compare two files column by column.
@@ -575,7 +805,14 @@ export function compareFrames(
       if (!acc) {
         const values: Record<string, number> = {};
         for (const f of VALUE_FIELDS) values[f] = 0;
-        acc = { id, key, gstin, dates: new Set<string>(), values };
+        acc = {
+          id,
+          key,
+          label: String(r['Invoice No'] ?? key).trim() || key,
+          gstin,
+          dates: new Set<string>(),
+          values,
+        };
         map.set(id, acc);
       }
       if (date) acc.dates.add(date);
@@ -604,6 +841,17 @@ export function compareFrames(
     push(booksByGstin, b.gstin, b);
   }
 
+  // Amount index, so a Possible Match can find an invoice with the same total
+  // without scanning every row. Total = taxable + tax, rounded to the rupee.
+  const booksByAmount = new Map<number, Agg[]>();
+  const amountOf = (x: Agg) => Math.round((x.values['Taxable Value'] || 0) + taxTotal(x));
+  for (const b of right.values()) {
+    const k = amountOf(b);
+    const list = booksByAmount.get(k);
+    if (list) list.push(b);
+    else booksByAmount.set(k, [b]);
+  }
+
   const usedBooks = new Set<string>();
   const usedPortal = new Set<string>();
   const pairs: Array<{ a: Agg; b: Agg; rule: number }> = [];
@@ -621,6 +869,11 @@ export function compareFrames(
     add(booksByGstinInvoice.get(`${a.gstin}\u0001${a.key}`));
     add(booksByInvoice.get(a.key));
     add(booksByGstin.get(a.gstin));
+    // Within the tolerance, so probe the rupee either side too.
+    const k = amountOf(a);
+    add(booksByAmount.get(k - 1));
+    add(booksByAmount.get(k));
+    add(booksByAmount.get(k + 1));
     return out;
   };
 
@@ -701,65 +954,46 @@ export function compareFrames(
     }
   }
 
-  const dateCells = (a?: Agg, b?: Agg) => {
-    const portalDates = a ? Array.from(a.dates).sort() : [];
-    const booksDates = b ? Array.from(b.dates).sort() : [];
-    return {
-      'Date (portal)': portalDates.join(', '),
-      'Date (books)': booksDates.join(', '),
-      'Date match': !a || !b ? '' : portalDates.join(',') === booksDates.join(',') ? 'Yes' : 'No',
-    };
-  };
+  const firstDate = (x?: Agg) => (x ? Array.from(x.dates).sort()[0] || '' : '');
+  const totalOf = (x?: Agg) => (x ? money((x.values['Taxable Value'] || 0) + taxTotal(x)) : 0);
 
-  const valueCells = (a?: Agg, b?: Agg) => {
-    const out: Record<string, any> = {};
-    for (const f of VALUE_FIELDS) {
-      out[`${f}_Portal`] = a ? money(a.values[f]) : 0;
-      out[`${f}_Books`] = b ? money(b.values[f]) : 0;
-    }
-    return out;
-  };
-
-  const rows: RecoRow[] = pairs.map(({ a, b, rule }) => ({
-    Status: STATUS_BY_RULE[rule],
+  /** The output row: the seven columns the spec asks for, in that order. */
+  const rowOf = (
+    a: Agg | undefined,
+    b: Agg | undefined,
+    status: RecoStatus,
+    rule: number,
+    note: string
+  ): RecoRow => ({
+    GSTIN: a?.gstin || b?.gstin || '',
+    'Invoice No': a?.label || b?.label || '',
+    Date: firstDate(a) || firstDate(b),
+    'Total (Books)': totalOf(b),
+    'Total (2B)': totalOf(a),
+    Status: status,
+    Note: note,
     'Match Rule': rule,
-    Reason: pairReason(rule, flagsOf(a, b, close), a, b, close),
-    'Invoice Key': a.key,
-    GSTIN: a.gstin,
-    ...dateCells(a, b),
-    ...valueCells(a, b),
-  })) as RecoRow[];
+    'Invoice Key': a?.key || b?.key || '',
+  });
+
+  const rows: RecoRow[] = pairs.map(({ a, b, rule }) =>
+    rowOf(a, b, STATUS_BY_RULE[rule], rule, pairReason(rule, flagsOf(a, b, close), a, b, close))
+  );
 
   for (const a of left.values()) {
     if (usedPortal.has(a.id)) continue;
-    rows.push({
-      Status: 'Only in Portal',
-      'Match Rule': 0,
-      Reason: 'Not in Books',
-      'Invoice Key': a.key,
-      GSTIN: a.gstin,
-      ...dateCells(a, undefined),
-      ...valueCells(a, undefined),
-    } as RecoRow);
+    rows.push(rowOf(a, undefined, 'Not in Books', 0, 'No pair in Books'));
   }
   for (const b of right.values()) {
     if (usedBooks.has(b.id)) continue;
-    rows.push({
-      Status: 'Only in Books',
-      'Match Rule': 0,
-      Reason: 'Not in 2B',
-      'Invoice Key': b.key,
-      GSTIN: b.gstin,
-      ...dateCells(undefined, b),
-      ...valueCells(undefined, b),
-    } as RecoRow);
+    rows.push(rowOf(undefined, b, 'Not in 2B', 0, 'No pair in 2B'));
   }
 
   const rank: Record<string, number> = {
     Mismatch: 0,
     'Possible Match': 1,
-    'Only in Portal': 2,
-    'Only in Books': 3,
+    'Not in Books': 2,
+    'Not in 2B': 3,
     Match: 4,
   };
   rows.sort((x, y) => {
@@ -789,17 +1023,19 @@ export interface RecoSummary {
 }
 
 export function summarize(rows: RecoRow[]): RecoSummary {
-  const sum = (side: 'Portal' | 'Books') =>
-    rows.reduce((total, r) => total + (Number(r[`Taxable Value_${side}`]) || 0), 0);
+  const sum = (col: 'Total (2B)' | 'Total (Books)') =>
+    rows.reduce((total, r) => total + (Number(r[col]) || 0), 0);
 
   return {
     matched: rows.filter((r) => r.Status === 'Match').length,
     possible: rows.filter((r) => r.Status === 'Possible Match').length,
     mismatch: rows.filter((r) => r.Status === 'Mismatch').length,
-    onlyPortal: rows.filter((r) => r.Status === 'Only in Portal').length,
-    onlyBooks: rows.filter((r) => r.Status === 'Only in Books').length,
-    portalTaxable: sum('Portal'),
-    booksTaxable: sum('Books'),
+    // "Not in Books" means the portal filed it and the books did not, and the
+    // other way round for "Not in 2B".
+    onlyPortal: rows.filter((r) => r.Status === 'Not in Books').length,
+    onlyBooks: rows.filter((r) => r.Status === 'Not in 2B').length,
+    portalTaxable: sum('Total (2B)'),
+    booksTaxable: sum('Total (Books)'),
   };
 }
 

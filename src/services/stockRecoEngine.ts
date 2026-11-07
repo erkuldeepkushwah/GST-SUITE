@@ -154,7 +154,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
         'Per report': reportQty ?? '',
         Difference: '',
         Status: qty === undefined ? 'Unit in report, no item lines' : 'No unit subtotal in file',
-        Reason:
+        Note:
           qty === undefined
             ? 'Unit appears in the report totals but no item line carries it'
             : 'Item lines use this unit but the report has no subtotal for it',
@@ -171,7 +171,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report': reportQty,
       Difference: diff,
       Status: Math.abs(diff) <= TIE_TOL ? 'Tied' : 'NOT TIED - check',
-      Reason:
+      Note:
         Math.abs(diff) <= TIE_TOL
           ? `Unit quantity ties with the report subtotal (difference ${diff})`
           : `Item lines and report subtotal differ by ${diff} for this unit`,
@@ -190,7 +190,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': grandOpening,
       Difference: diffOpen,
       Status: Math.abs(diffOpen) <= TIE_TOL ? "Tied" : "NOT TIED - check",
-      Reason:
+      Note:
         Math.abs(diffOpen) <= TIE_TOL
           ? 'Item opening values add up to the report total'
           : `Item opening values miss the report total by ${diffOpen}`,
@@ -201,7 +201,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': grandClosing,
       Difference: diffQty,
       Status: Math.abs(diffQty) <= TIE_TOL ? "Tied" : "NOT TIED - check",
-      Reason:
+      Note:
         Math.abs(diffQty) <= TIE_TOL
           ? 'Item closing quantities add up to the report total'
           : `Item closing quantities miss the report total by ${diffQty}`,
@@ -212,7 +212,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': grandValue,
       Difference: diffVal,
       Status: Math.abs(diffVal) <= TIE_TOL ? "Tied" : "NOT TIED - check",
-      Reason:
+      Note:
         Math.abs(diffVal) <= TIE_TOL
           ? 'Item stock values add up to the report total'
           : `Item stock values miss the report total by ${diffVal}`,
@@ -223,7 +223,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': '',
       Difference: unitTieOut.reduce((s, u) => s + Math.abs(u.Difference), 0),
       Status: unitOk ? "Tied for all units" : "NOT TIED - see Unit Tie-out",
-      Reason: unitOk
+      Note: unitOk
         ? 'Every unit in the file agrees with its report subtotal'
         : `One or more units do not agree with the report subtotal (${allUnits.length} unit(s) checked)`,
     },
@@ -233,7 +233,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': '',
       Difference: round(neg.reduce((s, it) => s + (it.StockValue || 0), 0)),
       Status: "Exception: value column shows the negative amount",
-      Reason: `${neg.length} item(s) have closing stock below zero - check issue entries`,
+      Note: `${neg.length} item(s) have closing stock below zero - check issue entries`,
     },
     {
       Check: "Qty present but stock value blank",
@@ -241,7 +241,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': '',
       Difference: round(noval.reduce((s, it) => s + (it.Closing || 0), 0)),
       Status: "Exception: qty units (value not included in total)",
-      Reason: `${noval.length} item(s) carry quantity but no stock value - rate missing in the item master`,
+      Note: `${noval.length} item(s) carry quantity but no stock value - rate missing in the item master`,
     },
     {
       Check: "Rate below ₹1 per unit",
@@ -249,7 +249,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': '',
       Difference: round(lowRate.reduce((s, it) => s + (it.StockValue || 0), 0)),
       Status: "Check cost entry",
-      Reason: `${lowRate.length} item(s) have a rate below \u20b91 per unit - likely a cost-entry error`,
+      Note: `${lowRate.length} item(s) have a rate below \u20b91 per unit - likely a cost-entry error`,
     },
     {
       Check: "Duplicate product name (same name, two IDs)",
@@ -257,7 +257,7 @@ export async function runStockSnapshot(file: File): Promise<StockSnapshotResult>
       'Per report total': '',
       Difference: '',
       Status: "Check item master",
-      Reason: `${dupProducts.length} name(s) appear under two item IDs - merge or rename in the item master`,
+      Note: `${dupProducts.length} name(s) appear under two item IDs - merge or rename in the item master`,
     },
   ];
 

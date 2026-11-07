@@ -18,6 +18,8 @@ import {
   ColumnMapping,
   StandardRow,
   autoMapColumns,
+  detectColumnRoles,
+  splitCombinedColumns,
   standardize,
   compareFrames,
   exceptionRows,
@@ -72,6 +74,26 @@ function sheetToRows(wb: any, sheetName: string) {
   return { headers, rows };
 }
 
+/**
+ * Spec step 1: read the columns by their values, then split any cell that holds
+ * a GSTIN and a bill number together, and point the mapping at the split halves.
+ */
+function readSheet(wb: any, sheetName: string) {
+  const { headers, rows } = sheetToRows(wb, sheetName);
+  if (!headers.length) return { headers, rows, mapping: {} as ColumnMapping };
+
+  const roles = detectColumnRoles(rows, headers);
+  const split = splitCombinedColumns(rows, headers, roles.combined);
+  const mapping: ColumnMapping = { ...roles.mapping };
+
+  for (const col of roles.combined) {
+    if (mapping['GSTIN'] === col || mapping['GSTIN'] === NOT_MAPPED) mapping['GSTIN'] = `${col} \u00b7 GSTIN`;
+    if (mapping['Invoice No'] === col || mapping['Invoice No'] === NOT_MAPPED) mapping['Invoice No'] = `${col} \u00b7 Invoice No`;
+  }
+
+  return { headers: split.headers, rows: split.rows, mapping };
+}
+
 export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) => {
   const [portal, setPortal] = useState<SideState>(emptySide);
   const [books, setBooks] = useState<SideState>(emptySide);
@@ -108,7 +130,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
       const sheets: string[] = wb.SheetNames || [];
       if (!sheets.length) throw new Error(t('err_reco_empty_file', lang, { name: file.name }));
       const first = sheets[0];
-      const { headers, rows } = sheetToRows(wb, first);
+      const { headers, rows, mapping } = readSheet(wb, first);
       if (!headers.length) throw new Error(t('err_reco_empty_file', lang, { name: file.name }));
       setSide(side, {
         fileName: file.name,
@@ -116,7 +138,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
         sheet: first,
         headers,
         rows,
-        mapping: autoMapColumns(headers),
+        mapping,
         imported: [],
       });
       setResults(null);
@@ -129,13 +151,13 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
     const current = getSide(side);
     const wb = (side === 'portal' ? portalWb : booksWb).current;
     if (!wb) return;
-    const { headers, rows } = sheetToRows(wb, sheetName);
+    const { headers, rows, mapping } = readSheet(wb, sheetName);
     setSide(side, {
       ...current,
       sheet: sheetName,
       headers,
       rows,
-      mapping: autoMapColumns(headers),
+      mapping,
       imported: [],
     });
     setResults(null);

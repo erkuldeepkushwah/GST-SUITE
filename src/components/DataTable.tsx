@@ -135,7 +135,13 @@ export const DataTable: React.FC<Props> = ({
     if (s.includes('mismatch') || s === 'difference' || s.includes('not tied')) {
       return <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">{String(val)}</span>;
     }
-    if (s.includes('only in 2a') || s.includes('only in portal') || s.includes('negative')) {
+    if (
+      s.includes('only in 2a') ||
+      s.includes('only in portal') ||
+      s.includes('negative') ||
+      s.includes('not in books') ||
+      s.includes('not in 2b')
+    ) {
       return <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300">{String(val)}</span>;
     }
     if (s.includes('only in books') || s.includes('in bank')) {
