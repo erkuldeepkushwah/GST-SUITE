@@ -12,7 +12,7 @@ import {
   saveManualNotes,
   mergeManualNotes
 } from '../../services/recoCore';
-import { exportToExcel, downloadCsv } from '../../services/excelEngine';
+import { exportToExcel, downloadCsv, omitColumns } from '../../services/excelEngine';
 import { getSampleGst2aRows, SAMPLE_GSTIN } from '../../services/sampleData';
 import { auditGstins, gstinAuditRows, GstinAuditSummary } from '../../services/gstinAudit';
 import { gstinIssueKey, validateGstin } from '../../services/validation';
@@ -25,6 +25,9 @@ interface Props {
   lang: LanguageCode;
   onSetGstin: (gstin: string) => void;
 }
+
+/** Working fields that stay out of the downloaded report. */
+const EXPORT_HIDDEN_COLUMNS = ['Doc_2A', 'Doc_BK', 'Reason Code', 'Action', 'Name Check'];
 
 export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetGstin }) => {
   const [overridePeriod, setOverridePeriod] = useState(false);
@@ -211,10 +214,10 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
       await exportToExcel(
         {
           Dashboard: results.dashboard,
-          'B2B Reco': results.b2bReco,
-          'CDN Reco': results.cdnReco,
+          'B2B Reco': omitColumns(results.b2bReco, EXPORT_HIDDEN_COLUMNS),
+          'CDN Reco': omitColumns(results.cdnReco, EXPORT_HIDDEN_COLUMNS),
           'GSTR-9 ITC': results.gstr9Itc,
-          'CDN Review': results.cdnReview,
+          'CDN Review': omitColumns(results.cdnReview, EXPORT_HIDDEN_COLUMNS),
           ...(audit ? { 'GSTIN Audit': gstinAuditRows(audit) } : {}),
         },
         `GST_2A_Reco_${gstin}_${activePeriod.label.replace(/\s+/g, '_')}.xlsx`,

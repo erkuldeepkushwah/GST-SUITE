@@ -69,6 +69,19 @@ export function getRawSheetRows(wb: XLSX.WorkBook, sheetName: string): any[][] {
  * editing operation that matters for analysis (filter, sort, format, insert and
  * delete rows/columns) is allowed.
  */
+/**
+ * Copy rows without the given columns. Used to keep internal working fields
+ * (document type, reason codes, action hints) out of a report the client sees.
+ */
+export function omitColumns(rows: any[], columns: string[]): any[] {
+  const drop = new Set(columns);
+  return (rows || []).map((row) => {
+    const out: Record<string, any> = {};
+    for (const key of Object.keys(row || {})) if (!drop.has(key)) out[key] = row[key];
+    return out;
+  });
+}
+
 export async function exportToExcel(
   sheets: Record<string, any[]>,
   fileName: string,
