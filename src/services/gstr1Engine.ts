@@ -513,7 +513,7 @@ export function runGstr1MultiReconciliation(
         'Tax (GSTR-3B)': '',
         'Tax Difference': '',
         Status: 'No 3B data entered',
-        Reason: 'No GSTR-3B figures for this month yet',
+        Note: 'No GSTR-3B figures for this month yet',
       });
       continue;
     }
@@ -530,7 +530,7 @@ export function runGstr1MultiReconciliation(
       'Tax (GSTR-3B)': round(matching3b.IGST + matching3b.CGST + matching3b.SGST),
       'Tax Difference': diffTax,
       Status: (Math.abs(diffTaxable) <= 1 && Math.abs(diffTax) <= 1) ? 'Tied' : 'Difference',
-      Reason:
+      Note:
         Math.abs(diffTaxable) <= 1 && Math.abs(diffTax) <= 1
           ? 'GSTR-1 and GSTR-3B agree within \u20b91'
           : [
@@ -618,7 +618,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
     if (p && !b) {
       results.push({
         Status: 'Only in Portal',
-        Reason: 'Not found in Books (sales register)',
+        Note: 'Not found in Books (sales register)',
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: p.Date,
@@ -634,7 +634,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
     } else if (!p && b) {
       results.push({
         Status: 'Only in Books',
-        Reason: 'Not found in GSTR-1 (portal)',
+        Note: 'Not found in GSTR-1 (portal)',
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: '',
@@ -660,7 +660,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
 
       results.push({
         Status: isMatch ? 'Matched' : 'Mismatch',
-        Reason: reasonParts.join(' \u00b7 '),
+        Note: reasonParts.join(' \u00b7 '),
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: p.Date,
@@ -728,7 +728,7 @@ function matchHsnSection(portal: any[], books: any[], tolerance: number): Array<
     out.push({
       HSN: k,
       Status: status,
-      Reason: hsnReason,
+      Note: hsnReason,
       'Qty (Portal)': round(pr?.qty || 0),
       'Qty (Books)': round(br?.qty || 0),
       'Taxable (Portal)': pTaxable,
@@ -758,7 +758,7 @@ function round(num: number): number {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 }
 
-/** Rupee amount for the Reason column. */
+/** Rupee amount for the Note column. */
 function inr(num: number): string {
   return `\u20b9${round(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
