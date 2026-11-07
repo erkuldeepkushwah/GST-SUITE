@@ -540,7 +540,6 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
     if (p && !b) {
       rows.push({
         Status: 'Only in 2A',
-        Reason: 'Not found in Books',
         GSTIN: gstin,
         Party: party,
         'Invoice No': invoiceNo,
@@ -552,6 +551,7 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
         'Total Tax_2A': round(p['Total Tax_2A']),
         'Total Tax_BK': 0,
         'Tax Diff (Books-2A)': round(-p['Total Tax_2A']),
+        Reason: 'Not in Books',
         Doc_2A: p.Doc_2A,
         Doc_BK: '',
         'Reason Code': 'NOT_IN_BOOKS',
@@ -562,7 +562,6 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
     } else if (!p && b) {
       rows.push({
         Status: 'Only in Books',
-        Reason: 'Not found in GSTR-2A/2B',
         GSTIN: gstin,
         Party: party,
         'Invoice No': invoiceNo,
@@ -574,6 +573,7 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
         'Total Tax_2A': 0,
         'Total Tax_BK': round(b['Total Tax_BK']),
         'Tax Diff (Books-2A)': round(b['Total Tax_BK']),
+        Reason: 'Not in 2A/2B',
         Doc_2A: '',
         Doc_BK: b.Doc_BK,
         DocSrc_BK: b.DocSrc_BK,
@@ -621,20 +621,25 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
 
       const isMatch = amountCodes.length === 0;
 
+      // The Reason column is meant to be filtered, so it carries a small closed
+      // set of short labels instead of a sentence: "Taxable Value Diff + Total
+      // Tax Diff", "IGST Diff", "Date Diff", "OK". The numbers themselves live
+      // in the diff columns next to it.
       const reasonParts: string[] = [];
-      if (Math.abs(diffTaxable) > tolerance) {
-        reasonParts.push(`Taxable value differs by ${inr(diffTaxable)}`);
+      if (Math.abs(diffTaxable) > tolerance) reasonParts.push('Taxable Value Diff');
+      if (Math.abs(diffTax) > tolerance) reasonParts.push('Total Tax Diff');
+      if (Math.abs(diffIgst) > tolerance) reasonParts.push('IGST Diff');
+      if (Math.abs(diffCgst) > tolerance) reasonParts.push('CGST Diff');
+      if (Math.abs(diffSgst) > tolerance) reasonParts.push('SGST Diff');
+      if (dateDiff) reasonParts.push('Date Diff');
+      if (!matchDocType && p.Doc_2A !== b.Doc_BK) reasonParts.push('Doc Type Diff');
+      if (p.Party_2A && b.Party_BK && p.Party_2A.toLowerCase() !== b.Party_BK.toLowerCase()) {
+        reasonParts.push('Name Diff');
       }
-      if (Math.abs(diffTax) > tolerance) {
-        reasonParts.push(`Total tax differs by ${inr(diffTax)}`);
-      }
-      if (isMatch) reasonParts.push('Taxable value and total tax agree');
-      if (nameNote) reasonParts.push(nameNote);
-      const reason = reasonParts.join(' \u00b7 ');
+      const reason = reasonParts.length ? reasonParts.join(' + ') : 'OK';
 
       rows.push({
         Status: isMatch ? 'Matched' : 'Mismatch',
-        Reason: reason,
         GSTIN: gstin,
         Party: party,
         'Invoice No': invoiceNo,
@@ -646,6 +651,7 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
         'Total Tax_2A': round(p['Total Tax_2A']),
         'Total Tax_BK': round(b['Total Tax_BK']),
         'Tax Diff (Books-2A)': diffTax,
+        Reason: reason,
         Doc_2A: p.Doc_2A,
         Doc_BK: b.Doc_BK,
         'Reason Code': codes.join(', '),
