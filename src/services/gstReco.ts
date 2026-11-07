@@ -49,7 +49,10 @@ export const FIELD_ALIASES: Record<string, string[]> = {
   'Invoice Value': ['invoice value', 'invoice amount', 'bill amount', 'invoice total', 'total invoice value', 'grand total'],
   IGST: ['igst', 'integrated tax', 'igst amount', 'integrated tax amount'],
   CGST: ['cgst', 'central tax', 'cgst amount', 'central tax amount'],
-  SGST: ['sgst', 'utgst', 'state tax', 'sgst amount', 'state tax amount', 'utgst amount'],
+  SGST: [
+    'sgst', 'utgst', 'state tax', 'sgst amount', 'state tax amount', 'utgst amount',
+    'state ut tax', 'state ut tax amount', 'state ut tax paid', 'ut tax', 'ut tax paid',
+  ],
   Cess: ['cess', 'cess amount'],
   'Total Tax': ['total tax', 'tax amount', 'total gst', 'gst amount', 'total tax amount'],
 };
@@ -63,6 +66,9 @@ const TOKEN_EXPAND: Record<string, string> = {
 };
 
 const BLANKS = ['', 'nan', 'none', 'null', '-', 'na', 'n/a'];
+
+/** Columns that hold one tax component rather than the tax total. */
+const COMPONENT_COLUMN = /(igst|cgst|sgst|utgst|integrated tax|central tax|state tax|state ut tax|ut tax|cess)/;
 
 /** Normalise a heading and expand abbreviations: "GST Amt" -> "gst amount". */
 export function normCol(value: unknown): string {
@@ -100,6 +106,8 @@ export function autoMapColumns(headers: string[]): ColumnMapping {
       for (const n of normalized) {
         if (found !== null) break;
         if (used.has(n.col)) continue;
+        // Total Tax must not swallow a single component; it is derived instead.
+        if (field === 'Total Tax' && COMPONENT_COLUMN.test(n.nc)) continue;
         const hit = aliasNorms.some(
           (a) => a.length >= 4 && (n.nc.indexOf(a) !== -1 || a.indexOf(n.nc) !== -1)
         );
