@@ -55,8 +55,8 @@ h1, h2, h3, h4 {
   letter-spacing: -.012em;
   color: var(--ink);
 }
-h1 { font-size: clamp(2rem, 4.1vw, 3.1rem); font-weight: 700; }
-h2 { font-size: clamp(1.5rem, 2.7vw, 2.15rem); }
+h1 { font-size: clamp(2.1rem, 4.2vw, 3.3rem); font-weight: 700; letter-spacing: -.025em; }
+h2 { font-size: clamp(1.55rem, 3vw, 2.4rem); letter-spacing: -.022em; }
 h3 { font-size: 1.16rem; }
 h4 { font-size: 1rem; }
 
@@ -343,17 +343,32 @@ ul, ol { margin: 0 0 1rem; padding-left: 1.15rem; }
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 72px 0 76px;
+  padding: 80px 0 112px;
+  text-align: center;
+  color: #fff;
   background:
-    radial-gradient(900px 380px at 82% -12%, rgba(0, 137, 247, .12), transparent 68%),
-    radial-gradient(700px 320px at 4% 8%, rgba(14, 87, 232, .07), transparent 70%),
-    linear-gradient(180deg, var(--surface) 0%, #fff 100%);
+    radial-gradient(820px 420px at 50% -18%, rgba(255, 255, 255, .18), transparent 70%),
+    linear-gradient(180deg, #1259EA 0%, #0E57E8 52%, #0B47C4 100%);
 }
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.04fr .96fr;
-  gap: 60px;
+  grid-template-columns: 1fr;
+  gap: 48px;
+  justify-items: center;
   align-items: center;
+}
+.hero-grid > div:first-child { max-width: 900px; }
+.hero-shot {
+  position: relative;
+  z-index: 2;
+  margin-top: -70px;
+}
+.hero-shot .container { display: flex; justify-content: center; }
+.hero-shot .app-card {
+  width: 100%;
+  max-width: 860px;
+  color: var(--ink);
+  box-shadow: 0 30px 64px rgba(16, 24, 40, .18);
 }
 
 .eyebrow {
@@ -361,55 +376,67 @@ ul, ol { margin: 0 0 1rem; padding-left: 1.15rem; }
   align-items: center;
   gap: 8px;
   margin-bottom: 20px;
-  padding: 6px 13px;
+  padding: 7px 16px;
   border-radius: 999px;
-  background: rgba(14, 87, 232, .08);
-  color: var(--blue);
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .34);
+  color: #fff;
   font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: .06em;
+  letter-spacing: .1em;
   text-transform: uppercase;
 }
 .eyebrow svg { flex: 0 0 auto; }
 
-.hero h1 { margin-bottom: 18px; max-width: 15ch; }
-.hero h1 em {
-  font-style: normal;
-  color: var(--blue);
-  background: linear-gradient(180deg, transparent 62%, rgba(0, 137, 247, .18) 62%);
+.hero h1 {
+  margin: 0 auto 20px;
+  max-width: 24ch;
+  color: #fff;
+  font-size: clamp(2rem, 3.9vw, 3.05rem);
+  letter-spacing: -.025em;
 }
+.hero h1 em { font-style: normal; color: #fff; }
 .lead {
-  font-size: 1.06rem;
+  font-size: 1.08rem;
   color: var(--body-text);
   max-width: 54ch;
+}
+.hero .lead {
+  margin: 0 auto;
+  color: rgba(255, 255, 255, .88);
+  font-size: 1.1rem;
+  max-width: 60ch;
 }
 .hero-cta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin: 28px 0 30px;
+  gap: 14px;
+  margin: 30px 0 34px;
+  justify-content: center;
 }
 
 .stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 40px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
+  gap: 14px 48px;
+  justify-content: center;
+  padding-top: 26px;
+  border-top: 1px solid rgba(255, 255, 255, .2);
 }
+.stat { text-align: center; }
 .stat strong {
   display: block;
-  font-size: 1.55rem;
+  font-size: 1.7rem;
   font-weight: 700;
   letter-spacing: -.02em;
-  color: var(--ink);
+  color: #fff;
 }
-.stat strong span { color: var(--blue); }
+.stat strong span { color: #fff; }
 .stat em {
   display: block;
   font-style: normal;
   font-size: 12.5px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, .74);
 }
 
 /* ---------- mock app card ---------- */
@@ -651,8 +678,9 @@ ul, ol { margin: 0 0 1rem; padding-left: 1.15rem; }
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(14, 87, 232, .1);
-  color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(14, 87, 232, .28);
 }
 
 .fact-panel {
@@ -712,33 +740,46 @@ ul, ol { margin: 0 0 1rem; padding-left: 1.15rem; }
 
 /* ---------- page header ---------- */
 .page-head {
-  padding: 52px 0 56px;
+  padding: 62px 0 68px;
+  text-align: center;
+  color: #fff;
   background:
-    radial-gradient(760px 300px at 88% -30%, rgba(0, 137, 247, .12), transparent 70%),
-    linear-gradient(180deg, var(--surface) 0%, #fff 100%);
-  border-bottom: 1px solid var(--border);
+    radial-gradient(700px 320px at 50% -30%, rgba(255, 255, 255, .16), transparent 70%),
+    linear-gradient(180deg, #1259EA 0%, #0E57E8 55%, #0B47C4 100%);
 }
 .breadcrumb {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   padding: 0;
   list-style: none;
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .72);
 }
 .breadcrumb li { display: flex; align-items: center; gap: 8px; }
 .breadcrumb li + li::before {
   content: "/";
-  color: #C6CEDD;
+  color: rgba(255, 255, 255, .45);
 }
-.breadcrumb a { color: var(--muted); }
-.breadcrumb a:hover { color: var(--blue); }
-.breadcrumb [aria-current="page"] { color: var(--ink); font-weight: 500; }
-.page-head h1 { margin-bottom: 14px; }
-.page-head p { color: var(--body-text); max-width: 60ch; margin-bottom: 0; font-size: 1.02rem; }
+.breadcrumb a { color: rgba(255, 255, 255, .8); }
+.breadcrumb a:hover { color: #fff; }
+.breadcrumb [aria-current="page"] { color: #fff; font-weight: 500; }
+.page-head h1 {
+  margin-bottom: 14px;
+  color: #fff;
+  font-size: clamp(1.9rem, 3.7vw, 2.8rem);
+  letter-spacing: -.025em;
+}
+.page-head p {
+  color: rgba(255, 255, 255, .86);
+  max-width: 62ch;
+  margin: 0 auto;
+  font-size: 1.04rem;
+}
+.page-head-cta { justify-content: center; }
 
 /* ---------- module gallery ---------- */
 .gallery {
@@ -1277,4 +1318,83 @@ body.is-locked { overflow: hidden; }
     animation-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+
+/* ============================================================
+   Digiado skin — blue band, chips, on-blue buttons
+   ============================================================ */
+
+/* pill chip strip under the header */
+.chip-bar {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.chip-bar .container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 13px;
+  padding-bottom: 13px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chip-bar .container::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #F1F5F9;
+  color: #3D4557;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color .16s ease, color .16s ease;
+}
+.chip:hover { background: rgba(14, 87, 232, .09); color: var(--blue); }
+
+/* buttons that sit on the blue band */
+.btn-on-blue {
+  background: #1C4FD6;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(4, 22, 70, .34);
+}
+.btn-on-blue:hover {
+  background: #1743B8;
+  color: #fff;
+  transform: translateY(-1px);
+}
+.btn-ghost-on-blue {
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .38);
+}
+.btn-ghost-on-blue:hover {
+  background: rgba(255, 255, 255, .24);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .6);
+}
+.cta-band .btn-ghost {
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .38);
+}
+.cta-band .btn-ghost:hover {
+  background: rgba(255, 255, 255, .24);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .6);
+}
+
+/* cards keep the white-on-light rhythm of the reference */
+.card { border-radius: 16px; }
+.app-card { border-radius: 16px; }
+
+@media (max-width: 980px) {
+  .hero { padding: 58px 0 68px; }
+  .hero-grid { gap: 36px; }
+  .page-head { padding: 44px 0 50px; }
+}
+@media (max-width: 760px) {
+  .hero h1 { max-width: 26ch; }
+  .stats { gap: 18px 32px; }
 }
