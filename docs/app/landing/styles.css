@@ -364,37 +364,6 @@ body.cn-open { overflow: hidden; }
 .cn-menu .m-sub a:hover { color: var(--blue); }
 .cn-menu .cn-menu-cta { padding: 20px 24px; margin-top: auto; }
 
-/* ---------- chip strip ---------- */
-.chip-bar {
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 69px;
-  z-index: 900;
-}
-.chip-bar .container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-top: 16px;
-  padding-bottom: 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.chip-bar .container::-webkit-scrollbar { display: none; }
-.chip {
-  flex: 0 0 auto;
-  padding: 8px 16px;
-  border-radius: 30px;
-  background: var(--chip);
-  color: var(--slate);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: background-color .2s, color .2s;
-}
-.chip:hover { background: var(--blue); color: #fff; }
-
 /* ---------- blue band (hero + page heads) ---------- */
 .hero {
   position: relative;
@@ -1276,7 +1245,6 @@ body.is-locked { overflow: hidden; }
   h1, .hero h1, .page-head h1 { font-size: 38px; }
   h2, .cta-band h2 { font-size: 28px; }
 
-  .chip-bar { position: static; }
   .hero { padding: 56px 0 48px; }
   .hero-shot { margin-top: -32px; }
   .page-head { padding: 56px 0 48px; }
