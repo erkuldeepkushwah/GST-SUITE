@@ -36,27 +36,33 @@ if (!existsSync(join(DIST, 'index.html'))) {
   process.exit(0);
 }
 
-// 1. keep a browsable copy at /landing/
+// 1. the app keeps its own index.html, but Cloudflare Pages normalises
+//    /index.html to /, which is rewritten to the marketing home. Publish the
+//    same shell at /app/ so the app has a URL of its own.
+mkdirSync(join(DIST, 'app'), { recursive: true });
+cpSync(join(DIST, 'index.html'), join(DIST, 'app', 'index.html'));
+
+// 2. keep a browsable copy at /landing/
 mkdirSync(join(DIST, 'landing'), { recursive: true });
 for (const file of FILES) {
   cpSync(join(SRC, file), join(DIST, 'landing', file));
 }
 
-// 2. flat copies at the site root; the home page becomes home.html
+// 3. flat copies at the site root; the home page becomes home.html
 for (const file of FILES) {
   const target = file === 'index.html' ? 'home.html' : file;
   cpSync(join(SRC, file), join(DIST, target));
 }
 
-// 3. serve the marketing home at "/" and leave the app at /index.html
+// 4. serve the marketing home at "/" and leave the app at /index.html
 writeFileSync(
   join(DIST, '_redirects'),
   [
     '# Marketing home at the site root.',
-    '# The React app keeps its own index.html and is reachable at /index.html.',
+    '# The React app is published at /app/.',
     '/            /home.html    200',
     '',
   ].join('\n'),
 );
 
-console.log('[landing] published home + 4 pages to the build root; app stays at /index.html');
+console.log('[landing] published home + 4 pages to the build root; app at /app/');
