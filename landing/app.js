@@ -8,30 +8,43 @@
 (function () {
   "use strict";
 
-  /* ---------- 1. mobile nav ---------- */
-  var toggle = document.querySelector(".nav-toggle");
-  var nav = document.getElementById("primary-nav");
+  /* ---------- 1. mobile drawer ---------- */
+  var navToggle = document.querySelector(".nav-toggle");
+  var drawer = document.getElementById("cn-menu");
 
-  if (toggle && nav) {
-    toggle.addEventListener("click", function () {
-      var open = nav.classList.toggle("is-open");
-      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  if (navToggle && drawer) {
+    function openDrawer() {
+      document.body.classList.add("cn-open");
+      drawer.setAttribute("aria-hidden", "false");
+      navToggle.setAttribute("aria-expanded", "true");
+    }
+    function closeDrawer() {
+      document.body.classList.remove("cn-open");
+      drawer.setAttribute("aria-hidden", "true");
+      navToggle.setAttribute("aria-expanded", "false");
+    }
+
+    navToggle.addEventListener("click", function () {
+      if (document.body.classList.contains("cn-open")) closeDrawer();
+      else openDrawer();
     });
 
-    // close after tapping a link (useful on single-page anchors)
-    nav.addEventListener("click", function (e) {
-      if (e.target.closest("a") && nav.classList.contains("is-open")) {
-        nav.classList.remove("is-open");
-        toggle.setAttribute("aria-expanded", "false");
+    document.querySelectorAll("[data-cn-close]").forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.preventDefault();
+        closeDrawer();
+      });
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if ((e.key === "Escape" || e.key === "Esc") &&
+          document.body.classList.contains("cn-open")) {
+        closeDrawer();
       }
     });
 
-    // reset the menu if the viewport grows past the breakpoint
     window.addEventListener("resize", function () {
-      if (window.innerWidth > 980 && nav.classList.contains("is-open")) {
-        nav.classList.remove("is-open");
-        toggle.setAttribute("aria-expanded", "false");
-      }
+      if (window.innerWidth > 1024) closeDrawer();
     });
   }
 
