@@ -212,6 +212,51 @@ ul, ol { margin: 0 0 1rem; padding-left: 1.15rem; }
 }
 .nav a:hover { color: var(--blue); }
 .nav a.is-active { color: var(--blue); }
+/* ---------- nav dropdown (Digiado .cn-submenu) ---------- */
+.nav-item { position: relative; }
+.nav-item > a { display: inline-flex; align-items: center; }
+.dropdown-chevron {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  margin-top: -3px;
+  margin-left: 6px;
+  transition: transform .2s ease, margin-top .2s ease;
+}
+.nav-item:hover .dropdown-chevron,
+.nav-item:focus-within .dropdown-chevron { transform: rotate(-135deg); margin-top: 3px; }
+
+.cn-submenu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: -14px;
+  min-width: 270px;
+  background: #fff;
+  border: 1px solid #EDF0F5;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .12);
+  padding: 8px 0;
+  list-style: none;
+  margin: 6px 0 0;
+  z-index: 10001;
+}
+.nav-item:hover .cn-submenu,
+.nav-item:focus-within .cn-submenu { display: block; }
+.cn-submenu li a {
+  display: block;
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #222938;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.cn-submenu li a:hover { background: #EEF4FE; color: var(--blue); }
+
 .nav a .nav-ext {
   display: inline-block;
   vertical-align: -1px;
@@ -300,6 +345,15 @@ body.cn-open { overflow: hidden; }
 }
 .cn-menu nav a:hover { color: var(--blue); }
 .cn-menu nav a.is-active { color: var(--blue); }
+.cn-menu .m-sub { background: var(--surface); }
+.cn-menu .m-sub a {
+  padding: 11px 24px 11px 38px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--slate);
+  border-bottom: 1px solid #fff;
+}
+.cn-menu .m-sub a:hover { color: var(--blue); }
 .cn-menu .cn-menu-cta { padding: 20px 24px; margin-top: auto; }
 
 /* ---------- chip strip ---------- */
@@ -768,6 +822,7 @@ body.cn-open { overflow: hidden; }
 
 /* ---------- module gallery ---------- */
 .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.shot-card { scroll-margin-top: 120px; }
 
 .shot-card {
   display: flex;
