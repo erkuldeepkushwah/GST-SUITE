@@ -89,10 +89,11 @@ r = one(base, { ...base, inv: 'INV-9', date: '09-04-2026' });
 check('rule 4: same GSTIN, invoice no + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 4, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, gstin: B });
-check('rule 5: same invoice no, GSTIN differs -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 5, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 5: same invoice no + date + amount, GSTIN differs -> Possible mismatch', r[0].Status === 'Possible mismatch' && r[0]['Match Rule'] === 5, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 5: reason names the wrong-state booking', /wrong state GSTIN/i.test(r[0].Reason), r[0].Reason);
 
 r = one(base, { ...base, gstin: B, date: '09-04-2026' });
-check('rule 6: same invoice no, GSTIN + date differ -> Match', r[0].Status === 'Match' && r[0]['Match Rule'] === 6, `${r[0].Status} / ${r[0]['Match Rule']}`);
+check('rule 6: same invoice no + amount, GSTIN and date differ -> Possible mismatch', r[0].Status === 'Possible mismatch' && r[0]['Match Rule'] === 6, `${r[0].Status} / ${r[0]['Match Rule']}`);
 
 r = one(base, { ...base, taxable: 9000, igst: 1620 });
 check('rule 8: GSTIN + invoice same, amount differs -> Mismatch', r[0].Status === 'Mismatch' && r[0]['Match Rule'] === 8, `${r[0].Status} / ${r[0]['Match Rule']}`);
@@ -112,7 +113,7 @@ check('rule 7: neither GSTIN nor invoice no same -> no pair, even with the same 
 const splitPortal = [portalRow({ ...base, gstin: B, igst: 1800 })];
 const splitBooks = [booksRow({ ...base, gstin: A, igst: 0, cgst: 900, sgst: 900 })];
 const split = compareFrames(splitPortal, splitBooks, 1);
-check('tax head split with the same total is a Match, not a Mismatch', split[0].Status === 'Match' && split[0]['Match Rule'] === 5, `${split[0].Status} / ${split[0]['Match Rule']}`);
+check('tax head split with the same total is not a Mismatch', split[0].Status === 'Possible mismatch' && split[0]['Match Rule'] === 5, `${split[0].Status} / ${split[0]['Match Rule']}`);
 
 // rule 6 of the sheet: invoice numbers differing only by slash / dash / space
 check('invoice key ignores slashes, dashes and spaces', normalizeInvoice('INV/26-27/001') === normalizeInvoice('inv 26 27 001'), normalizeInvoice('INV/26-27/001'));
@@ -169,7 +170,7 @@ check('period: return period column detected', detectReturnPeriodColumn(['GSTIN'
 const sMatch = summarize(compareFrames([portalRow(base)], [booksRow(base)], 1));
 check('summary: counts a match', sMatch.matched === 1, String(sMatch.matched));
 const sPossible = summarize(compareFrames([portalRow(base)], [booksRow({ ...base, gstin: B })], 1));
-check('summary: a GSTIN-only difference is a full match, not a possible one', sPossible.matched === 1 && sPossible.possible === 0, `${sPossible.matched}/${sPossible.possible}`);
+check('summary: a GSTIN-only difference counts as possible, not matched', sPossible.matched === 0 && sPossible.possible === 1 && sPossible.possibleMismatch === 1, `${sPossible.matched}/${sPossible.possible}/${sPossible.possibleMismatch}`);
 
 check('3B: seven particulars', threeBRows({}).length === 7, String(threeBRows({}).length));
 

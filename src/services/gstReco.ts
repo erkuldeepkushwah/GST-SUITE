@@ -389,7 +389,17 @@ export function standardize(
   });
 }
 
-export type RecoStatus = 'Match' | 'Possible Match' | 'Mismatch' | 'Only in Portal' | 'Only in Books';
+export type RecoStatus =
+  | 'Match'
+  | 'Possible Match'
+  /** Invoice no, date and amount agree but the party GSTIN does not: the same
+   * bill was booked against another state's registration. Not a clean match,
+   * because the ITC would land in the wrong state, and not a plain mismatch,
+   * because the invoice itself is the right one. */
+  | 'Possible mismatch'
+  | 'Mismatch'
+  | 'Only in Portal'
+  | 'Only in Books';
 
 export interface RecoRow extends Record<string, any> {
   Status: RecoStatus;
@@ -496,8 +506,12 @@ const STATUS_BY_RULE: Record<number, RecoStatus> = {
   2: 'Match',
   3: 'Match',
   4: 'Match',
-  5: 'Match',
-  6: 'Match',
+  // Rows 5 and 6 pair on invoice number and amount while the GSTIN differs, so
+  // the invoice is right but the registration is not. Reporting them as a plain
+  // Match hid a wrong-state booking; reporting them as a Mismatch would claim
+  // the amount is wrong when it is not.
+  5: 'Possible mismatch',
+  6: 'Possible mismatch',
   8: 'Mismatch',
 };
 
@@ -509,9 +523,28 @@ export const RULE_REASON: Record<number, string> = {
   2: 'GSTIN, invoice no and amount match - date mismatch',
   3: 'GSTIN, date and amount match - invoice no mismatch',
   4: 'GSTIN and amount match - invoice no and date mismatch',
-  5: 'Invoice no, date and amount match - GSTIN mismatch',
-  6: 'Invoice no and amount match - GSTIN and date mismatch',
+  5: 'Book entry invoice booked in wrong state GSTIN',
+  6: 'Book entry invoice booked in wrong state GSTIN - date also differs',
   8: 'Amount mismatch - GSTIN or invoice no matches',
+};
+
+/** First two digits of a GSTIN are the state code; naming the state turns
+ * "GSTIN mismatch" into something a reviewer can act on. */
+const STATE_BY_CODE: Record<string, string> = {
+  '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
+  '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
+  '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
+  '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+  '26': 'Dadra & Nagar Haveli and Daman & Diu', '27': 'Maharashtra', '29': 'Karnataka',
+  '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry',
+  '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh',
+  '97': 'Other Territory',
+};
+
+const stateOf = (gstin: string) => {
+  const code = String(gstin || '').slice(0, 2);
+  return STATE_BY_CODE[code] || (code ? `state ${code}` : 'no GSTIN');
 };
 
 const inr = (v: number) =>
@@ -551,6 +584,16 @@ function pairReason(
     if (f.taxable && f.tax && !f.invoiceValue) {
       parts.push(`invoice value by ${inr(gap('Invoice Value'))}`);
     }
+  }
+
+  // Rows 5 and 6: show both registrations with their states, so the reviewer
+  // can see which side was booked in the wrong state.
+  if (rule === 5 || rule === 6) {
+    const portalGstin = String(a.gstin || '').toUpperCase();
+    const booksGstin = String(b.gstin || '').toUpperCase();
+    parts.push(
+      `portal ${portalGstin || '-'} (${stateOf(portalGstin)}) vs books ${booksGstin || '-'} (${stateOf(booksGstin)})`
+    );
   }
 
   return parts.join(' \u00b7 ');
@@ -757,6 +800,7 @@ export function compareFrames(
 
   const rank: Record<string, number> = {
     Mismatch: 0,
+    'Possible mismatch': 1,
     'Possible Match': 1,
     'Only in Portal': 2,
     'Only in Books': 3,
@@ -781,6 +825,8 @@ export function exceptionRows(rows: RecoRow[]): RecoRow[] {
 export interface RecoSummary {
   matched: number;
   possible: number;
+  /** Subset of `possible`: same invoice, different party GSTIN. */
+  possibleMismatch: number;
   mismatch: number;
   onlyPortal: number;
   onlyBooks: number;
@@ -794,7 +840,8 @@ export function summarize(rows: RecoRow[]): RecoSummary {
 
   return {
     matched: rows.filter((r) => r.Status === 'Match').length,
-    possible: rows.filter((r) => r.Status === 'Possible Match').length,
+    possible: rows.filter((r) => r.Status === 'Possible Match' || r.Status === 'Possible mismatch').length,
+    possibleMismatch: rows.filter((r) => r.Status === 'Possible mismatch').length,
     mismatch: rows.filter((r) => r.Status === 'Mismatch').length,
     onlyPortal: rows.filter((r) => r.Status === 'Only in Portal').length,
     onlyBooks: rows.filter((r) => r.Status === 'Only in Books').length,
