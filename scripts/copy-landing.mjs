@@ -28,7 +28,7 @@ if (!existsSync(join(DIST, 'index.html'))) {
 
 // every page plus any shared css / js sitting beside it
 const files = readdirSync(SRC).filter(
-  (f) => !f.startsWith('.') && /\.(html|css|js)$/i.test(f),
+  (f) => !f.startsWith('.') && /\.(html|css|js|png|jpe?g|svg|webp|gif|ico)$/i.test(f),
 );
 if (!files.length) {
   console.warn('[landing] nothing to publish in ./landing');
