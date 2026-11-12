@@ -174,7 +174,7 @@ export const Sidebar: React.FC<Props> = ({
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-[#94A3B8]">
           {t('about_heading', lang)}
         </div>
-        <div className="font-semibold text-[#062E80]">{FIRM_NAME}</div>
+        <div className="font-semibold text-[#165DFC]">{FIRM_NAME}</div>
         <div className="my-0.5 text-[11px] text-[#64748B]">{FIRM_TAGLINE}</div>
         <div className="text-[11px] text-[#94A3B8]">{FIRM_LOCATION}</div>
       </div>

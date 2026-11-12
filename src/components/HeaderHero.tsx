@@ -29,11 +29,11 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="w-8 h-8 rounded-lg bg-[#062E80] flex items-center justify-center p-1 shadow-2xs overflow-hidden shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[#165DFC] flex items-center justify-center p-1 shadow-2xs overflow-hidden shrink-0">
             <img src={LOGO_PATH} alt={FIRM_NAME} className="w-full h-full object-contain" />
           </div>
           <div className="leading-tight">
-            <span className="font-bold text-sm text-[#062E80]">{FIRM_NAME}</span>
+            <span className="font-bold text-sm text-[#165DFC]">{FIRM_NAME}</span>
             <span className="text-xs text-slate-500 ml-2 hidden sm:inline">{FIRM_TAGLINE}</span>
           </div>
         </div>
