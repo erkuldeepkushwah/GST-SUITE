@@ -179,6 +179,44 @@ async function engineChecks() {
   }
   console.log('GSTIN swap action:', swapped[0].Action);
 
+  // Same rule for credit / debit notes: a note booked against another state's
+  // GSTIN is one row, not a 2A note plus a books note.
+  const noteBase: any = {
+    ...books[0],
+    type: 'CDNR',
+    docType: 'CN',
+    docSource: 'Portal note type',
+    invoiceNo: 'CN/26/77',
+    invoiceDate: '2026-04-20',
+  };
+  const cdnSwap = runGst2aReconciliation(
+    [{ ...noteBase, source: 'GSTR-2A', gstin: '27AABCT1332L1ZE', party: 'Tata Steel Limited' }],
+    [{ ...noteBase, gstin: '24AAACB2233M1ZZ', party: 'Tata Steel Ltd' }],
+    '23AAOFT2395R1ZA',
+    { startDate: '2026-04-01', endDate: '2026-04-30', basis: 'both', manualTypes: [] }
+  );
+  const cdnRows = cdnSwap.cdnReco;
+  console.log('CDN GSTIN swap rows:', JSON.stringify(cdnRows.map((r: any) => [r.Status, r['Invoice No'], r.Reason])));
+  if (cdnRows.length !== 1 || cdnRows[0].Status !== 'Possible mismatch') {
+    throw new Error(`CDN swap: expected one Possible mismatch row, got ${JSON.stringify(cdnRows.map((r: any) => r.Status))}`);
+  }
+  if (!/wrong state GSTIN/i.test(String(cdnRows[0].Reason))) {
+    throw new Error(`CDN swap: reason missing, got "${cdnRows[0].Reason}"`);
+  }
+
+  // A credit note must not pair with a debit note that shares its number.
+  const cnDn = runGst2aReconciliation(
+    [{ ...noteBase, source: 'GSTR-2A', gstin: '27AABCT1332L1ZE', docType: 'CN' }],
+    [{ ...noteBase, gstin: '24AAACB2233M1ZZ', docType: 'DN' }],
+    '23AAOFT2395R1ZA',
+    { startDate: '2026-04-01', endDate: '2026-04-30', basis: 'both', manualTypes: [] }
+  );
+  const cnDnRows = cnDn.cdnReco;
+  if (cnDnRows.some((r: any) => r.Status === 'Possible mismatch')) {
+    throw new Error('CDN: a CN must not pair with a DN');
+  }
+  console.log('CDN CN vs DN stays apart:', JSON.stringify(cnDnRows.map((r: any) => r.Status)));
+
   // ---------- 6. Stock snapshot ----------
   const stockAoa = [
     ['Standard Hardware - Indore'],

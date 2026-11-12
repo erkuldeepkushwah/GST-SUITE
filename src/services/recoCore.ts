@@ -714,6 +714,10 @@ function pairAcrossGstin(
       if (usedBooks.has(b)) continue;
       if (cleanDocNumber(b['Invoice No']) !== invA) continue;
       if (String(a.GSTIN || '').toUpperCase() === String(b.GSTIN || '').toUpperCase()) continue;
+      // Credit and debit notes can share a number: never pair a CN with a DN.
+      const docA = String(a.Doc_2A || '').toUpperCase();
+      const docB = String(b.Doc_BK || '').toUpperCase();
+      if (docA && docB && docA !== docB) continue;
       if (Math.abs((b.Taxable_BK || 0) - (a.Taxable_2A || 0)) > tolerance) continue;
       if (Math.abs((b['Total Tax_BK'] || 0) - (a['Total Tax_2A'] || 0)) > tolerance) continue;
       // Same invoice no and amount, different registration: the date is the
