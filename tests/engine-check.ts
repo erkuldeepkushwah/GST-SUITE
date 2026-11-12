@@ -156,6 +156,29 @@ async function engineChecks() {
   for (const d of r2.dashboard) console.log('  ', d.Section, d.Status, d.Count, d['Taxable as per 2A'], d['Taxable as per Books']);
   console.log('2A gstr9 rows:', JSON.stringify(r2.gstr9Itc.filter((x: any) => x.Category.startsWith('ITC eligible') || x.Category.startsWith('Net'))));
 
+  // ---------- 5b. GSTIN mismatch on the same invoice ----------
+  // Portal and books carry the same invoice no, date and amount but a different
+  // party GSTIN. That used to arrive as two half-rows ("Only in 2A" plus "Only
+  // in Books"); it is one invoice booked against the wrong state registration.
+  const gstinSwap = runGst2aReconciliation(
+    [{ ...portal[0] }],
+    [{ ...books[0], gstin: '24AAACB2233M1ZZ' }],
+    '23AAOFT2395R1ZA',
+    { startDate: '2026-04-01', endDate: '2026-04-30', basis: 'both', manualTypes: [] }
+  );
+  const swapped = gstinSwap.b2bReco;
+  console.log('GSTIN swap rows:', JSON.stringify(swapped.map((r: any) => [r.Status, r['Invoice No'], r.Reason])));
+  if (swapped.length !== 1 || swapped[0].Status !== 'Possible mismatch') {
+    throw new Error(`GSTIN swap: expected one Possible mismatch row, got ${JSON.stringify(swapped.map((r: any) => r.Status))}`);
+  }
+  if (!/wrong state GSTIN/i.test(String(swapped[0].Reason))) {
+    throw new Error(`GSTIN swap: reason missing, got "${swapped[0].Reason}"`);
+  }
+  if (!swapped[0]['GSTIN (2A)'] || !swapped[0]['GSTIN (Books)']) {
+    throw new Error('GSTIN swap: both registrations should be on the row');
+  }
+  console.log('GSTIN swap action:', swapped[0].Action);
+
   // ---------- 6. Stock snapshot ----------
   const stockAoa = [
     ['Standard Hardware - Indore'],

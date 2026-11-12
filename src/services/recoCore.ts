@@ -664,7 +664,121 @@ function reconcileSets(portal: StandardRow[], books: StandardRow[], tolerance: n
     }
   }
 
-  return rows;
+  return pairAcrossGstin(rows, tolerance);
+}
+
+/** First two digits of a GSTIN are the state code. */
+const STATE_BY_CODE: Record<string, string> = {
+  '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
+  '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
+  '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
+  '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+  '26': 'Dadra & Nagar Haveli and Daman & Diu', '27': 'Maharashtra', '29': 'Karnataka',
+  '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry',
+  '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh',
+  '97': 'Other Territory',
+};
+
+const stateOf = (gstin: string) => {
+  const code = String(gstin || '').slice(0, 2);
+  return STATE_BY_CODE[code] || (code ? `state ${code}` : 'no GSTIN');
+};
+
+/**
+ * The portal key includes the GSTIN, so the same invoice booked against another
+ * state's registration never pairs: it shows up once as "Only in 2A" and once
+ * as "Only in Books", and the reviewer has to notice the two rows belong
+ * together. When invoice number, date and amount agree but the GSTIN does not,
+ * the invoice is right and the registration is wrong, so the two rows are
+ * replaced by one row marked "Possible mismatch".
+ */
+function pairAcrossGstin(
+  rows: Array<Record<string, any>>,
+  tolerance: number
+): Array<Record<string, any>> {
+  const only2a = rows.filter(r => r.Status === 'Only in 2A');
+  const onlyBk = rows.filter(r => r.Status === 'Only in Books');
+  if (!only2a.length || !onlyBk.length) return rows;
+
+  const merged: Array<Record<string, any>> = [];
+  const usedBooks = new Set<Record<string, any>>();
+  const replaced = new Set<Record<string, any>>();
+
+  for (const a of only2a) {
+    const invA = cleanDocNumber(a['Invoice No']);
+    if (!invA) continue;
+
+    let best: Record<string, any> | null = null;
+    for (const b of onlyBk) {
+      if (usedBooks.has(b)) continue;
+      if (cleanDocNumber(b['Invoice No']) !== invA) continue;
+      if (String(a.GSTIN || '').toUpperCase() === String(b.GSTIN || '').toUpperCase()) continue;
+      if (Math.abs((b.Taxable_BK || 0) - (a.Taxable_2A || 0)) > tolerance) continue;
+      if (Math.abs((b['Total Tax_BK'] || 0) - (a['Total Tax_2A'] || 0)) > tolerance) continue;
+      // Same invoice no and amount, different registration: the date is the
+      // tie-breaker when the books carry more than one candidate.
+      const sameDate = a.Date_2A && b.Date_BK && a.Date_2A === b.Date_BK;
+      if (!best || (sameDate && !(best.Date_2A && best.Date_BK && best.Date_2A === best.Date_BK))) {
+        best = b;
+        if (sameDate) break;
+      }
+    }
+
+    if (!best) continue;
+
+    usedBooks.add(best);
+    replaced.add(a);
+    replaced.add(best);
+
+    const gstin2a = String(a.GSTIN || '').toUpperCase();
+    const gstinBk = String(best.GSTIN || '').toUpperCase();
+    const dateNote =
+      a.Date_2A && best.Date_BK && a.Date_2A !== best.Date_BK
+        ? ' Date also differs (2A ' + a.Date_2A + ' vs Books ' + best.Date_BK + ').'
+        : '';
+
+    merged.push({
+      Status: 'Possible mismatch',
+      GSTIN: gstinBk,
+      'GSTIN (2A)': gstin2a,
+      'GSTIN (Books)': gstinBk,
+      Party: a.Party || best.Party || '',
+      'Invoice No': a['Invoice No'] || best['Invoice No'] || '',
+      Date_2A: a.Date_2A || '',
+      Date_BK: best.Date_BK || '',
+      Taxable_2A: round(a.Taxable_2A || 0),
+      Taxable_BK: round(best.Taxable_BK || 0),
+      'Taxable Diff (Books-2A)': round((best.Taxable_BK || 0) - (a.Taxable_2A || 0)),
+      'Total Tax_2A': round(a['Total Tax_2A'] || 0),
+      'Total Tax_BK': round(best['Total Tax_BK'] || 0),
+      'Tax Diff (Books-2A)': round((best['Total Tax_BK'] || 0) - (a['Total Tax_2A'] || 0)),
+      Reason: 'Book entry invoice booked in wrong state GSTIN',
+      Doc_2A: a.Doc_2A || '',
+      Doc_BK: best.Doc_BK || '',
+      DocSrc_BK: best.DocSrc_BK || '',
+      'Reason Code': 'GSTIN_DIFF',
+      Action:
+        'Invoice no, date and amount agree, but the party GSTIN differs - the book entry is booked under the wrong state registration. ' +
+        'Portal ' + (gstin2a || '-') + ' (' + stateOf(gstin2a) + ') vs Books ' + (gstinBk || '-') + ' (' + stateOf(gstinBk) + '). ' +
+        'Correct the GSTIN in the books before claiming ITC.' + dateNote,
+      'Name Check': a.Party && best.Party && a.Party.toLowerCase() !== best.Party.toLowerCase()
+        ? 'Name differs (check master)'
+        : '',
+      'Possible Pair': '',
+    });
+  }
+
+  if (!merged.length) return rows;
+
+  // Keep the original order for everything that was not paired, and drop the
+  // two half-rows that the pair replaced.
+  const out: Array<Record<string, any>> = [];
+  for (const r of rows) {
+    if (replaced.has(r)) continue;
+    out.push(r);
+  }
+  return [...merged, ...out];
 }
 
 function suggestPairs(result: Array<Record<string, any>>, tolerance = 1.0): Array<Record<string, any>> {
@@ -773,7 +887,7 @@ function buildGst2aDashboard(b2bReco: Array<Record<string, any>>, cdnReco: Array
     { name: 'CDN', list: cdnReco },
   ];
 
-  const statuses = ['Matched', 'Mismatch', 'Only in 2A', 'Only in Books'];
+  const statuses = ['Matched', 'Possible mismatch', 'Mismatch', 'Only in 2A', 'Only in Books'];
   const dash: Array<Record<string, any>> = [];
 
   for (const sec of sections) {
