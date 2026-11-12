@@ -145,6 +145,25 @@ async function engineChecks() {
   requireReason('GSTR-1 tieOut', r1.tieOut);
   console.log('GSTR1 tie-out row:', JSON.stringify(r1.tieOut[0]));
 
+  // ---------- 4b. GSTR-1: same invoice, different recipient GSTIN ----------
+  // Portal filed the sale against 27..., the sales register booked it against
+  // 24... . Same invoice no, date and amount, so it is one row, not two.
+  const booksOtherState = {
+    ...booksGstr1,
+    b2b: [{ ...booksGstr1.b2b[0], GSTIN: '24AAACB2233M1ZZ' }],
+  };
+  const r1b = runGstr1MultiReconciliation([p], [booksOtherState], '2026-04-01', '2026-04-30',
+    [{ 'Return Period': 'apr 2026', Taxable: 645000, IGST: 99000, CGST: 8550, SGST: 8550 }]);
+  const g1rows = r1b.b2bReco;
+  console.log('GSTR1 GSTIN swap rows:', JSON.stringify(g1rows.map((r: any) => [r.Status, r['Invoice No'], r.Reason])));
+  if (g1rows.length !== 1 || g1rows[0].Status !== 'Possible mismatch') {
+    throw new Error(`GSTR1 GSTIN swap: expected one Possible mismatch row, got ${JSON.stringify(g1rows.map((r: any) => r.Status))}`);
+  }
+  if (!/wrong state GSTIN/i.test(String(g1rows[0].Reason))) {
+    throw new Error(`GSTR1 GSTIN swap: reason missing, got "${g1rows[0].Reason}"`);
+  }
+  console.log('GSTR1 GSTIN swap action:', g1rows[0].Action);
+
   // ---------- 5. GST 2A sample ----------
   const { portal, books } = getSampleGst2aRows();
   const r2 = runGst2aReconciliation(portal, books, '23AAOFT2395R1ZA', {

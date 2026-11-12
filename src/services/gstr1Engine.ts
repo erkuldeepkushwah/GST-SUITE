@@ -429,9 +429,11 @@ export function runGstr1MultiReconciliation(
   const b2bMismatch = b2bReco.filter(r => r.Status === 'Mismatch');
   const b2bOnlyPortal = b2bReco.filter(r => r.Status === 'Only in Portal');
   const b2bOnlyBooks = b2bReco.filter(r => r.Status === 'Only in Books');
+  const b2bPossibleMismatch = b2bReco.filter(r => r.Status === 'Possible mismatch');
 
   const dashboard = [
     { Section: 'B2B', Status: 'Matched', Count: b2bMatched.length, 'Taxable (Portal)': sum(b2bMatched, 'Taxable_Portal'), 'Taxable (Books)': sum(b2bMatched, 'Taxable_Books') },
+    { Section: 'B2B', Status: 'Possible mismatch', Count: b2bPossibleMismatch.length, 'Taxable (Portal)': sum(b2bPossibleMismatch, 'Taxable_Portal'), 'Taxable (Books)': sum(b2bPossibleMismatch, 'Taxable_Books') },
     { Section: 'B2B', Status: 'Mismatch', Count: b2bMismatch.length, 'Taxable (Portal)': sum(b2bMismatch, 'Taxable_Portal'), 'Taxable (Books)': sum(b2bMismatch, 'Taxable_Books') },
     { Section: 'B2B', Status: 'Only in Portal', Count: b2bOnlyPortal.length, 'Taxable (Portal)': sum(b2bOnlyPortal, 'Taxable_Portal'), 'Taxable (Books)': 0 },
     { Section: 'B2B', Status: 'Only in Books', Count: b2bOnlyBooks.length, 'Taxable (Portal)': 0, 'Taxable (Books)': sum(b2bOnlyBooks, 'Taxable_Books') },
@@ -439,7 +441,7 @@ export function runGstr1MultiReconciliation(
 
   // CDNR was reconciled but never reached the dashboard, so notes never showed
   // up in the KPI strip or the overview table.
-  for (const st of ['Matched', 'Mismatch', 'Only in Portal', 'Only in Books']) {
+  for (const st of ['Matched', 'Possible mismatch', 'Mismatch', 'Only in Portal', 'Only in Books']) {
     const list = cdnrReco.filter(r => r.Status === st);
     dashboard.push({
       Section: 'CDNR',
@@ -450,7 +452,7 @@ export function runGstr1MultiReconciliation(
     });
   }
 
-  for (const st of ['Matched', 'Mismatch', 'Only in Portal', 'Only in Books']) {
+  for (const st of ['Matched', 'Possible mismatch', 'Mismatch', 'Only in Portal', 'Only in Books']) {
     const list = hsnReco.filter(r => r.Status === st);
     dashboard.push({
       Section: 'HSN',
@@ -676,7 +678,104 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
     }
   }
 
-  return results;
+  return pairGstr1AcrossGstin(results, tolerance);
+}
+
+/** First two digits of a GSTIN are the state code. */
+const STATE_BY_CODE: Record<string, string> = {
+  '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
+  '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
+  '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
+  '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+  '26': 'Dadra & Nagar Haveli and Daman & Diu', '27': 'Maharashtra', '29': 'Karnataka',
+  '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry',
+  '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh',
+  '97': 'Other Territory',
+};
+
+const stateOfGstin = (gstin: string) => {
+  const code = String(gstin || '').slice(0, 2);
+  return STATE_BY_CODE[code] || (code ? `state ${code}` : 'no GSTIN');
+};
+
+/**
+ * The key is GSTIN + invoice no, so the same invoice filed against another
+ * state's registration arrives as two half-rows. When invoice no, amount and
+ * date agree but the GSTIN does not, the invoice is right and the registration
+ * is wrong: report one row marked "Possible mismatch".
+ */
+function pairGstr1AcrossGstin(results: any[], tolerance: number): any[] {
+  const onlyPortal = results.filter(r => r.Status === 'Only in Portal');
+  const onlyBooks = results.filter(r => r.Status === 'Only in Books');
+  if (!onlyPortal.length || !onlyBooks.length) return results;
+
+  const keyOf = (v: any) => String(v || '').replace(/\s+/g, '').toUpperCase();
+  const merged: any[] = [];
+  const replaced = new Set<any>();
+  const usedBooks = new Set<any>();
+
+  for (const a of onlyPortal) {
+    const invA = keyOf(a['Invoice No']);
+    if (!invA) continue;
+
+    let best: any = null;
+    for (const b of onlyBooks) {
+      if (usedBooks.has(b)) continue;
+      if (keyOf(b['Invoice No']) !== invA) continue;
+      if (String(a.GSTIN || '').toUpperCase() === String(b.GSTIN || '').toUpperCase()) continue;
+      if (Math.abs((b.Taxable_Books || 0) - (a.Taxable_Portal || 0)) > tolerance) continue;
+      if (Math.abs((b.Tax_Books || 0) - (a.Tax_Portal || 0)) > tolerance) continue;
+      const sameDate = a.Date_Portal && b.Date_Books && a.Date_Portal === b.Date_Books;
+      if (!best || (sameDate && !(best.Date_Portal && best.Date_Books && best.Date_Portal === best.Date_Books))) {
+        best = b;
+        if (sameDate) break;
+      }
+    }
+
+    if (!best) continue;
+
+    usedBooks.add(best);
+    replaced.add(a);
+    replaced.add(best);
+
+    const gPortal = String(a.GSTIN || '').toUpperCase();
+    const gBooks = String(best.GSTIN || '').toUpperCase();
+    const dateNote =
+      a.Date_Portal && best.Date_Books && a.Date_Portal !== best.Date_Books
+        ? ' Date also differs (portal ' + a.Date_Portal + ' vs books ' + best.Date_Books + ').'
+        : '';
+
+    merged.push({
+      Status: 'Possible mismatch',
+      Reason: 'Book entry invoice booked in wrong state GSTIN',
+      GSTIN: gBooks,
+      'GSTIN (Portal)': gPortal,
+      'GSTIN (Books)': gBooks,
+      'Invoice No': a['Invoice No'] || best['Invoice No'] || '',
+      Date_Portal: a.Date_Portal || '',
+      Date_Books: best.Date_Books || '',
+      Taxable_Portal: round(a.Taxable_Portal || 0),
+      Taxable_Books: round(best.Taxable_Books || 0),
+      'Taxable Diff': round((best.Taxable_Books || 0) - (a.Taxable_Portal || 0)),
+      Tax_Portal: round(a.Tax_Portal || 0),
+      Tax_Books: round(best.Tax_Books || 0),
+      'Tax Diff': round((best.Tax_Books || 0) - (a.Tax_Portal || 0)),
+      Action:
+        'Invoice no, date and amount agree, but the recipient GSTIN differs - the book entry is booked under the wrong state registration. ' +
+        'Portal ' + (gPortal || '-') + ' (' + stateOfGstin(gPortal) + ') vs Books ' + (gBooks || '-') + ' (' + stateOfGstin(gBooks) + '). ' +
+        'Correct the GSTIN in the sales register before filing.' + dateNote,
+    });
+  }
+
+  if (!merged.length) return results;
+
+  const out: any[] = [];
+  for (const r of results) {
+    if (replaced.has(r)) continue;
+    out.push(r);
+  }
+  return [...merged, ...out];
 }
 
 /**
