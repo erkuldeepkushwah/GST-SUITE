@@ -11,197 +11,207 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip" href="#main">Skip to content</a>
 
-<!-- ================= header ================= -->
-<header class="site-header">
-  <div class="container">
-    <a class="brand" href="index.html" aria-label="Fingenuity Associates — home"><span class="brand-logo" aria-hidden="true"></span></a>
+<header class="hdr">
+  <div class="wrap hdr-in">
+    <a class="logo" href="index.html" aria-label="Fingenuity Associates — home">
+      <span class="logo-img" aria-hidden="true"></span>
+    </a>
 
-    <nav class="nav" id="primary-nav" aria-label="Primary">
-      <a href="index.html">Home</a>
-      <a href="about.html" class="is-active" aria-current="page">About</a>
-      <div class="nav-item has-dropdown">
-        <a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Solutions &amp; Modules<i class="dropdown-chevron" aria-hidden="true"></i></a>
-        <ul class="cn-submenu">
-          <li><a href="solutions.html">Module gallery</a></li>
-          <li><a href="solutions.html#gst-2a-2b">GST 2A / 2B reco</a></li>
-          <li><a href="solutions.html#gstr-1-3b">GSTR-1 &amp; GSTR-3B reco</a></li>
-          <li><a href="solutions.html#gst-reconciliation">GST-Reconciliation</a></li>
-          <li><a href="solutions.html#bank">Bank reco</a></li>
-          <li><a href="solutions.html#tds">TDS reco</a></li>
-          <li><a href="solutions.html#stock">Stock reco</a></li>
-        </ul>
-      </div>
-      <a href="blog.html">Blog</a>
-      <a href="contact.html">Contact</a>
+    <nav class="pillnav" aria-label="Primary">
+      <a class="pillnav-link" href="index.html">Home</a>
+      <a class="pillnav-link is-active" href="about.html">About</a>
+      <div class="pill-item has-menu"><a class="pill-btn" href="solutions.html">Solutions &amp; Modules <i class="chev" aria-hidden="true"></i></a><ul class="pill-menu"><li><a href="solutions.html">Module gallery</a></li><li><a href="solutions.html#gst-2a-2b">GST 2A / 2B vs purchase register</a></li><li><a href="solutions.html#gstr-1-3b">GSTR-1 vs GSTR-3B liability</a></li><li><a href="solutions.html#gst-reconciliation">GST-Reconciliation from any file</a></li><li><a href="solutions.html#bank">Bank statement vs books</a></li><li><a href="solutions.html#tds">TDS 26AS / AIS reconciler</a></li><li><a href="solutions.html#stock">Physical stock vs stock register</a></li><li><a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Open the live app</a></li></ul></div>
+      <a class="pillnav-link" href="blog.html">Blog</a>
+      <a class="pillnav-link" href="contact.html">Contact</a>
     </nav>
 
-
-    <div class="header-actions">
-      <a class="cn-btn" href="contact.html">Book a demo</a>
+    <div class="hdr-act">
+      <button class="icon-btn search-btn" type="button" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+      <a class="btn btn-primary" href="contact.html">Book a demo</a>
     </div>
 
-    <button class="nav-toggle" type="button" aria-label="Open menu" aria-controls="cn-menu">&#9776;</button>
+    <button class="nav-toggle" type="button" aria-label="Open menu" aria-controls="drawer">&#9776;</button>
   </div>
 </header>
 
-<!-- mobile drawer -->
-<div class="cn-backdrop" data-cn-close></div>
-<aside class="cn-menu" id="cn-menu" aria-label="Menu" aria-hidden="true">
-  <a class="cn-close" href="#" data-cn-close aria-label="Close menu">&times;</a>
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="about.html" class="is-active">About</a>
-    <a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Solutions &amp; Modules</a>
-    <div class="m-sub">
-      <a href="solutions.html">Module gallery</a>
-      <a href="solutions.html#gst-2a-2b">GST 2A / 2B reco</a>
-      <a href="solutions.html#gstr-1-3b">GSTR-1 &amp; GSTR-3B reco</a>
-      <a href="solutions.html#gst-reconciliation">GST-Reconciliation</a>
-      <a href="solutions.html#bank">Bank reco</a>
-      <a href="solutions.html#tds">TDS reco</a>
-      <a href="solutions.html#stock">Stock reco</a>
-    </div>
-    <a href="blog.html">Blog</a>
-    <a href="contact.html">Contact</a>
-  </nav>
-  <div class="cn-menu-cta">
-    <a class="btn btn-primary btn-block" href="contact.html">Book a demo</a>
+<div class="drawer-bg" data-close></div>
+<aside class="drawer" id="drawer" aria-label="Menu">
+  <div class="drawer-top">
+    <a class="logo" href="index.html" aria-label="Fingenuity Associates — home"><span class="logo-img" aria-hidden="true"></span></a>
+    <button class="drawer-close" type="button" data-close aria-label="Close menu">&times;</button>
   </div>
+  <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html" class="is-active">About</a>
+      <a href="solutions.html">Solutions &amp; Modules</a>
+      <div class="sub"><a href="solutions.html#gst-2a-2b">GST 2A / 2B vs purchase register</a><a href="solutions.html#gstr-1-3b">GSTR-1 vs GSTR-3B liability</a><a href="solutions.html#gst-reconciliation">GST-Reconciliation from any file</a><a href="solutions.html#bank">Bank statement vs books</a><a href="solutions.html#tds">TDS 26AS / AIS reconciler</a><a href="solutions.html#stock">Physical stock vs stock register</a><a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Open the live app</a></div>
+      <a href="blog.html">Blog</a>
+      <a href="contact.html">Contact</a>
+  </nav>
+  <div class="drawer-foot"><a class="btn btn-primary btn-block" href="contact.html">Book a demo</a></div>
 </aside>
 
-
 <main id="main">
-
-  <!-- ================= page header ================= -->
-  <section class="page-head">
-    <div class="container">
-      <ul class="breadcrumb">
-        <li><a href="index.html">Home</a></li>
-        <li><span aria-current="page">About</span></li>
-      </ul>
+  <section class="pagehead">
+    <div class="wrap">
+      <ul class="crumbs"><li><a href="index.html">Home</a></li><li><span>About</span></li></ul>
       <h1>A practice that got tired of matching by eye</h1>
       <p>Fingenuity Associates is an accounts and GST practice in Indore. The suite started as our own month-end tool. It is still the tool we use.</p>
     </div>
   </section>
 
-  <!-- ================= who we are ================= -->
-  <section class="section">
-    <div class="container">
-      <div class="split">
-        <div>
-          <span class="section-kicker">Who we are</span>
-          <h2>Written inside a working practice, not a product studio</h2>
-          <p>We file GST returns, keep books and reconcile stock for a book of clients across Indore and nearby districts. Every month, the same two hours went into comparing one export against another in Excel — sorting, eyeballing invoice numbers, and still missing the duplicate that had been claimed twice.</p>
-          <p>So we wrote the comparison down properly. GSTIN, invoice number, date, taxable value and each tax head get compared field by field. One invoice pairs once. Anything that does not tie gets a reason you can filter on, and the whole thing exports as a summary sheet plus an exceptions sheet.</p>
-          <p>Then other practices asked for it. That is the only reason this is a website and not a folder on our own laptop.</p>
-          <a class="btn btn-primary" href="solutions.html">See what it reconciles</a>
-        </div>
-
-        <div class="fact-panel">
-          <div class="fact-row"><span>Practice</span><b>Indore, Madhya Pradesh</b></div>
-          <div class="fact-row"><span>Work</span><b>GST, TDS, accounts, stock</b></div>
-          <div class="fact-row"><span>Suite</span><b>6 reconciliation modules</b></div>
-          <div class="fact-row"><span>Built for</span><b>Tax practices and CA firms</b></div>
-          <div class="fact-row"><span>Interface</span><b>5 UI languages</b></div>
-          <div class="fact-row"><span>Client files</span><b>Stay in the browser</b></div>
-        </div>
+  <section class="sec">
+    <div class="wrap split">
+      <div>
+        <span class="kicker">Who we are</span>
+        <h2>Written inside a working practice, not a product studio</h2>
+        <p>We file GST returns, keep books and reconcile stock for a book of clients across Indore and nearby districts. Every month the same two hours went into comparing one export against another in Excel — sorting, eyeballing invoice numbers, and still missing the duplicate that had been claimed twice.</p>
+        <p>So we wrote the comparison down properly. GSTIN, invoice number, date, taxable value and each tax head get compared field by field. One invoice pairs once. Anything that does not tie gets a reason you can filter on, and the whole thing exports as a summary sheet plus an exceptions sheet.</p>
+        <p>Then other practices asked for it. That is the only reason this is a website and not a folder on our own laptop.</p>
+        <a class="btn btn-primary" href="solutions.html">See what it reconciles</a>
       </div>
+      <div class="split-art"><svg viewBox="0 0 460 340" role="img" aria-label="Reconciliation summary with totals">
+  <rect x="18" y="18" width="424" height="304" rx="16" fill="#ffffff" stroke="#DDE5F1"/>
+  <rect x="38" y="40" width="120" height="10" rx="5" fill="#C9D8EF"/>
+  <rect x="38" y="64" width="80" height="8" rx="4" fill="#E1E9F4"/>
+  <rect x="38" y="92" width="118" height="66" rx="12" fill="#EEF4FE"/>
+  <rect x="52" y="108" width="44" height="14" rx="4" fill="#0E57E8"/>
+  <rect x="52" y="130" width="66" height="8" rx="4" fill="#B9CEEF"/>
+  <rect x="170" y="92" width="118" height="66" rx="12" fill="#F6F9FD"/>
+  <rect x="184" y="108" width="38" height="14" rx="4" fill="#131A2A"/>
+  <rect x="184" y="130" width="66" height="8" rx="4" fill="#DDE5F1"/>
+  <rect x="302" y="92" width="118" height="66" rx="12" fill="#F6F9FD"/>
+  <rect x="316" y="108" width="52" height="14" rx="4" fill="#0E9F6E"/>
+  <rect x="316" y="130" width="66" height="8" rx="4" fill="#DDE5F1"/>
+  <rect x="38" y="180" width="88" height="8" rx="4" fill="#C9D8EF"/>
+  <rect x="38" y="198" width="382" height="10" rx="5" fill="#E7ECF4"/>
+  <rect x="38" y="198" width="330" height="10" rx="5" fill="#0E57E8"/>
+  <rect x="38" y="224" width="88" height="8" rx="4" fill="#C9D8EF"/>
+  <rect x="38" y="242" width="382" height="10" rx="5" fill="#E7ECF4"/>
+  <rect x="38" y="242" width="250" height="10" rx="5" fill="#0E9F6E"/>
+  <rect x="38" y="268" width="88" height="8" rx="4" fill="#C9D8EF"/>
+  <rect x="38" y="286" width="382" height="10" rx="5" fill="#E7ECF4"/>
+  <rect x="38" y="286" width="150" height="10" rx="5" fill="#F59E0B"/>
+</svg></div>
     </div>
   </section>
 
-  <!-- ================= how we work ================= -->
-  <section class="section section-alt">
-    <div class="container">
-      <div class="section-head">
-        <span class="section-kicker">How we work</span>
+  <section class="sec sec-alt">
+    <div class="wrap">
+      <div class="sec-head center">
+        <span class="kicker">How we work</span>
         <h2>Four steps, same on every module</h2>
         <p>The flow does not change between GST, bank, TDS and stock. Learn it once and every module behaves the same way.</p>
       </div>
-
-      <div class="cards-4">
-        <article class="card card-hover">
-          <span class="num-badge" aria-hidden="true">1</span>
-          <h3>Bring both files</h3>
-          <p>The two exports go in as they are — purchase register and 2B, bank statement and cash book, stock register and books. They are read in your browser.</p>
-        </article>
-
-        <article class="card card-hover">
-          <span class="num-badge" aria-hidden="true">2</span>
-          <h3>Match field-wise</h3>
-          <p>GSTIN, invoice number, date, taxable value and each tax head are compared. One invoice pairs once, inside the ₹1 tolerance you set.</p>
-        </article>
-
-        <article class="card card-hover">
-          <span class="num-badge" aria-hidden="true">3</span>
-          <h3>Review the exceptions</h3>
-          <p>Every row carries a filterable reason — matched, value differs, missing in 2B, duplicate. Filter, and the review is a short list.</p>
-        </article>
-
-        <article class="card card-hover">
-          <span class="num-badge" aria-hidden="true">4</span>
-          <h3>Export and file</h3>
-          <p>An Excel with a summary sheet and an exceptions sheet. The working paper is done, and the numbers on it can be traced back to a row.</p>
-        </article>
+      <div class="cards3">
+        <article class="card"><span class="ico solid" aria-hidden="true"><strong>1</strong></span><h3>Bring both files</h3><p>The two exports go in as they are — purchase register and 2B, bank statement and cash book, stock register and books. They are read in your browser.</p></article>
+        <article class="card"><span class="ico solid" aria-hidden="true"><strong>2</strong></span><h3>Match field-wise</h3><p>GSTIN, invoice number, date, taxable value and each tax head are compared. One invoice pairs once, inside the ₹1 tolerance you set.</p></article>
+        <article class="card"><span class="ico solid" aria-hidden="true"><strong>3</strong></span><h3>Review the exceptions</h3><p>Every row carries a filterable reason — matched, value differs, missing in 2B, duplicate. Filter, and the review is a short list.</p></article>
+        <article class="card"><span class="ico solid" aria-hidden="true"><strong>4</strong></span><h3>Export and file</h3><p>An Excel with a summary sheet and an exceptions sheet. The working paper is done, and the numbers trace back to a row.</p></article>
       </div>
     </div>
   </section>
 
-  <!-- ================= CTA band ================= -->
-  <section class="section section-tight">
-    <div class="container">
-      <div class="cta-band">
-        <div>
-          <h2>Come see it run on your own file</h2>
-          <p>Bring one client's two exports. We will run the reconciliation on a shared screen and you can judge the exceptions list yourself.</p>
+  <section class="sec">
+    <div class="wrap split flip">
+      <div class="split-art"><svg viewBox="0 0 460 340" role="img" aria-label="Exception list with a reason on every row">
+  <rect x="18" y="18" width="424" height="304" rx="16" fill="#ffffff" stroke="#DDE5F1"/>
+  <rect x="38" y="38" width="384" height="34" rx="8" fill="#F6F9FD"/>
+  <rect x="52" y="50" width="60" height="9" rx="4" fill="#C9D8EF"/>
+  <rect x="180" y="50" width="52" height="9" rx="4" fill="#C9D8EF"/>
+  <rect x="286" y="50" width="60" height="9" rx="4" fill="#C9D8EF"/>
+  <rect x="38" y="84" width="384" height="40" rx="8" fill="#ffffff" stroke="#E7ECF4"/>
+  <rect x="52" y="99" width="66" height="9" rx="4" fill="#DDE5F1"/>
+  <rect x="180" y="99" width="46" height="9" rx="4" fill="#DDE5F1"/>
+  <rect x="286" y="94" width="72" height="19" rx="9" fill="#E8F8F0"/>
+  <rect x="298" y="101" width="48" height="6" rx="3" fill="#0E9F6E"/>
+  <rect x="38" y="132" width="384" height="40" rx="8" fill="#FFFBF2" stroke="#F3E2C0"/>
+  <rect x="52" y="147" width="58" height="9" rx="4" fill="#E9D6AE"/>
+  <rect x="180" y="147" width="46" height="9" rx="4" fill="#E9D6AE"/>
+  <rect x="286" y="142" width="72" height="19" rx="9" fill="#FEF4E6"/>
+  <rect x="298" y="149" width="48" height="6" rx="3" fill="#B45309"/>
+  <rect x="38" y="180" width="384" height="40" rx="8" fill="#FFF5F5" stroke="#F6D6D6"/>
+  <rect x="52" y="195" width="72" height="9" rx="4" fill="#EFC9C9"/>
+  <rect x="180" y="195" width="46" height="9" rx="4" fill="#EFC9C9"/>
+  <rect x="286" y="190" width="72" height="19" rx="9" fill="#FEEFEF"/>
+  <rect x="298" y="197" width="48" height="6" rx="3" fill="#DC2626"/>
+  <rect x="38" y="228" width="384" height="40" rx="8" fill="#ffffff" stroke="#E7ECF4"/>
+  <rect x="52" y="243" width="62" height="9" rx="4" fill="#DDE5F1"/>
+  <rect x="180" y="243" width="46" height="9" rx="4" fill="#DDE5F1"/>
+  <rect x="286" y="238" width="72" height="19" rx="9" fill="#EEF4FE"/>
+  <rect x="298" y="245" width="48" height="6" rx="3" fill="#0E57E8"/>
+  <rect x="38" y="282" width="140" height="26" rx="8" fill="#0E57E8"/>
+  <rect x="56" y="291" width="104" height="8" rx="4" fill="#BFD6FF"/>
+</svg></div>
+      <div>
+        <span class="kicker">At a glance</span>
+        <h2>The practice behind the suite</h2>
+        <ul class="checks">
+          <li><span class="tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><b>Practice:</b> Indore, Madhya Pradesh</span></li>
+          <li><span class="tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><b>Work:</b> GST, TDS, accounts, stock</span></li>
+          <li><span class="tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><b>Built for:</b> tax practices and CA firms</span></li>
+          <li><span class="tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><b>Interface:</b> 5 UI languages</span></li>
+          <li><span class="tick" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span><b>Client files:</b> stay in the browser</span></li>
+        </ul>
+        <div class="stats3">
+          <div><span class="n">6</span><span class="l">Modules</span></div>
+          <div><span class="n">5</span><span class="l">UI languages</span></div>
+          <div><span class="n">₹1</span><span class="l">Tolerance</span></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="cta">
+        <h2>Come see it run on your own file</h2>
+        <p>Bring one client's two exports. We will run the reconciliation on a shared screen and you can judge the exceptions list yourself.</p>
         <div class="cta-actions">
-          <a class="btn btn-light btn-lg" href="contact.html">Book a demo</a>
-          <a class="btn btn-ghost btn-lg" href="solutions.html">See the modules</a>
+          <a class="btn btn-white btn-lg" href="contact.html">Book a demo</a>
+          <a class="btn btn-outline btn-lg" href="solutions.html">See the six modules</a>
         </div>
       </div>
     </div>
   </section>
 
 </main>
-
-<!-- ================= footer ================= -->
-<footer class="site-footer">
-  <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <a class="brand" href="index.html" aria-label="Fingenuity Associates — home"><span class="brand-logo" aria-hidden="true"></span></a>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="logo" href="index.html" aria-label="Fingenuity Associates — home"><span class="logo-img" aria-hidden="true"></span></a>
         <p>A GST and accounts reconciliation suite for tax practices in Indore. Six modules, field-wise matching, and client files that never leave your machine.</p>
-        <span class="footer-badge"><span class="topbar-dot" aria-hidden="true"></span> Runs in your browser</span>
+        <span class="badge"><span class="dot-green" aria-hidden="true"></span> Runs in your browser</span>
       </div>
-
       <div>
         <h4>Site</h4>
-        <ul class="footer-links">
+        <ul>
           <li><a href="index.html">Home</a></li>
           <li><a href="about.html">About</a></li>
-          <li><a href="solutions.html">Module gallery</a></li>
+          <li><a href="solutions.html">Solutions &amp; Modules</a></li>
           <li><a href="blog.html">Blog</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </div>
-
       <div>
         <h4>Modules</h4>
-        <ul class="footer-links">
-          <li><a href="solutions.html">GST 2A / 2B reco</a></li>
-          <li><a href="solutions.html">GSTR-1 &amp; 3B reco</a></li>
-          <li><a href="solutions.html">GST-Reconciliation</a></li>
-          <li><a href="solutions.html">Bank reco</a></li>
-          <li><a href="solutions.html">TDS reco</a></li>
-          <li><a href="solutions.html">Stock reco</a></li>
+        <ul>
+          <li><a href="solutions.html#gst-2a-2b">GST 2A / 2B reco</a></li>
+          <li><a href="solutions.html#gstr-1-3b">GSTR-1 &amp; 3B reco</a></li>
+          <li><a href="solutions.html#gst-reconciliation">GST-Reconciliation</a></li>
+          <li><a href="solutions.html#bank">Bank reco</a></li>
+          <li><a href="solutions.html#tds">TDS reco</a></li>
+          <li><a href="solutions.html#stock">Stock reco</a></li>
         </ul>
       </div>
-
       <div>
         <h4>Office</h4>
-        <ul class="footer-links">
+        <ul>
           <li>Vijay Nagar, Indore<br>Madhya Pradesh 452010</li>
           <li><a href="mailto:hello@fingenuity.in">hello@fingenuity.in</a></li>
           <li><a href="tel:+917310000000">+91 731 000 0000</a></li>
@@ -209,8 +219,7 @@
         </ul>
       </div>
     </div>
-
-    <div class="footer-bottom">
+    <div class="foot-bottom">
       <p>© 2026 Fingenuity Associates. All rights reserved.</p>
       <ul>
         <li><a href="contact.html#privacy">Privacy note</a></li>

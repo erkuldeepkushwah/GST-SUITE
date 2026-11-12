@@ -4,105 +4,75 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solutions &amp; Modules — Fingenuity Associates</title>
-<meta name="description" content="Six reconciliation modules: GST 2A/2B, GSTR-1 and GSTR-3B, GST-Reconciliation, bank, TDS and stock — field-wise matching, a filterable reason on every row, and an Excel report with summary and exceptions.">
+<meta name="description" content="Six reconciliation modules: GST 2A/2B, GSTR-1 and 3B, GST-Reconciliation, bank, TDS and stock.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip" href="#main">Skip to content</a>
 
-<!-- ================= header ================= -->
-<header class="site-header">
-  <div class="container">
-    <a class="brand" href="index.html" aria-label="Fingenuity Associates — home"><span class="brand-logo" aria-hidden="true"></span></a>
+<header class="hdr">
+  <div class="wrap hdr-in">
+    <a class="logo" href="index.html" aria-label="Fingenuity Associates — home">
+      <span class="logo-img" aria-hidden="true"></span>
+    </a>
 
-    <nav class="nav" id="primary-nav" aria-label="Primary">
-      <a href="index.html">Home</a>
-      <a href="about.html">About</a>
-      <div class="nav-item has-dropdown">
-        <a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener" class="is-active">Solutions &amp; Modules<i class="dropdown-chevron" aria-hidden="true"></i></a>
-        <ul class="cn-submenu">
-          <li><a href="solutions.html">Module gallery</a></li>
-          <li><a href="solutions.html#gst-2a-2b">GST 2A / 2B reco</a></li>
-          <li><a href="solutions.html#gstr-1-3b">GSTR-1 &amp; GSTR-3B reco</a></li>
-          <li><a href="solutions.html#gst-reconciliation">GST-Reconciliation</a></li>
-          <li><a href="solutions.html#bank">Bank reco</a></li>
-          <li><a href="solutions.html#tds">TDS reco</a></li>
-          <li><a href="solutions.html#stock">Stock reco</a></li>
-        </ul>
-      </div>
-      <a href="blog.html">Blog</a>
-      <a href="contact.html">Contact</a>
+    <nav class="pillnav" aria-label="Primary">
+      <a class="pillnav-link" href="index.html">Home</a>
+      <a class="pillnav-link" href="about.html">About</a>
+      <div class="pill-item has-menu"><a class="pill-btn is-active" href="solutions.html">Solutions &amp; Modules <i class="chev" aria-hidden="true"></i></a><ul class="pill-menu"><li><a href="solutions.html">Module gallery</a></li><li><a href="solutions.html#gst-2a-2b">GST 2A / 2B vs purchase register</a></li><li><a href="solutions.html#gstr-1-3b">GSTR-1 vs GSTR-3B liability</a></li><li><a href="solutions.html#gst-reconciliation">GST-Reconciliation from any file</a></li><li><a href="solutions.html#bank">Bank statement vs books</a></li><li><a href="solutions.html#tds">TDS 26AS / AIS reconciler</a></li><li><a href="solutions.html#stock">Physical stock vs stock register</a></li><li><a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Open the live app</a></li></ul></div>
+      <a class="pillnav-link" href="blog.html">Blog</a>
+      <a class="pillnav-link" href="contact.html">Contact</a>
     </nav>
 
-
-    <div class="header-actions">
-      <a class="cn-btn" href="contact.html">Book a demo</a>
+    <div class="hdr-act">
+      <button class="icon-btn search-btn" type="button" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+      <a class="btn btn-primary" href="contact.html">Book a demo</a>
     </div>
 
-    <button class="nav-toggle" type="button" aria-label="Open menu" aria-controls="cn-menu">&#9776;</button>
+    <button class="nav-toggle" type="button" aria-label="Open menu" aria-controls="drawer">&#9776;</button>
   </div>
 </header>
 
-<!-- mobile drawer -->
-<div class="cn-backdrop" data-cn-close></div>
-<aside class="cn-menu" id="cn-menu" aria-label="Menu" aria-hidden="true">
-  <a class="cn-close" href="#" data-cn-close aria-label="Close menu">&times;</a>
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="about.html">About</a>
-    <a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener" class="is-active">Solutions &amp; Modules</a>
-    <div class="m-sub">
-      <a href="solutions.html">Module gallery</a>
-      <a href="solutions.html#gst-2a-2b">GST 2A / 2B reco</a>
-      <a href="solutions.html#gstr-1-3b">GSTR-1 &amp; GSTR-3B reco</a>
-      <a href="solutions.html#gst-reconciliation">GST-Reconciliation</a>
-      <a href="solutions.html#bank">Bank reco</a>
-      <a href="solutions.html#tds">TDS reco</a>
-      <a href="solutions.html#stock">Stock reco</a>
-    </div>
-    <a href="blog.html">Blog</a>
-    <a href="contact.html">Contact</a>
-  </nav>
-  <div class="cn-menu-cta">
-    <a class="btn btn-primary btn-block" href="contact.html">Book a demo</a>
+<div class="drawer-bg" data-close></div>
+<aside class="drawer" id="drawer" aria-label="Menu">
+  <div class="drawer-top">
+    <a class="logo" href="index.html" aria-label="Fingenuity Associates — home"><span class="logo-img" aria-hidden="true"></span></a>
+    <button class="drawer-close" type="button" data-close aria-label="Close menu">&times;</button>
   </div>
+  <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="solutions.html" class="is-active">Solutions &amp; Modules</a>
+      <div class="sub"><a href="solutions.html#gst-2a-2b">GST 2A / 2B vs purchase register</a><a href="solutions.html#gstr-1-3b">GSTR-1 vs GSTR-3B liability</a><a href="solutions.html#gst-reconciliation">GST-Reconciliation from any file</a><a href="solutions.html#bank">Bank statement vs books</a><a href="solutions.html#tds">TDS 26AS / AIS reconciler</a><a href="solutions.html#stock">Physical stock vs stock register</a><a href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Open the live app</a></div>
+      <a href="blog.html">Blog</a>
+      <a href="contact.html">Contact</a>
+  </nav>
+  <div class="drawer-foot"><a class="btn btn-primary btn-block" href="contact.html">Book a demo</a></div>
 </aside>
 
-
 <main id="main">
-
-  <!-- ================= page header ================= -->
-  <section class="page-head">
-    <div class="container">
-      <ul class="breadcrumb">
-        <li><a href="index.html">Home</a></li>
-        <li><span aria-current="page">Solutions &amp; Modules</span></li>
-      </ul>
+  <section class="pagehead">
+    <div class="wrap">
+      <ul class="crumbs"><li><a href="index.html">Home</a></li><li><span>Solutions &amp; Modules</span></li></ul>
       <h1>Six modules. One way of working.</h1>
       <p>Each module takes two records, matches them field by field, and hands back a summary plus a list of exceptions. Tap any screen to see it full size.</p>
-      <div class="page-head-cta">
-        <a class="btn btn-on-blue" href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Open the live app</a>
-        <a class="btn btn-ghost-on-blue" href="contact.html">Book a demo</a>
-      </div>
     </div>
   </section>
 
-  <!-- ================= gallery ================= -->
-  <section class="section">
-    <div class="container">
-      <div class="section-head">
-        <span class="section-kicker">The module gallery</span>
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">The module gallery</span>
         <h2>What the screens look like</h2>
         <p>Six modules, six screens. The layout is the same throughout: the two sources, the match, and the reason column.</p>
       </div>
-
       <div class="gallery">
-
-        <!-- 1. GST 2A / 2B -->
-        <article class="shot-card" id="gst-2a-2b" data-shot tabindex="0" role="button" aria-label="Open screenshot: GST 2A and 2B reconciliation">
+        <article class="shot-card" id="gst-2a-2b" data-shot tabindex="0" role="button" aria-label="Open screenshot: GST 2A / 2B reconciliation">
           <div class="shot">
             <svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of GSTR-2B and purchase register side by side with matched rows">
               <rect width="400" height="250" rx="12" fill="#ffffff"/>
@@ -148,10 +118,7 @@
               <line x1="184" y1="210" x2="216" y2="210" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="3 3"/>
               <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
             </svg>
-            <span class="shot-zoom" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              View
-            </span>
+            <span class="shot-zoom" aria-hidden="true">View</span>
           </div>
           <div class="shot-meta">
             <span class="shot-tag">GST</span>
@@ -159,9 +126,7 @@
             <p>Your purchase register against GSTR-2A and 2B, invoice by invoice.</p>
           </div>
         </article>
-
-        <!-- 2. GSTR-1 & 3B -->
-        <article class="shot-card" id="gstr-1-3b" data-shot tabindex="0" role="button" aria-label="Open screenshot: GSTR-1 and GSTR-3B reconciliation">
+        <article class="shot-card" id="gstr-1-3b" data-shot tabindex="0" role="button" aria-label="Open screenshot: GSTR-1 &amp; GSTR-3B reconciliation">
           <div class="shot">
             <svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of a GSTR-1 and GSTR-3B comparison table with a difference column">
               <rect width="400" height="250" rx="12" fill="#ffffff"/>
@@ -208,10 +173,7 @@
               <rect x="310" y="222" width="52" height="6" rx="3" fill="#7FB0FF"/>
               <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
             </svg>
-            <span class="shot-zoom" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              View
-            </span>
+            <span class="shot-zoom" aria-hidden="true">View</span>
           </div>
           <div class="shot-meta">
             <span class="shot-tag">Returns</span>
@@ -219,9 +181,7 @@
             <p>What you reported in GSTR-1, against what you claimed in 3B.</p>
           </div>
         </article>
-
-        <!-- 3. GST-Reconciliation -->
-        <article class="shot-card" id="gst-reconciliation" data-shot tabindex="0" role="button" aria-label="Open screenshot: GST reconciliation summary with a matched percentage">
+        <article class="shot-card" id="gst-reconciliation" data-shot tabindex="0" role="button" aria-label="Open screenshot: GST-Reconciliation">
           <div class="shot">
             <svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of a GST reconciliation summary with a matched percentage ring and totals">
               <rect width="400" height="250" rx="12" fill="#ffffff"/>
@@ -256,10 +216,7 @@
               <text x="278" y="219" font-size="7.5" fill="#8D99AE">missing / duplicate</text>
               <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
             </svg>
-            <span class="shot-zoom" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              View
-            </span>
+            <span class="shot-zoom" aria-hidden="true">View</span>
           </div>
           <div class="shot-meta">
             <span class="shot-tag">Summary</span>
@@ -267,9 +224,7 @@
             <p>One view of every GST pair, with the gap explained rather than just counted.</p>
           </div>
         </article>
-
-        <!-- 4. Bank reco -->
-        <article class="shot-card" id="bank" data-shot tabindex="0" role="button" aria-label="Open screenshot: bank reconciliation between statement and cash book">
+        <article class="shot-card" id="bank" data-shot tabindex="0" role="button" aria-label="Open screenshot: Bank reconciliation">
           <div class="shot">
             <svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of bank statement rows matched against cash book entries">
               <rect width="400" height="250" rx="12" fill="#ffffff"/>
@@ -317,10 +272,7 @@
               <rect x="352" y="209" width="24" height="16" rx="8" fill="#E8F8F0"/>
               <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
             </svg>
-            <span class="shot-zoom" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              View
-            </span>
+            <span class="shot-zoom" aria-hidden="true">View</span>
           </div>
           <div class="shot-meta">
             <span class="shot-tag">Bank</span>
@@ -328,9 +280,7 @@
             <p>Statement against cash book, with the open items left standing.</p>
           </div>
         </article>
-
-        <!-- 5. TDS reco -->
-        <article class="shot-card" id="tds" data-shot tabindex="0" role="button" aria-label="Open screenshot: TDS reconciliation against 26AS">
+        <article class="shot-card" id="tds" data-shot tabindex="0" role="button" aria-label="Open screenshot: TDS reconciliation">
           <div class="shot">
             <svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of a TDS reconciliation table by section against 26AS">
               <rect width="400" height="250" rx="12" fill="#ffffff"/>
@@ -377,10 +327,7 @@
               <rect x="352" y="216" width="26" height="14" rx="7" fill="#FEEFEF"/>
               <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
             </svg>
-            <span class="shot-zoom" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              View
-            </span>
+            <span class="shot-zoom" aria-hidden="true">View</span>
           </div>
           <div class="shot-meta">
             <span class="shot-tag">TDS</span>
@@ -388,9 +335,7 @@
             <p>TDS deducted in the books, against 26AS and Form 16A entries.</p>
           </div>
         </article>
-
-        <!-- 6. Stock reco -->
-        <article class="shot-card" id="stock" data-shot tabindex="0" role="button" aria-label="Open screenshot: stock reconciliation with variance per item">
+        <article class="shot-card" id="stock" data-shot tabindex="0" role="button" aria-label="Open screenshot: Stock reconciliation">
           <div class="shot">
             <svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of a stock reconciliation with bars per item and variance">
               <rect width="400" height="250" rx="12" fill="#ffffff"/>
@@ -432,10 +377,7 @@
               <rect x="330" y="213" width="44" height="10" rx="4" fill="#0E57E8"/>
               <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
             </svg>
-            <span class="shot-zoom" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-              View
-            </span>
+            <span class="shot-zoom" aria-hidden="true">View</span>
           </div>
           <div class="shot-meta">
             <span class="shot-tag">Stock</span>
@@ -443,127 +385,76 @@
             <p>The stock register against purchase and sales books, item by item.</p>
           </div>
         </article>
-
       </div>
-
       <p class="note">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <span><b>About these screens.</b> They are placeholder mockups drawn in the brand colours, not live product shots. Real screenshots can be dropped in later — replace the inline SVG inside each <b>.shot</b> block with an image and the gallery and lightbox will pick it up unchanged.</span>
+        <span><b>About these screens.</b> They are placeholder mockups drawn in the brand colours, not live product shots. Real screenshots can be dropped in later — replace the inline SVG inside each <b>.shot</b> block and the gallery and lightbox pick it up unchanged.</span>
       </p>
     </div>
   </section>
 
-  <!-- ================= summary cards ================= -->
-  <section class="section section-alt">
-    <div class="container">
-      <div class="section-head">
-        <span class="section-kicker">Common to every module</span>
+  <section class="sec sec-alt">
+    <div class="wrap">
+      <div class="sec-head center">
+        <span class="kicker">Common to every module</span>
         <h2>Four things you get whichever module you open</h2>
         <p>The modules differ in what they read, not in how they behave. That is deliberate — a new joiner should not have to learn six interfaces.</p>
       </div>
-
-      <div class="cards-4">
-        <article class="card card-hover">
-          <span class="icon-badge" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-          </span>
-          <h3>Field-wise matching</h3>
-          <p>GSTIN, invoice number, date, taxable value and each tax head compared separately — not a fuzzy name match.</p>
-        </article>
-
-        <article class="card card-hover">
-          <span class="icon-badge" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          </span>
-          <h3>A filterable reason</h3>
-          <p>Every row says why it is there. Filter to "value differs" and the review is a short, finite list.</p>
-        </article>
-
-        <article class="card card-hover">
-          <span class="icon-badge" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          </span>
-          <h3>One invoice, one pair</h3>
-          <p>An invoice can be matched once and once only, so nothing is counted twice in the summary.</p>
-        </article>
-
-        <article class="card card-hover">
-          <span class="icon-badge" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
-          </span>
-          <h3>Excel out, every time</h3>
-          <p>A summary sheet and an exceptions sheet, with the reason carried into the file — not just the screen.</p>
-        </article>
+      <div class="cards3">
+        <article class="card"><span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h7"/></svg></span><h3>Field-wise matching</h3><p>GSTIN, invoice number, date, taxable value and each tax head compared separately — not a fuzzy name match.</p></article>
+        <article class="card"><span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span><h3>A filterable reason</h3><p>Every row says why it is there. Filter to “value differs” and the review is a short, finite list.</p></article>
+        <article class="card"><span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><h3>One invoice, one pair</h3><p>An invoice can be matched once and once only, so nothing is counted twice in the summary.</p></article>
+        <article class="card"><span class="ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></span><h3>Excel out, every time</h3><p>A summary sheet and an exceptions sheet, with the reason carried into the file — not just the screen.</p></article>
       </div>
     </div>
   </section>
 
-  <!-- ================= CTA band ================= -->
-  <section class="section section-tight">
-    <div class="container">
-      <div class="cta-band">
-        <div>
-          <h2>Pick the module you dread most</h2>
-          <p>Most practices start with GST 2A/2B and add bank reco the same week. Bring one client's file and we will run whichever one you like.</p>
-        </div>
+  <section class="sec">
+    <div class="wrap">
+      <div class="cta">
+        <h2>Pick the module you dread most</h2>
+        <p>Most practices start with GST 2A/2B and add bank reco the same week. Bring one client's file and we will run whichever one you like.</p>
         <div class="cta-actions">
-          <a class="btn btn-light btn-lg" href="contact.html">Book a demo</a>
-          <a class="btn btn-ghost btn-lg" href="https://gst-suite.pages.dev/app/" target="_blank" rel="noopener">Open the live app</a>
+          <a class="btn btn-white btn-lg" href="contact.html">Book a demo</a>
+          <a class="btn btn-outline btn-lg" href="blog.html">Read the notes</a>
         </div>
       </div>
     </div>
   </section>
 
 </main>
-
-<!-- ================= lightbox ================= -->
-<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Module screenshot" aria-hidden="true">
-  <button class="lightbox-close" type="button" aria-label="Close screenshot">&times;</button>
-  <div class="lightbox-panel">
-    <div data-lightbox-shot></div>
-    <div class="lightbox-cap">
-      <h3 data-lightbox-title></h3>
-      <p data-lightbox-caption></p>
-    </div>
-  </div>
-</div>
-
-<!-- ================= footer ================= -->
-<footer class="site-footer">
-  <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <a class="brand" href="index.html" aria-label="Fingenuity Associates — home"><span class="brand-logo" aria-hidden="true"></span></a>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="logo" href="index.html" aria-label="Fingenuity Associates — home"><span class="logo-img" aria-hidden="true"></span></a>
         <p>A GST and accounts reconciliation suite for tax practices in Indore. Six modules, field-wise matching, and client files that never leave your machine.</p>
-        <span class="footer-badge"><span class="topbar-dot" aria-hidden="true"></span> Runs in your browser</span>
+        <span class="badge"><span class="dot-green" aria-hidden="true"></span> Runs in your browser</span>
       </div>
-
       <div>
         <h4>Site</h4>
-        <ul class="footer-links">
+        <ul>
           <li><a href="index.html">Home</a></li>
           <li><a href="about.html">About</a></li>
-          <li><a href="solutions.html">Module gallery</a></li>
+          <li><a href="solutions.html">Solutions &amp; Modules</a></li>
           <li><a href="blog.html">Blog</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </div>
-
       <div>
         <h4>Modules</h4>
-        <ul class="footer-links">
-          <li><a href="solutions.html">GST 2A / 2B reco</a></li>
-          <li><a href="solutions.html">GSTR-1 &amp; 3B reco</a></li>
-          <li><a href="solutions.html">GST-Reconciliation</a></li>
-          <li><a href="solutions.html">Bank reco</a></li>
-          <li><a href="solutions.html">TDS reco</a></li>
-          <li><a href="solutions.html">Stock reco</a></li>
+        <ul>
+          <li><a href="solutions.html#gst-2a-2b">GST 2A / 2B reco</a></li>
+          <li><a href="solutions.html#gstr-1-3b">GSTR-1 &amp; 3B reco</a></li>
+          <li><a href="solutions.html#gst-reconciliation">GST-Reconciliation</a></li>
+          <li><a href="solutions.html#bank">Bank reco</a></li>
+          <li><a href="solutions.html#tds">TDS reco</a></li>
+          <li><a href="solutions.html#stock">Stock reco</a></li>
         </ul>
       </div>
-
       <div>
         <h4>Office</h4>
-        <ul class="footer-links">
+        <ul>
           <li>Vijay Nagar, Indore<br>Madhya Pradesh 452010</li>
           <li><a href="mailto:hello@fingenuity.in">hello@fingenuity.in</a></li>
           <li><a href="tel:+917310000000">+91 731 000 0000</a></li>
@@ -571,8 +462,7 @@
         </ul>
       </div>
     </div>
-
-    <div class="footer-bottom">
+    <div class="foot-bottom">
       <p>© 2026 Fingenuity Associates. All rights reserved.</p>
       <ul>
         <li><a href="contact.html#privacy">Privacy note</a></li>
