@@ -616,11 +616,13 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
 
     const gstin = p?.GSTIN || b?.GSTIN;
     const invNo = p?.['Invoice No'] || b?.['Invoice No'];
+    const noteType = p?.Type ?? b?.Type ?? '';
 
     if (p && !b) {
       results.push({
         Status: 'Only in Portal',
         Reason: 'Not found in Books (sales register)',
+        ...(noteType ? { Type: noteType } : {}),
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: p.Date,
@@ -637,6 +639,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
       results.push({
         Status: 'Only in Books',
         Reason: 'Not found in GSTR-1 (portal)',
+        ...(noteType ? { Type: noteType } : {}),
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: '',
@@ -663,6 +666,7 @@ function matchGstr1Section(portalRows: any[], booksRows: any[], tolerance = 1.0)
       results.push({
         Status: isMatch ? 'Matched' : 'Mismatch',
         Reason: reasonParts.join(' \u00b7 '),
+        ...(noteType ? { Type: noteType } : {}),
         GSTIN: gstin,
         'Invoice No': invNo,
         Date_Portal: p.Date,
@@ -711,6 +715,15 @@ function pairGstr1AcrossGstin(results: any[], tolerance: number): any[] {
   if (!onlyPortal.length || !onlyBooks.length) return results;
 
   const keyOf = (v: any) => String(v || '').replace(/\s+/g, '').toUpperCase();
+  // Notes share the matcher with invoices, so a credit note must never pair
+  // with a debit note that happens to carry the same number.
+  const noteKind = (v: any) => {
+    const t = String(v || '').trim().toUpperCase();
+    if (!t) return '';
+    if (t.startsWith('C') || t.includes('CREDIT')) return 'CN';
+    if (t.startsWith('D') || t.includes('DEBIT')) return 'DN';
+    return t;
+  };
   const merged: any[] = [];
   const replaced = new Set<any>();
   const usedBooks = new Set<any>();
@@ -724,6 +737,9 @@ function pairGstr1AcrossGstin(results: any[], tolerance: number): any[] {
       if (usedBooks.has(b)) continue;
       if (keyOf(b['Invoice No']) !== invA) continue;
       if (String(a.GSTIN || '').toUpperCase() === String(b.GSTIN || '').toUpperCase()) continue;
+      const kindA = noteKind(a.Type);
+      const kindB = noteKind(b.Type);
+      if (kindA && kindB && kindA !== kindB) continue;
       if (Math.abs((b.Taxable_Books || 0) - (a.Taxable_Portal || 0)) > tolerance) continue;
       if (Math.abs((b.Tax_Books || 0) - (a.Tax_Portal || 0)) > tolerance) continue;
       const sameDate = a.Date_Portal && b.Date_Books && a.Date_Portal === b.Date_Books;

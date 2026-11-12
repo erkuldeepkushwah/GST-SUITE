@@ -164,6 +164,29 @@ async function engineChecks() {
   }
   console.log('GSTR1 GSTIN swap action:', g1rows[0].Action);
 
+  // GSTR-1 notes: a credit note booked against another state is one row, but a
+  // credit note never pairs with a debit note that shares its number.
+  const booksCdnCn = {
+    ...booksGstr1,
+    cdnr: [{ GSTIN: '24AAACB2233M1ZZ', 'Invoice No': 'CN-01', Date: '12-04-2026', Taxable: 10000, Tax: 1800, Type: 'C' }],
+  };
+  const rCdn = runGstr1MultiReconciliation([p], [booksCdnCn], '2026-04-01', '2026-04-30', []);
+  const cdnPm = rCdn.cdnrReco.filter((r: any) => r.Status === 'Possible mismatch');
+  console.log('GSTR1 CDN possible:', JSON.stringify(cdnPm.map((r: any) => [r.Status, r['Invoice No']])));
+  if (cdnPm.length !== 1 || cdnPm[0]['Invoice No'] !== 'CN-01') {
+    throw new Error(`GSTR1 CDN: expected CN-01 as Possible mismatch, got ${JSON.stringify(cdnPm.map((r: any) => r['Invoice No']))}`);
+  }
+
+  const booksCdnDn = {
+    ...booksGstr1,
+    cdnr: [{ GSTIN: '24AAACB2233M1ZZ', 'Invoice No': 'CN-01', Date: '12-04-2026', Taxable: 10000, Tax: 1800, Type: 'D' }],
+  };
+  const rCdn2 = runGstr1MultiReconciliation([p], [booksCdnDn], '2026-04-01', '2026-04-30', []);
+  if (rCdn2.cdnrReco.some((r: any) => r.Status === 'Possible mismatch')) {
+    throw new Error('GSTR1 CDN: a credit note must not pair with a debit note');
+  }
+  console.log('GSTR1 CDN CN vs DN stays apart:', JSON.stringify(rCdn2.cdnrReco.map((r: any) => r.Status)));
+
   // ---------- 5. GST 2A sample ----------
   const { portal, books } = getSampleGst2aRows();
   const r2 = runGst2aReconciliation(portal, books, '23AAOFT2395R1ZA', {
