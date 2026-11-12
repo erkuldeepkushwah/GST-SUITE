@@ -14,7 +14,11 @@ export const KPICards: React.FC<Props> = ({ items }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 my-4">
+    <div
+      className={`grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-4 ${
+        items.length >= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+      }`}
+    >
       {items.map((kpi, idx) => (
         <div
           key={idx}

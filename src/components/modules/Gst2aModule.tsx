@@ -235,6 +235,10 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
   let b2bMismatchCnt = 0, b2bMismatchAmt = 0;
   let only2aCnt = 0, only2aAmt = 0;
   let onlyBkCnt = 0, onlyBkAmt = 0;
+  // Same invoice, wrong state GSTIN: shown on its own so it is not lost between
+  // the matched and the mismatch totals, split by section.
+  let possibleCnt = 0;
+  let possibleB2b = 0, possibleCdn = 0;
 
   if (results) {
     for (const r of results.dashboard) {
@@ -252,6 +256,11 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
           onlyBkCnt = r.Count || 0;
           onlyBkAmt = r['Taxable as per Books'] || 0;
         }
+      }
+      if (r.Status === 'Possible mismatch') {
+        possibleCnt += r.Count || 0;
+        if (r.Section === 'B2B') possibleB2b += r.Count || 0;
+        if (r.Section === 'CDN') possibleCdn += r.Count || 0;
       }
     }
   }
@@ -454,6 +463,12 @@ export const Gst2aModule: React.FC<Props> = ({ commonPeriod, gstin, lang, onSetG
                 label: t('kpi_b2b_mismatch', lang),
                 value: b2bMismatchCnt.toLocaleString(),
                 sub: t('sub_taxable', lang, { amount: lakh(b2bMismatchAmt) }),
+                color: 'amber',
+              },
+              {
+                label: t('kpi_possible_mismatch', lang),
+                value: possibleCnt.toLocaleString(),
+                sub: t('sub_b2b_cdn_split', lang, { b2b: possibleB2b, cdn: possibleCdn }),
                 color: 'amber',
               },
               {
