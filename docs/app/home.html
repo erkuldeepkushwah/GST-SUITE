@@ -183,6 +183,324 @@ p{margin:0 0 1rem}
   .stats-grid,.foot-grid{grid-template-columns:1fr}
   .sec-head{flex-direction:column;align-items:flex-start}
 }
+
+/* ---------- home v2 ---------- */
+.hv-hero{position:relative;min-height:620px;display:grid;place-items:center;overflow:hidden;
+  color:#fff;text-align:center;background:#0b1b3a}
+.hv-hero .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.hv-hero::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,20,45,.82) 0%,rgba(10,40,110,.72) 60%,rgba(8,20,45,.9) 100%)}
+.hv-hero .wrap{position:relative;z-index:2;max-width:900px;padding:96px 24px}
+.hv-hero h1{color:#fff;font-size:clamp(2.2rem,5vw,4rem);margin:22px 0 20px;letter-spacing:-.03em}
+.hv-hero h1 span{color:#93c5fd}
+.hv-hero p{color:rgba(226,238,255,.9);font-size:1.1rem;max-width:44em;margin:0 auto 32px}
+.hv-cta{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.btn-solid{display:inline-flex;align-items:center;gap:9px;padding:16px 34px;border-radius:10px;
+  background:#2563eb;color:#fff;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  box-shadow:0 16px 34px rgba(37,99,235,.4);transition:.25s}
+.btn-solid:hover{background:#1d4ed8;transform:translateY(-2px)}
+.btn-line-w{display:inline-flex;align-items:center;gap:9px;padding:16px 34px;border-radius:10px;
+  border:2px solid rgba(255,255,255,.65);color:#fff;font-size:12px;font-weight:800;
+  letter-spacing:.12em;text-transform:uppercase;transition:.25s}
+.btn-line-w:hover{background:#fff;color:#1e3a8a;border-color:#fff}
+.scroll-dot{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:3;
+  color:rgba(255,255,255,.75);animation:bob 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+/* services */
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.svc{background:#fff;border:1px solid #eef2f7;border-radius:20px;overflow:hidden;transition:.3s}
+.svc:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,23,42,.1)}
+.svc .ph{aspect-ratio:4/3;overflow:hidden;background:linear-gradient(150deg,#e2e8f0,#dbeafe)}
+.svc .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.svc:hover .ph img{transform:scale(1.06)}
+.svc .body{padding:28px}
+.svc h3{font-size:1.25rem;margin-bottom:10px}
+.svc p{font-size:14.5px;color:#64748b;margin-bottom:20px}
+.svc .link{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#2563eb}
+.svc .link:hover{color:#1d4ed8}
+
+/* who we are */
+.who{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.who-img{position:relative;border-radius:22px;overflow:hidden;min-height:420px;
+  background:linear-gradient(150deg,#e2e8f0,#dbeafe);box-shadow:0 26px 54px rgba(15,23,42,.16)}
+.who-img img{width:100%;height:100%;min-height:420px;object-fit:cover}
+.who h2{font-size:clamp(1.7rem,3.2vw,2.5rem)}
+.who .accent{color:#2563eb}
+.counter-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:30px 0 26px;
+  padding:26px 0;border-top:1px solid #eef2f7;border-bottom:1px solid #eef2f7}
+.counter b{display:block;font-size:2rem;font-weight:800;color:#2563eb;letter-spacing:-.03em;line-height:1.1}
+.counter span{display:block;margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#94a3b8}
+.ticks{list-style:none;margin:0 0 26px;padding:0;display:grid;gap:12px}
+.ticks li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:#475569}
+.ticks .tk{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;
+  display:grid;place-items:center;margin-top:1px}
+
+/* three-up strip */
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.strip .box{border:1px solid #eef2f7;border-radius:18px;padding:28px;background:#fff}
+.strip .box:hover{border-color:#dbeafe;box-shadow:0 18px 36px rgba(15,23,42,.07)}
+.strip .n{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#bfdbfe;margin-bottom:14px}
+.strip h3{font-size:1.05rem;margin-bottom:8px}
+.strip p{font-size:14px;color:#64748b;margin:0}
+
+/* why choose us */
+.why{position:relative;overflow:hidden;color:#fff;background:#0b1b3a}
+.why .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.22}
+.why::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,20,45,.94),rgba(10,40,110,.8))}
+.why .wrap{position:relative;z-index:2}
+.why h2{color:#fff;font-size:clamp(1.8rem,3.4vw,2.6rem)}
+.why .est{display:inline-flex;align-items:baseline;gap:10px;margin-bottom:18px;color:#93c5fd}
+.why .est b{font-size:2.6rem;font-weight:800;letter-spacing:-.03em}
+.why .est span{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.why p{color:rgba(219,234,254,.82);font-size:15px;max-width:46em}
+.why-counters{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.why-counters .c{padding:24px;border-radius:16px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.14)}
+.why-counters b{display:block;font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.1}
+.why-counters span{display:block;margin-top:8px;font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#93c5fd}
+
+/* showcase */
+.show-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.show{border-radius:20px;overflow:hidden;background:#fff;border:1px solid #eef2f7;transition:.3s}
+.show:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,23,42,.1)}
+.show .ph{position:relative;aspect-ratio:16/11;overflow:hidden;background:linear-gradient(150deg,#e2e8f0,#dbeafe)}
+.show .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.show:hover .ph img{transform:scale(1.07)}
+.show .cat{position:absolute;top:14px;left:14px;padding:5px 12px;border-radius:999px;
+  background:rgba(255,255,255,.94);color:#1e40af;font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase}
+.show .body{padding:24px}
+.show h3{font-size:1.1rem;margin-bottom:8px}
+.show p{font-size:14px;color:#64748b;margin-bottom:16px}
+.show .link{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#2563eb}
+
+@media (max-width:1024px){
+  .svc-grid,.show-grid,.strip{grid-template-columns:1fr 1fr}
+  .who{grid-template-columns:1fr;gap:32px}
+  .why-counters,.counter-row{grid-template-columns:1fr 1fr}
+}
+@media (max-width:700px){
+  .svc-grid,.show-grid,.strip{grid-template-columns:1fr}
+  .hv-hero{min-height:520px}
+  .why-counters,.counter-row{grid-template-columns:1fr}
+}
+
+/* ---------- home v2 ---------- */
+.hv-hero{position:relative;min-height:620px;display:grid;place-items:center;overflow:hidden;
+  color:#fff;text-align:center;background:#0b1b3a}
+.hv-hero .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.hv-hero::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,20,45,.82) 0%,rgba(10,40,110,.72) 60%,rgba(8,20,45,.9) 100%)}
+.hv-hero .wrap{position:relative;z-index:2;max-width:900px;padding:96px 24px}
+.hv-hero h1{color:#fff;font-size:clamp(2.2rem,5vw,4rem);margin:22px 0 20px;letter-spacing:-.03em}
+.hv-hero h1 span{color:#93c5fd}
+.hv-hero p{color:rgba(226,238,255,.9);font-size:1.1rem;max-width:44em;margin:0 auto 32px}
+.hv-cta{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.btn-solid{display:inline-flex;align-items:center;gap:9px;padding:16px 34px;border-radius:10px;
+  background:#2563eb;color:#fff;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  box-shadow:0 16px 34px rgba(37,99,235,.4);transition:.25s}
+.btn-solid:hover{background:#1d4ed8;transform:translateY(-2px)}
+.btn-line-w{display:inline-flex;align-items:center;gap:9px;padding:16px 34px;border-radius:10px;
+  border:2px solid rgba(255,255,255,.65);color:#fff;font-size:12px;font-weight:800;
+  letter-spacing:.12em;text-transform:uppercase;transition:.25s}
+.btn-line-w:hover{background:#fff;color:#1e3a8a;border-color:#fff}
+.scroll-dot{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:3;
+  color:rgba(255,255,255,.75);animation:bob 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+/* services */
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.svc{background:#fff;border:1px solid #eef2f7;border-radius:20px;overflow:hidden;transition:.3s}
+.svc:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,23,42,.1)}
+.svc .ph{aspect-ratio:4/3;overflow:hidden;background:linear-gradient(150deg,#e2e8f0,#dbeafe)}
+.svc .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.svc:hover .ph img{transform:scale(1.06)}
+.svc .body{padding:28px}
+.svc h3{font-size:1.25rem;margin-bottom:10px}
+.svc p{font-size:14.5px;color:#64748b;margin-bottom:20px}
+.svc .link{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#2563eb}
+.svc .link:hover{color:#1d4ed8}
+
+/* who we are */
+.who{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.who-img{position:relative;border-radius:22px;overflow:hidden;min-height:420px;
+  background:linear-gradient(150deg,#e2e8f0,#dbeafe);box-shadow:0 26px 54px rgba(15,23,42,.16)}
+.who-img img{width:100%;height:100%;min-height:420px;object-fit:cover}
+.who h2{font-size:clamp(1.7rem,3.2vw,2.5rem)}
+.who .accent{color:#2563eb}
+.counter-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:30px 0 26px;
+  padding:26px 0;border-top:1px solid #eef2f7;border-bottom:1px solid #eef2f7}
+.counter b{display:block;font-size:2rem;font-weight:800;color:#2563eb;letter-spacing:-.03em;line-height:1.1}
+.counter span{display:block;margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#94a3b8}
+.ticks{list-style:none;margin:0 0 26px;padding:0;display:grid;gap:12px}
+.ticks li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:#475569}
+.ticks .tk{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;
+  display:grid;place-items:center;margin-top:1px}
+
+/* three-up strip */
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.strip .box{border:1px solid #eef2f7;border-radius:18px;padding:28px;background:#fff}
+.strip .box:hover{border-color:#dbeafe;box-shadow:0 18px 36px rgba(15,23,42,.07)}
+.strip .n{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#bfdbfe;margin-bottom:14px}
+.strip h3{font-size:1.05rem;margin-bottom:8px}
+.strip p{font-size:14px;color:#64748b;margin:0}
+
+/* why choose us */
+.why{position:relative;overflow:hidden;color:#fff;background:#0b1b3a}
+.why .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.22}
+.why::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,20,45,.94),rgba(10,40,110,.8))}
+.why .wrap{position:relative;z-index:2}
+.why h2{color:#fff;font-size:clamp(1.8rem,3.4vw,2.6rem)}
+.why .est{display:inline-flex;align-items:baseline;gap:10px;margin-bottom:18px;color:#93c5fd}
+.why .est b{font-size:2.6rem;font-weight:800;letter-spacing:-.03em}
+.why .est span{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.why p{color:rgba(219,234,254,.82);font-size:15px;max-width:46em}
+.why-counters{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.why-counters .c{padding:24px;border-radius:16px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.14)}
+.why-counters b{display:block;font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.1}
+.why-counters span{display:block;margin-top:8px;font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#93c5fd}
+
+/* showcase */
+.show-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.show{border-radius:20px;overflow:hidden;background:#fff;border:1px solid #eef2f7;transition:.3s}
+.show:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,23,42,.1)}
+.show .ph{position:relative;aspect-ratio:16/11;overflow:hidden;background:linear-gradient(150deg,#e2e8f0,#dbeafe)}
+.show .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.show:hover .ph img{transform:scale(1.07)}
+.show .cat{position:absolute;top:14px;left:14px;padding:5px 12px;border-radius:999px;
+  background:rgba(255,255,255,.94);color:#1e40af;font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase}
+.show .body{padding:24px}
+.show h3{font-size:1.1rem;margin-bottom:8px}
+.show p{font-size:14px;color:#64748b;margin-bottom:16px}
+.show .link{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#2563eb}
+
+@media (max-width:1024px){
+  .svc-grid,.show-grid,.strip{grid-template-columns:1fr 1fr}
+  .who{grid-template-columns:1fr;gap:32px}
+  .why-counters,.counter-row{grid-template-columns:1fr 1fr}
+}
+@media (max-width:700px){
+  .svc-grid,.show-grid,.strip{grid-template-columns:1fr}
+  .hv-hero{min-height:520px}
+  .why-counters,.counter-row{grid-template-columns:1fr}
+}
+
+/* ---------- home v2 ---------- */
+.hv-hero{position:relative;min-height:620px;display:grid;place-items:center;overflow:hidden;
+  color:#fff;text-align:center;background:#0b1b3a}
+.hv-hero .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.hv-hero::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,20,45,.82) 0%,rgba(10,40,110,.72) 60%,rgba(8,20,45,.9) 100%)}
+.hv-hero .wrap{position:relative;z-index:2;max-width:900px;padding:96px 24px}
+.hv-hero h1{color:#fff;font-size:clamp(2.2rem,5vw,4rem);margin:22px 0 20px;letter-spacing:-.03em}
+.hv-hero h1 span{color:#93c5fd}
+.hv-hero p{color:rgba(226,238,255,.9);font-size:1.1rem;max-width:44em;margin:0 auto 32px}
+.hv-cta{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.btn-solid{display:inline-flex;align-items:center;gap:9px;padding:16px 34px;border-radius:10px;
+  background:#2563eb;color:#fff;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  box-shadow:0 16px 34px rgba(37,99,235,.4);transition:.25s}
+.btn-solid:hover{background:#1d4ed8;transform:translateY(-2px)}
+.btn-line-w{display:inline-flex;align-items:center;gap:9px;padding:16px 34px;border-radius:10px;
+  border:2px solid rgba(255,255,255,.65);color:#fff;font-size:12px;font-weight:800;
+  letter-spacing:.12em;text-transform:uppercase;transition:.25s}
+.btn-line-w:hover{background:#fff;color:#1e3a8a;border-color:#fff}
+.scroll-dot{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:3;
+  color:rgba(255,255,255,.75);animation:bob 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+/* services */
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.svc{background:#fff;border:1px solid #eef2f7;border-radius:20px;overflow:hidden;transition:.3s}
+.svc:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,23,42,.1)}
+.svc .ph{aspect-ratio:4/3;overflow:hidden;background:linear-gradient(150deg,#e2e8f0,#dbeafe)}
+.svc .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.svc:hover .ph img{transform:scale(1.06)}
+.svc .body{padding:28px}
+.svc h3{font-size:1.25rem;margin-bottom:10px}
+.svc p{font-size:14.5px;color:#64748b;margin-bottom:20px}
+.svc .link{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#2563eb}
+.svc .link:hover{color:#1d4ed8}
+
+/* who we are */
+.who{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.who-img{position:relative;border-radius:22px;overflow:hidden;min-height:420px;
+  background:linear-gradient(150deg,#e2e8f0,#dbeafe);box-shadow:0 26px 54px rgba(15,23,42,.16)}
+.who-img img{width:100%;height:100%;min-height:420px;object-fit:cover}
+.who h2{font-size:clamp(1.7rem,3.2vw,2.5rem)}
+.who .accent{color:#2563eb}
+.counter-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:30px 0 26px;
+  padding:26px 0;border-top:1px solid #eef2f7;border-bottom:1px solid #eef2f7}
+.counter b{display:block;font-size:2rem;font-weight:800;color:#2563eb;letter-spacing:-.03em;line-height:1.1}
+.counter span{display:block;margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#94a3b8}
+.ticks{list-style:none;margin:0 0 26px;padding:0;display:grid;gap:12px}
+.ticks li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:#475569}
+.ticks .tk{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;
+  display:grid;place-items:center;margin-top:1px}
+
+/* three-up strip */
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.strip .box{border:1px solid #eef2f7;border-radius:18px;padding:28px;background:#fff}
+.strip .box:hover{border-color:#dbeafe;box-shadow:0 18px 36px rgba(15,23,42,.07)}
+.strip .n{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#2563eb;margin-bottom:14px}
+.strip h3{font-size:1.05rem;margin-bottom:8px}
+.strip p{font-size:14px;color:#64748b;margin:0}
+
+/* why choose us */
+.why{position:relative;overflow:hidden;color:#fff;background:#0b1b3a}
+.why .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.22}
+.why::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,20,45,.94),rgba(10,40,110,.8))}
+.why .wrap{position:relative;z-index:2}
+.why h2{color:#fff;font-size:clamp(1.8rem,3.4vw,2.6rem)}
+.why .est{display:inline-flex;align-items:baseline;gap:10px;margin-bottom:18px;color:#93c5fd}
+.why .est b{font-size:2.6rem;font-weight:800;letter-spacing:-.03em}
+.why .est span{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.why p{color:rgba(219,234,254,.82);font-size:15px;max-width:46em}
+.why-counters{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.why-counters .c{padding:24px;border-radius:16px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.14)}
+.why-counters b{display:block;font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.1}
+.why-counters span{display:block;margin-top:8px;font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:#93c5fd}
+
+/* showcase */
+.show-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.show{border-radius:20px;overflow:hidden;background:#fff;border:1px solid #eef2f7;transition:.3s}
+.show:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,23,42,.1)}
+.show .ph{position:relative;aspect-ratio:16/11;overflow:hidden;background:linear-gradient(150deg,#e2e8f0,#dbeafe)}
+.show .ph img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.show:hover .ph img{transform:scale(1.07)}
+.show .cat{position:absolute;top:14px;left:14px;padding:5px 12px;border-radius:999px;
+  background:rgba(255,255,255,.94);color:#1e40af;font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase}
+.show .body{padding:24px}
+.show h3{font-size:1.1rem;margin-bottom:8px}
+.show p{font-size:14px;color:#64748b;margin-bottom:16px}
+.show .link{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;color:#2563eb}
+
+@media (max-width:1024px){
+  .svc-grid,.show-grid,.strip{grid-template-columns:1fr 1fr}
+  .who{grid-template-columns:1fr;gap:32px}
+  .why-counters,.counter-row{grid-template-columns:1fr 1fr}
+}
+@media (max-width:700px){
+  .svc-grid,.show-grid,.strip{grid-template-columns:1fr}
+  .hv-hero{min-height:520px}
+  .why-counters,.counter-row{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -207,243 +525,171 @@ p{margin:0 0 1rem}
 <main>
 
   <!-- hero -->
-  <section class="hero">
-    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
-    <svg class="shapes" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M 0,0 L 600,0 L 350,700 L 0,700 Z" fill="#2563eb"/>
-      <path d="M 450,0 L 800,0 L 550,700 L 200,700 Z" fill="#1d4ed8" opacity=".6"/>
-    </svg>
-    <div class="wrap hero-in">
-      <div class="hero-grid">
-        <div>
-          <span class="badge"><i></i>Reconciliation suite for tax practices</span>
-          <h1>Reconcile GST <span class="light">and books</span> <span class="accent">in an afternoon</span></h1>
-          <p class="lead">Fingenuity Associates is a GST and accounts reconciliation suite built for practices in Indore. Upload the two files, match them field by field, look only at what does not tie, and export an Excel your team can file from.</p>
-          <div class="hero-cta">
-            <button class="plus" type="button" onclick="document.getElementById('solutions').scrollIntoView({behavior:'smooth'})" aria-label="See the modules"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16m8-8H4"/></svg></button>
-            <span>Discover the modules</span>
-          </div>
-          <div class="pick">
-            <a href="service.html">
-              <img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-pic1.webp" alt="" onerror="this.style.visibility='hidden'">
-              <span><small>Built for</small><b>Tax practices</b></span>
-              <span class="go"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg></span>
-            </a>
-            <a href="service.html">
-              <img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-pic2.webp" alt="" onerror="this.style.visibility='hidden'">
-              <span><small>Built for</small><b>Finance teams</b></span>
-              <span class="go"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg></span>
-            </a>
-          </div>
-        </div>
-        <div class="hero-art">
-          <img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic2.webp" alt="Financial advisor" onerror="this.style.visibility='hidden'">
-        </div>
+  <section class="hv-hero">
+    <img class="bg" src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-section-bg.webp" alt="" onerror="this.style.visibility='hidden'">
+    <div class="wrap">
+      <span class="badge"><span style="width:6px;height:6px;border-radius:50%;background:#60a5fa;display:block"></span>GST &amp; accounts reconciliation</span>
+      <h1>Reconcile GST and books <span>in an afternoon</span>, not a week.</h1>
+      <p>Fingenuity Associates is a reconciliation suite built for practices in Indore. Upload the two files, match them field by field, look only at what does not tie, and export an Excel your team can file from.</p>
+      <div class="hv-cta">
+        <a class="btn-solid" href="contact.html">Book a demo <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+        <a class="btn-line-w" href="service.html">See the modules</a>
       </div>
     </div>
+    <a class="scroll-dot" href="#services" aria-label="Scroll to services"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg></a>
   </section>
 
-  <!-- quick solutions -->
-  <section class="sec" id="solutions">
+  <!-- our services -->
+  <section class="sec" id="services">
     <div class="wrap">
       <div class="sec-head">
-        <h2>Years of experience<br><span class="accent">quick solutions</span></h2>
-        <a class="round" href="#about" aria-label="Read more"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg></a>
+        <div>
+          <span class="kicker" style="display:block;margin-bottom:10px;color:#2563eb;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase">Our services</span>
+          <h2>A full range of reconciliation work, done the same way every month</h2>
+        </div>
+        <a class="round" href="service.html" aria-label="All modules"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg></a>
       </div>
-      <div class="cards3">
-        <article class="fcard">
-          <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h16"/></svg></div>
-          <h3>Match, field by field</h3>
-          <p>GSTIN, invoice number, date, taxable value and each tax head are compared column by column. A match means the same invoice — not a similar one.</p>
-          <a class="more" href="service.html"><i>→</i>Learn more</a>
+      <div class="svc-grid">
+        <article class="svc">
+          <div class="ph"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic1.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>GST 2A / 2B reconciliation</h3>
+            <p>Purchase register against the portal, invoice by invoice — field-wise, with the reason written on every row.</p>
+            <a class="link" href="service.html">Discover GST 2A / 2B <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
         </article>
-        <article class="fcard">
-          <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.586a1 1 0 0 1-.293.707l-6.414 6.414a1 1 0 0 0-.293.707V17l-4 4v-6.586a1 1 0 0 0-.293-.707L3.293 7.293A1 1 0 0 1 3 6.586V4z"/></svg></div>
-          <h3>A reason on every row</h3>
-          <p>Matched, value differs, missing in 2B, duplicate — each line carries a reason you can filter on, so the exceptions are the only thing left on screen.</p>
-          <a class="more" href="service.html"><i>→</i>Learn more</a>
+        <article class="svc">
+          <div class="ph"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic3.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>GSTR-1 &amp; GSTR-3B reconciliation</h3>
+            <p>What you reported in GSTR-1 against what you claimed in 3B, month by month, before a notice finds the gap.</p>
+            <a class="link" href="service.html">Discover Returns <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
         </article>
-        <article class="fcard">
-          <div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"/></svg></div>
-          <h3>An Excel you can file</h3>
-          <p>One workbook, two sheets: a summary of what reconciled, and an exceptions sheet with the reason on each row. No re-typing into a working paper.</p>
-          <a class="more" href="service.html"><i>→</i>Learn more</a>
+        <article class="svc">
+          <div class="ph"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic4.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>Bank, TDS &amp; stock reconciliation</h3>
+            <p>Statements against cash book, TDS against 26AS, stock register against the books — the same rules throughout.</p>
+            <a class="link" href="service.html">Discover Books <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
         </article>
       </div>
     </div>
   </section>
 
-  <!-- team -->
+  <!-- who we are -->
   <section class="sec alt" id="about">
-    <div class="wrap split">
-      <div class="curve-wrap">
-        <img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic1.webp" alt="Consultant team working together" onerror="this.style.visibility='hidden'">
-      </div>
+    <div class="wrap who">
+      <div class="who-img"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic2.webp" alt="" onerror="this.style.visibility='hidden'"></div>
       <div>
-        <h2>Our team of experts will help you in <span class="accent">all situations</span></h2>
-        <p>We file GST returns, keep books and reconcile stock for a book of clients across Indore and nearby districts. Every month the same two hours went into comparing one export against another in Excel — sorting, eyeballing invoice numbers, and still missing the duplicate that had been claimed twice.</p>
-        <p>So we wrote the comparison down properly. GSTIN, invoice number, date, taxable value and each tax head get compared field by field. One invoice pairs once, and anything that does not tie gets a reason you can filter on.</p>
-        <p style="margin-top:24px"><a class="btn-outline" href="about.html">Read more <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a></p>
+        <span class="kicker" style="display:block;margin-bottom:10px;color:#2563eb;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase">Who we are</span>
+        <h2>A practice of accountants, <span class="accent">passionate about clean books</span></h2>
+        <p>We file GST returns, keep books and reconcile stock for a book of clients across Indore and nearby districts. The suite started as our own month-end tool — it is still the tool we use.</p>
+        <div class="counter-row">
+          <div class="counter"><b>6</b><span>Modules</span></div>
+          <div class="counter"><b>5</b><span>UI languages</span></div>
+          <div class="counter"><b>₹1</b><span>Tolerance</span></div>
+        </div>
+        <ul class="ticks">
+          <li><span class="tk"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>One invoice pairs once — no double counting in the summary.</span></li>
+          <li><span class="tk"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>A filterable reason on every row, so the review is a short list.</span></li>
+          <li><span class="tk"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span>Client files stay in the browser; nothing is uploaded to us.</span></li>
+        </ul>
+        <a class="btn-outline" href="about.html">Read more <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
       </div>
     </div>
   </section>
 
-  <!-- stats -->
-  <section class="stats" style="background-image:url('https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-section-bg.webp')">
-    <div class="wrap">
-      <div class="stats-grid">
-        <div class="stat"><h3>Six modules<br><span class="accent">one suite</span></h3></div>
-        <div class="stat"><b>6</b><span>Modules</span></div>
-        <div class="stat"><b>5</b><span>UI languages</span></div>
-        <div class="stat"><b>₹1</b><span>Configurable tolerance</span></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- notes -->
+  <!-- what the suite does -->
   <section class="sec">
     <div class="wrap">
-      <div class="sec-head">
-        <h2>Notes from the<br><span class="accent">reconciliation desk</span></h2>
-        <a class="round" href="faq.html" aria-label="More"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg></a>
+      <div class="sec-head" style="display:block;border:0;padding:0;margin-bottom:36px">
+        <h2>What the suite does, in three lines</h2>
       </div>
-      <div class="cards3">
-        <article class="icard">
-          <div class="ph"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic3.webp" alt=""></div>
-          <div class="body">
-            <div>
-              <h3>Why the same invoice shows up twice in 2B</h3>
-              <p>Two amendments, or one supplier filing the same invoice in two successive months, will do it — and without one-to-one pairing, both rows get claimed.</p>
-            </div>
-            <a class="more" href="faq.html"><i>›</i>Read article</a>
-          </div>
-        </article>
-        <article class="icard">
-          <div class="ph"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-home-pic4.webp" alt=""></div>
-          <div class="body">
-            <div>
-              <h3>Three reasons your 3B does not agree with 1</h3>
-              <p>Timing, credit notes and a rate change mid-month account for most of the gap. Work out which one you are looking at before passing entries.</p>
-            </div>
-            <a class="more" href="faq.html"><i>›</i>Read article</a>
-          </div>
-        </article>
-        <article class="icard">
-          <div class="ph"><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountant4-slider-pic2.webp" alt=""></div>
-          <div class="body">
-            <div>
-              <h3>Client files that never leave your machine</h3>
-              <p>What “runs in the browser” actually means when you are handling forty clients, and the two questions worth asking any tool.</p>
-            </div>
-            <a class="more" href="faq.html"><i>›</i>Read article</a>
-          </div>
-        </article>
+      <div class="strip">
+        <div class="box"><div class="n">01 — Match</div><h3>Field by field</h3><p>GSTIN, invoice number, date, taxable value and each tax head compared separately. A match means the same invoice, not a similar one.</p></div>
+        <div class="box"><div class="n">02 — Explain</div><h3>Reason on every row</h3><p>Matched, value differs, missing in 2B, duplicate, wrong-state GSTIN. Filter on the reason and the exceptions are the only thing left.</p></div>
+        <div class="box"><div class="n">03 — Export</div><h3>Two-sheet Excel</h3><p>A summary of what reconciled and an exceptions sheet carrying the reason into the file — not just the screen.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- modules band -->
-  <section class="dark">
-    <svg class="bg" viewBox="0 0 1200 600" fill="none" aria-hidden="true">
-      <path d="M0 0L400 600L1200 0H0Z" fill="#fff" fill-opacity=".1"/>
-      <circle cx="800" cy="300" r="250" fill="#fff" fill-opacity=".05"/>
-    </svg>
-    <div class="wrap dark-grid">
-      <div>
-        <h2>Six<br>modules</h2>
-        <p>GST 2A/2B, GSTR-1 and 3B, GST-Reconciliation, bank, TDS and stock — one way of working.</p>
-        <p style="margin-top:22px"><a class="btn-ghost" href="service.html">About us <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a></p>
+  <!-- why choose us -->
+  <section class="why">
+    <img class="bg" src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountant4-slider-pic1.webp" alt="" onerror="this.style.visibility='hidden'">
+    <div class="wrap" style="padding:88px 24px">
+      <span class="kicker" style="display:block;margin-bottom:10px;color:#93c5fd;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase">Why choose us</span>
+      <h2>A modern approach, and results that tie</h2>
+      <div class="est"><b>2018</b><span>est. · built inside a working practice</span></div>
+      <p>Most reconciliation tools assume a single company. A practice has forty clients, each with two files and a deadline. The suite is set up for that: one file at a time, one client at a time, nothing left on someone else's server.</p>
+      <div class="why-counters">
+        <div class="c"><b>6</b><span>Reconciliation modules</span></div>
+        <div class="c"><b>2</b><span>Sheets in every report</span></div>
+        <div class="c"><b>0</b><span>Files uploaded to us</span></div>
       </div>
-      <div class="shots">
-        <div class="shot"><svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of GSTR-2B and purchase register side by side with matched rows">
-              <rect width="400" height="250" rx="12" fill="#ffffff"/>
-              <rect width="400" height="34" rx="12" fill="#F8FAFC"/>
-              <rect y="22" width="400" height="12" fill="#F8FAFC"/>
-              <circle cx="18" cy="17" r="4" fill="#0E57E8"/>
-              <circle cx="32" cy="17" r="4" fill="#DDE5F3"/>
-              <circle cx="46" cy="17" r="4" fill="#DDE5F3"/>
-              <text x="62" y="21" font-size="9.5" fill="#8D99AE">GST 2A / 2B reconciliation · FY 2025-26</text>
-              <text x="16" y="53" font-size="8" font-weight="600" fill="#8D99AE">GSTR-2B</text>
-              <text x="218" y="53" font-size="8" font-weight="600" fill="#8D99AE">PURCHASE REGISTER</text>
-              <rect x="14" y="60" width="170" height="174" rx="8" fill="#F8FAFC" stroke="#E6EAF2"/>
-              <rect x="216" y="60" width="170" height="174" rx="8" fill="#F8FAFC" stroke="#E6EAF2"/>
-              <rect x="24" y="70" width="150" height="24" rx="5" fill="#ffffff" stroke="#E6EAF2"/>
-              <rect x="30" y="78" width="56" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="128" y="78" width="36" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="24" y="102" width="150" height="24" rx="5" fill="#ffffff" stroke="#E6EAF2"/>
-              <rect x="30" y="110" width="62" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="128" y="110" width="36" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="24" y="134" width="150" height="24" rx="5" fill="#ffffff" stroke="#E6EAF2"/>
-              <rect x="30" y="142" width="48" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="128" y="142" width="36" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="24" y="166" width="150" height="24" rx="5" fill="#FFFBF3" stroke="#F3E2C0"/>
-              <rect x="30" y="174" width="58" height="8" rx="3" fill="#F3E2C0"/>
-              <rect x="24" y="198" width="150" height="24" rx="5" fill="#FFF6F6" stroke="#F6D6D6"/>
-              <rect x="30" y="206" width="44" height="8" rx="3" fill="#F6D6D6"/>
-              <rect x="226" y="70" width="150" height="24" rx="5" fill="#ffffff" stroke="#E6EAF2"/>
-              <rect x="232" y="78" width="56" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="330" y="78" width="36" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="226" y="102" width="150" height="24" rx="5" fill="#ffffff" stroke="#E6EAF2"/>
-              <rect x="232" y="110" width="62" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="330" y="110" width="36" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="226" y="134" width="150" height="24" rx="5" fill="#ffffff" stroke="#E6EAF2"/>
-              <rect x="232" y="142" width="48" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="330" y="142" width="36" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="226" y="166" width="150" height="24" rx="5" fill="#FFFBF3" stroke="#F3E2C0"/>
-              <rect x="232" y="174" width="58" height="8" rx="3" fill="#F3E2C0"/>
-              <rect x="226" y="198" width="150" height="24" rx="5" fill="#F8FAFC" stroke="#E6EAF2" stroke-dasharray="3 3"/>
-              <line x1="184" y1="82" x2="216" y2="82" stroke="#0E57E8" stroke-width="1.5"/>
-              <line x1="184" y1="114" x2="216" y2="114" stroke="#0E57E8" stroke-width="1.5"/>
-              <line x1="184" y1="146" x2="216" y2="146" stroke="#0E57E8" stroke-width="1.5"/>
-              <line x1="184" y1="178" x2="216" y2="178" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
-              <line x1="184" y1="210" x2="216" y2="210" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="3 3"/>
-              <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
-            </svg></div>
-        <div class="shot"><svg viewBox="0 0 400 250" role="img" aria-label="Mock screen of a GSTR-1 and GSTR-3B comparison table with a difference column">
-              <rect width="400" height="250" rx="12" fill="#ffffff"/>
-              <rect width="400" height="34" rx="12" fill="#F8FAFC"/>
-              <rect y="22" width="400" height="12" fill="#F8FAFC"/>
-              <circle cx="18" cy="17" r="4" fill="#0E57E8"/>
-              <circle cx="32" cy="17" r="4" fill="#DDE5F3"/>
-              <circle cx="46" cy="17" r="4" fill="#DDE5F3"/>
-              <text x="62" y="21" font-size="9.5" fill="#8D99AE">GSTR-1 &amp; GSTR-3B reconciliation</text>
-              <rect x="14" y="46" width="80" height="22" rx="6" fill="#0E57E8"/>
-              <text x="34" y="61" font-size="8.5" font-weight="600" fill="#ffffff">GSTR-1</text>
-              <rect x="100" y="46" width="80" height="22" rx="6" fill="#ffffff" stroke="#E6EAF2"/>
-              <text x="120" y="61" font-size="8.5" font-weight="600" fill="#8D99AE">GSTR-3B</text>
-              <rect x="286" y="46" width="100" height="22" rx="6" fill="#F8FAFC" stroke="#E6EAF2"/>
-              <rect x="294" y="53" width="52" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="14" y="80" width="372" height="22" fill="#F8FAFC"/>
-              <text x="24" y="95" font-size="8" font-weight="600" fill="#8D99AE">INVOICE</text>
-              <text x="140" y="95" font-size="8" font-weight="600" fill="#8D99AE">GSTR-1</text>
-              <text x="228" y="95" font-size="8" font-weight="600" fill="#8D99AE">3B</text>
-              <text x="304" y="95" font-size="8" font-weight="600" fill="#8D99AE">DIFF</text>
-              <rect x="14" y="102" width="372" height="26" fill="#ffffff"/>
-              <rect x="24" y="111" width="62" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="140" y="111" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="228" y="111" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="300" y="108" width="40" height="14" rx="7" fill="#E8F8F0"/>
-              <rect x="14" y="128" width="372" height="26" fill="#FCFDFF"/>
-              <rect x="24" y="137" width="58" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="140" y="137" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="228" y="137" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="300" y="134" width="40" height="14" rx="7" fill="#FEF4E6"/>
-              <rect x="14" y="154" width="372" height="26" fill="#ffffff"/>
-              <rect x="24" y="163" width="66" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="140" y="163" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="228" y="163" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="300" y="160" width="40" height="14" rx="7" fill="#FEEFEF"/>
-              <rect x="14" y="180" width="372" height="26" fill="#FCFDFF"/>
-              <rect x="24" y="189" width="52" height="8" rx="3" fill="#DDE5F3"/>
-              <rect x="140" y="189" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="228" y="189" width="46" height="8" rx="3" fill="#E6EAF2"/>
-              <rect x="300" y="186" width="40" height="14" rx="7" fill="#E8F8F0"/>
-              <rect x="14" y="212" width="372" height="1" fill="#E6EAF2"/>
-              <rect x="14" y="220" width="120" height="10" rx="4" fill="#DDE5F3"/>
-              <rect x="286" y="216" width="100" height="18" rx="6" fill="#0E57E8"/>
-              <rect x="310" y="222" width="52" height="6" rx="3" fill="#7FB0FF"/>
-              <rect x="0.5" y="0.5" width="399" height="249" rx="12" fill="none" stroke="#E6EAF2"/>
-            </svg></div>
+    </div>
+  </section>
+
+  <!-- showcase -->
+  <section class="sec" id="showcase">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <span class="kicker" style="display:block;margin-bottom:10px;color:#2563eb;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase">Showcase</span>
+          <h2>Check out the six modules</h2>
+        </div>
+        <a class="round" href="service.html" aria-label="All modules"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg></a>
+      </div>
+      <div class="show-grid">
+        <article class="show">
+          <div class="ph"><span class="cat">Core reco</span><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-pic1.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>GST 2A / 2B vs purchase register</h3>
+            <p>Field-wise auto match across GSTIN, invoice date, number and multi-tax slabs, with multi-month rollover.</p>
+            <a class="link" href="service.html">View module <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
+        </article>
+        <article class="show">
+          <div class="ph"><span class="cat">Tax audit</span><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-pic2.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>GSTR-1 vs GSTR-3B liability</h3>
+            <p>Detect unfiled outward supplies or differing tax heads between Form 1 and monthly 3B payments.</p>
+            <a class="link" href="service.html">View module <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
+        </article>
+        <article class="show">
+          <div class="ph"><span class="cat">ERP parser</span><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-services-pic3.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>GST-Reconciliation from any file</h3>
+            <p>Parse raw Excel, CSV or JSON dumps from TallyPrime, Busy, SAP and Marg — no plugins, no installs.</p>
+            <a class="link" href="service.html">View module <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
+        </article>
+        <article class="show">
+          <div class="ph"><span class="cat">Cash &amp; banking</span><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountant4-contact-pic2.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>Bank statement vs books</h3>
+            <p>Narration cleanup, cheque clearance dates, NEFT/RTGS UTR extraction and bank fee segregation.</p>
+            <a class="link" href="service.html">View module <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
+        </article>
+        <article class="show">
+          <div class="ph"><span class="cat">Direct tax</span><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-faq-pic2.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>TDS 26AS / AIS reconciler</h3>
+            <p>Match 26AS and AIS deduction entries against book credits, and flag section mismatches.</p>
+            <a class="link" href="service.html">View module <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
+        </article>
+        <article class="show">
+          <div class="ph"><span class="cat">Inventory</span><img src="https://themes.muffingroup.com/be/accountant4/wp-content/uploads/2022/03/accountan4-faq-pic3.webp" alt="" onerror="this.style.visibility='hidden'"></div>
+          <div class="body">
+            <h3>Physical stock vs stock register</h3>
+            <p>Quantity, rate and batch variance analysis — shrinkage, damage and unentered delivery challans.</p>
+            <a class="link" href="service.html">View module <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg></a>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -453,7 +699,7 @@ p{margin:0 0 1rem}
     <div class="wrap">
       <h2>Contact with our professionals</h2>
       <p class="phone">Call us today at <a href="tel:+917310000000">+91 731 000 0000</a></p>
-      <div class="cta-box"><a href="contact.html"><span>Book a demo</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></a></div>
+      <div class="cta-box"><a href="contact.html"><span>Book a demo</span></a></div>
       <p class="small">Mon–Sat · 10:00–19:00 IST · Vijay Nagar, Indore</p>
     </div>
   </section>
@@ -487,7 +733,7 @@ p{margin:0 0 1rem}
     </div>
     <div class="foot-bottom">
       <p>© 2026 Fingenuity Associates. All rights reserved.</p>
-      <a class="top" href="#top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></a>
+      <a class="top" href="#" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></a>
     </div>
   </div>
 </footer>
