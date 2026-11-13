@@ -24,7 +24,7 @@ const MODULE_KEYS: ModuleKey[] = ['gst2a', 'gstr1', 'gstreco', 'bank', 'tds', 's
 /** Section label with the gold tick taken from the logo. */
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h3 className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.09em] text-[#64748B]">
-    <span className="h-3 w-[3px] rounded-full bg-[#C9A227]" aria-hidden="true" />
+    <span className="h-3 w-[3px] rounded-full bg-[#2563eb]" aria-hidden="true" />
     {children}
   </h3>
 );
@@ -81,13 +81,13 @@ export const Sidebar: React.FC<Props> = ({
                   onClick={() => onModuleChange(k)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-colors flex items-center justify-between gap-2 ${
                     isSelected
-                      ? 'bg-[#165DFC] text-white shadow-sm font-semibold'
-                      : 'bg-white text-[#344056] border border-[#DDE4EE] font-medium hover:bg-[#EEF6FF] hover:border-[#8AC4FF] hover:text-[#062E80]'
+                      ? 'bg-[#2563eb] text-white shadow-sm font-semibold'
+                      : 'bg-white text-[#344056] border border-[#DDE4EE] font-medium hover:bg-[#eff6ff] hover:border-[#93c5fd] hover:text-[#1e40af]'
                   }`}
                 >
                   <span>{t(`mod_${k}`, lang)}</span>
                   {isSelected && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227] ring-2 ring-white/40" aria-hidden="true" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] ring-2 ring-white/40" aria-hidden="true" />
                   )}
                 </button>
               );
@@ -123,7 +123,7 @@ export const Sidebar: React.FC<Props> = ({
               autoComplete="off"
               aria-invalid={gstinCheck.status === 'invalid'}
               placeholder={t('gstin_label', lang)}
-              className={`w-full text-xs font-mono tracking-wider bg-white border rounded-lg py-2 pl-3 pr-8 text-[#0F172A] uppercase outline-none transition-shadow focus:ring-2 focus:ring-[#165DFC]/30 focus:border-[#165DFC] ${
+              className={`w-full text-xs font-mono tracking-wider bg-white border rounded-lg py-2 pl-3 pr-8 text-[#0F172A] uppercase outline-none transition-shadow focus:ring-2 focus:ring-[#2563eb]/30 focus:border-[#2563eb] ${
                 gstin.length > 0 && !isGstinValid
                   ? 'border-amber-400 bg-amber-50/20'
                   : isGstinValid
@@ -159,7 +159,7 @@ export const Sidebar: React.FC<Props> = ({
             onChange={onCommonPeriodChange}
             lang={lang}
           />
-          <div className="mt-2 p-2.5 bg-[#EEF6FF] border border-[#DDE4EE] rounded-lg text-[11px] leading-snug text-[#47566B]">
+          <div className="mt-2 p-2.5 bg-[#eff6ff] border border-[#DDE4EE] rounded-lg text-[11px] leading-snug text-[#47566B]">
             {t('period_caption', lang, {
               label: commonPeriod.label,
               start: formatDateDisplay(commonPeriod.start),
@@ -170,11 +170,11 @@ export const Sidebar: React.FC<Props> = ({
       </div>
 
       {/* About box in the sidebar footer */}
-      <div className="mt-2 border-t-2 border-[#C9A227]/30 pt-4 text-xs leading-relaxed text-[#64748B]">
+      <div className="mt-2 border-t-2 border-[#2563eb]/30 pt-4 text-xs leading-relaxed text-[#64748B]">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-[#94A3B8]">
           {t('about_heading', lang)}
         </div>
-        <div className="font-semibold text-[#062E80]">{FIRM_NAME}</div>
+        <div className="font-semibold text-[#2563eb]">{FIRM_NAME}</div>
         <div className="my-0.5 text-[11px] text-[#64748B]">{FIRM_TAGLINE}</div>
         <div className="text-[11px] text-[#94A3B8]">{FIRM_LOCATION}</div>
       </div>

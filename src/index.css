@@ -2,18 +2,18 @@
 
 /**
  * One palette for the whole app.
- * Blues come from the Brivora site (#165DFC family); the navy and gold are
+ * Blues come from the Brivora site (#2563eb family); the navy and gold are
  * sampled from the firm logo, so the UI, the logo and the Excel reports agree.
  */
 @layer base {
   :root {
-    --brand-blue: #165dfc;
-    --brand-blue-dark: #0d45e8;
-    --brand-blue-soft: #eef6ff;
-    --brand-blue-line: #8ac4ff;
-    --logo-navy: #062e80;
+    --brand-blue: #2563eb;
+    --brand-blue-dark: #1d4ed8;
+    --brand-blue-soft: #eff6ff;
+    --brand-blue-line: #93c5fd;
+    --logo-navy: #1e40af;
     --logo-navy-deep: #131d3e;
-    --logo-gold: #c9a227;
+    --logo-gold: #2563eb;
     --logo-gold-soft: #f6edd9;
     --surface: #f8fafc;
     --surface-alt: #f1f5f9;

@@ -8,9 +8,9 @@ interface Props {
 export const KPICards: React.FC<Props> = ({ items }) => {
   const colorStyles: Record<string, string> = {
     green: 'bg-gradient-to-br from-[#1e8e5a] to-[#2fbf7b] text-white',
-    amber: 'bg-gradient-to-br from-[#A8841D] to-[#C9A227] text-white',
+    amber: 'bg-gradient-to-br from-[#A8841D] to-[#2563eb] text-white',
     red: 'bg-gradient-to-br from-[#b3261e] to-[#e5534b] text-white',
-    blue: 'bg-gradient-to-br from-[#062E80] to-[#165DFC] text-white',
+    blue: 'bg-gradient-to-br from-[#1e40af] to-[#2563eb] text-white',
   };
 
   return (
