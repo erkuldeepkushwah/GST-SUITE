@@ -8,9 +8,10 @@ interface Props {
   value: Period;
   onChange: (p: Period) => void;
   lang: LanguageCode;
+  compact?: boolean;
 }
 
-export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
+export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang, compact = false }) => {
   const fyYears = availableFyYears();
   const currentMode = (value.mode.toLowerCase() === 'financial year' ? 'fy' : value.mode.toLowerCase()) as PeriodMode;
 
@@ -77,15 +78,15 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
   const activeQ = Math.floor(((startD.getMonth() - 3 + 12) % 12) / 3) + 1;
 
   return (
-    <div className="space-y-3">
+    <div className={compact ? "space-y-2" : "space-y-3"}>
       <div>
-        <label className="block text-xs font-semibold text-[#475569] mb-2">
+        <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
           {t('period_type', lang)}
         </label>
         <select
           value={currentMode}
           onChange={(e) => handleModeChange(e.target.value as PeriodMode)}
-          className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-3 py-2.5 font-medium text-[#334155] focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20 focus:border-[#0159D3]"
+          className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-3 py-2 font-medium text-[#334155] focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20 focus:border-[#0159D3]"
         >
           <option value="monthly">{t('mode_monthly', lang)}</option>
           <option value="quarterly">{t('mode_quarterly', lang)}</option>
@@ -96,14 +97,14 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
 
       {currentMode === 'monthly' && (
         <div>
-          <label className="block text-xs font-semibold text-[#475569] mb-2">
+          <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
             {t('select_month', lang)}
           </label>
           <input
             type="month"
             value={value.start.slice(0, 7)}
             onChange={handleMonthChange}
-            className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-3 py-2.5 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
+            className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-3 py-2 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
           />
         </div>
       )}
@@ -111,13 +112,13 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
       {currentMode === 'quarterly' && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs font-semibold text-[#475569] mb-2">
+            <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
               {t('financial_year', lang)}
             </label>
             <select
               value={activeFy}
               onChange={(e) => handleQuarterChange(Number(e.target.value), activeQ)}
-              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2.5 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
+              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
             >
               {fyYears.map((yr) => (
                 <option key={yr} value={yr}>
@@ -127,13 +128,13 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#475569] mb-2">
+            <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
               {t('quarter', lang)}
             </label>
             <select
               value={activeQ}
               onChange={(e) => handleQuarterChange(activeFy, Number(e.target.value))}
-              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2.5 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
+              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
             >
               <option value={1}>Q1 (Apr-Jun)</option>
               <option value={2}>Q2 (Jul-Sep)</option>
@@ -146,13 +147,13 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
 
       {currentMode === 'fy' && (
         <div>
-          <label className="block text-xs font-semibold text-[#475569] mb-2">
+          <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
             {t('financial_year', lang)}
           </label>
           <select
             value={activeFy}
             onChange={(e) => handleFyChange(Number(e.target.value))}
-            className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-3 py-2.5 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
+            className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-3 py-2 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
           >
             {fyYears.map((yr) => (
               <option key={yr} value={yr}>
@@ -166,25 +167,25 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
       {currentMode === 'custom' && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs font-semibold text-[#475569] mb-2">
+            <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
               {t('from_date', lang)}
             </label>
             <input
               type="date"
               value={value.start}
               onChange={(e) => handleCustomDateChange(e.target.value, undefined)}
-              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2.5 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
+              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#475569] mb-2">
+            <label className={compact ? "block text-[10px] font-semibold text-[#475569] mb-1" : "block text-xs font-semibold text-[#475569] mb-2"}>
               {t('to_date', lang)}
             </label>
             <input
               type="date"
               value={value.end}
               onChange={(e) => handleCustomDateChange(undefined, e.target.value)}
-              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2.5 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
+              className="w-full text-xs bg-white border border-[#D7E0EC] rounded-lg px-2.5 py-2 text-[#334155] font-medium focus:outline-none focus:ring-2 focus:ring-[#0159D3]/20"
             />
           </div>
         </div>
