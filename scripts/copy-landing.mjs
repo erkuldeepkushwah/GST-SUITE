@@ -47,6 +47,25 @@ for (const file of files) {
   cpSync(join(SRC, file), join(DIST, target));
 }
 
+// Copy module artwork from the repository's shared assets folder.
+// This makes /assets/module-*.webp available to marketing home and /landing/ pages.
+const MODULE_IMAGES = [
+  'module-gst-2a.webp',
+  'module-gstr1-3b.webp',
+  'module-gst-reconciliation.webp',
+  'module-bank.webp',
+  'module-tds.webp',
+  'module-stock.webp',
+];
+mkdirSync(join(DIST, 'assets'), { recursive: true });
+for (const image of MODULE_IMAGES) {
+  const source = join('assets', image);
+  if (!existsSync(source)) {
+    throw new Error(`Missing module artwork: ${source}`);
+  }
+  cpSync(source, join(DIST, 'assets', image));
+}
+
 // 3. serve the marketing home at "/" and leave the app at /index.html
 writeFileSync(
   join(DIST, '_redirects'),
