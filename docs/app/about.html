@@ -371,10 +371,6 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
 .fg-links a{display:inline-block;font-size:14px;font-weight:600;color:#5B5B5B;text-decoration:none;
   padding-bottom:4px;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
 .fg-links a:hover,.fg-links a.on{color:#0159D3;border-color:#0159D3}
-.fg-cta{display:inline-flex;align-items:center;padding:11px 22px;border-radius:999px;background:#EAF1FC;
-  border:1px solid #B7CDEF;color:#00347D;font-size:11.5px;font-weight:800;letter-spacing:.1em;
-  text-transform:uppercase;text-decoration:none;white-space:nowrap}
-.fg-cta:hover{background:#D8E5F9;color:#00347D}
 .fg-burger{display:none;width:44px;height:44px;border:1px solid #DDE3EA;border-radius:12px;
   background:#fff;font-size:20px;line-height:1;cursor:pointer;color:#2C3338;padding:0}
 @media (max-width:1024px){
@@ -384,7 +380,6 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
     box-shadow:0 12px 24px rgba(15,23,42,.08)}
   .fg-links.open a{padding:12px 0;width:100%;border:0}
   .fg-burger{display:grid;place-items:center}
-  .fg-cta{display:none}
 }
 </style>
 </head>
@@ -400,7 +395,6 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
       <li><a href="service.html">Services</a></li>
       <li><a href="contact.html">Contact</a></li>
     </ul>
-    <a class="fg-cta" href="contact.html">Inquire now</a>
     <button class="fg-burger" type="button" aria-label="Menu"
       onclick="document.getElementById('fg-links').classList.toggle('open')">&#9776;</button>
   </div>
