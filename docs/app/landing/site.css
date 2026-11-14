@@ -1,0 +1,216 @@
+/* ==========================================================================
+   Fingenuity Associates — local stylesheet
+   The pages are Elementor markup whose theme CSS lives on the7.io. That host
+   is not always reachable, and when it is not the pages come up unstyled.
+   This file gives them a working baseline on their own: layout, type, buttons,
+   cards, sliders and the footer. It is loaded after the theme links, so where
+   the theme does load, the theme still wins.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --fg-accent: #0159D3;
+  --fg-deep: #00347D;
+  --fg-ink: #2C3338;
+  --fg-body: #5B5B5B;
+  --fg-muted: #909090;
+  --fg-line: #E3E7ED;
+  --fg-soft: #F2F4F6;
+  --fg-dark: #1B1D1F;
+  --fg-radius: 10px;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: "Manrope", "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--fg-body);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: inline-block; border: 0;
+  background: #EEF2F7; border-radius: 6px; }
+img[src=""], img:not([src]) { display: none; }
+a { color: var(--fg-accent); text-decoration: none; }
+a:hover { color: var(--fg-deep); }
+a:not([href]) { cursor: default; }
+
+h1, h2, h3, h4, h5, h6,
+.elementor-heading-title,
+.the7-heading-title {
+  margin: 0 0 .5em;
+  font-family: inherit;
+  color: var(--fg-ink);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.01em;
+}
+h1, .elementor-heading-title:is(h1) { font-size: clamp(2rem, 4.2vw, 3.1rem); }
+h2 { font-size: clamp(1.6rem, 3vw, 2.35rem); }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.05rem; }
+p { margin: 0 0 1rem; }
+
+/* ---------- structure ---------- */
+.elementor-section, .elementor-top-section { position: relative; }
+.elementor-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: flex-start;
+}
+.elementor-column { flex: 1 1 0; min-width: 0; }
+.elementor-col-100 { flex: 1 1 100%; }
+.elementor-col-50 { flex: 1 1 calc(50% - 16px); }
+.elementor-col-33 { flex: 1 1 calc(33.333% - 22px); }
+.elementor-col-25 { flex: 1 1 calc(25% - 24px); }
+.elementor-column-gap-no { gap: 0; }
+.elementor-widget-wrap { display: flex; flex-direction: column; gap: 16px; }
+.elementor-widget { width: 100%; }
+.elementor-widget__width-auto { width: auto; }
+.elementor-widget-container { width: 100%; }
+.elementor-spacer-inner { display: block; height: 20px; }
+.elementor-widget-spacer .elementor-spacer-inner { height: 24px; }
+
+/* vertical rhythm for the big sections */
+.elementor-section.elementor-top-section { padding: 64px 0; }
+.elementor-section.elementor-section-height-full { min-height: 60vh; display: flex; align-items: center; }
+
+/* ---------- buttons ---------- */
+.box-button, .elementor-button, button.box-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 26px;
+  border: 1px solid var(--fg-accent);
+  border-radius: 999px;
+  background: var(--fg-accent);
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background .2s, color .2s, border-color .2s, transform .2s;
+}
+.box-button:hover, .elementor-button:hover {
+  background: var(--fg-deep);
+  border-color: var(--fg-deep);
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+.elementor-size-xs { padding: 9px 18px; font-size: 12px; }
+.elementor-size-sm { padding: 11px 22px; }
+.elementor-size-lg { padding: 16px 34px; font-size: 14px; }
+.elementor-button-wrapper { display: inline-flex; }
+.elementor-widget-the7_button_widget { width: auto; align-self: flex-start; }
+.elementor-widget-wrap:has(> .elementor-widget-the7_button_widget + .elementor-widget-the7_button_widget) {
+  flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px;
+}
+.elementor-widget-wrap:has(> .elementor-widget-the7_button_widget + .elementor-widget-the7_button_widget)
+  > .elementor-widget-the7_button_widget { flex: 0 0 auto; }
+
+/* ---------- icon boxes / card grids ---------- */
+.dt-css-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+.wf-cell { min-width: 0; }
+.the7-icon-box-grid, .the7-icon-box-grid * { text-decoration: none; }
+.the7-icon-box-grid {
+  display: block;
+  padding: 26px;
+  border: 1px solid var(--fg-line);
+  border-radius: var(--fg-radius);
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.the7-icon-box-grid:hover {
+  border-color: #B7CDEF;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, .07);
+  transform: translateY(-3px);
+}
+.the7-icon-box-grid .box-content-wrapper { display: flex; flex-direction: column; gap: 14px; }
+.the7-icon-box-grid .elementor-icon-div { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 12px; background: #EAF1FC; color: var(--fg-accent); }
+.the7-icon-box-grid .elementor-icon svg { width: 24px; height: 24px; fill: currentColor; }
+.the7-icon-box-grid .box-heading { margin: 0; font-size: 1.05rem; color: var(--fg-ink); }
+
+/* ---------- images and cards ---------- */
+.the7-image-wrapper, .the7-image-container { display: block; }
+.the7-image-wrapper img, .elementor-widget-the7-image-widget img {
+  width: 100%;
+  border-radius: var(--fg-radius);
+  object-fit: cover;
+}
+.elementor-widget-the7_image img { border-radius: var(--fg-radius); }
+
+/* ---------- sliders ---------- */
+.the7-swiper-slide, .the7-slide-content { display: block; }
+[class*="swiper"] { overflow: hidden; }
+.the7-swiper-slide-inner { padding: 0; }
+
+/* ---------- tables ---------- */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 12px; border-bottom: 1px solid var(--fg-line); text-align: left; font-size: 14px; }
+th { color: var(--fg-ink); font-weight: 700; }
+
+/* ---------- forms ---------- */
+input[type="text"], input[type="email"], input[type="tel"], input[type="number"],
+input[type="date"], input[type="search"], textarea, select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--fg-line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg-ink);
+  background: #fff;
+}
+input:focus, textarea:focus, select:focus { outline: 2px solid #B7CDEF; outline-offset: 1px; }
+label { display: block; font-size: 13px; font-weight: 600; color: var(--fg-ink); margin-bottom: 6px; }
+
+/* ---------- footer ---------- */
+.elementor-location-footer, footer.elementor-location-footer {
+  background: var(--fg-dark);
+  color: #BBBDBE;
+  padding: 56px 0 24px;
+}
+.elementor-location-footer h1, .elementor-location-footer h2,
+.elementor-location-footer h3, .elementor-location-footer h4,
+.elementor-location-footer .elementor-heading-title { color: #fff; }
+.elementor-location-footer p, .elementor-location-footer li,
+.elementor-location-footer .elementor-widget-text-editor { color: #BBBDBE; }
+.elementor-location-footer a { color: #BBBDBE; }
+.elementor-location-footer a:hover { color: #7FA8E4; }
+.elementor-location-footer .box-button { border-color: rgba(255,255,255,.5); background: transparent; color: #fff !important; }
+.elementor-location-footer .box-button:hover { background: #fff; color: var(--fg-deep) !important; border-color: #fff; }
+.elementor-location-footer .dt-nav-menu { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.elementor-location-footer .dt-nav-menu li { list-style: none; }
+.elementor-location-footer .dt-nav-menu a { font-size: 14px; }
+
+/* ---------- utilities ---------- */
+.elementor-screen-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.scroll-top { position: fixed; right: 24px; bottom: 24px; z-index: 40; width: 42px; height: 42px;
+  display: grid; place-items: center; border-radius: 10px; background: var(--fg-accent); color: #fff; }
+.scroll-top svg { fill: currentColor; width: 16px; height: 16px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1024px) {
+  .elementor-container { gap: 24px; }
+  .elementor-col-50, .elementor-col-33, .elementor-col-25 { flex: 1 1 100%; }
+  .elementor-section.elementor-top-section { padding: 44px 0; }
+}
+@media (max-width: 700px) {
+  .elementor-container { padding: 0 18px; gap: 18px; }
+  .elementor-section.elementor-top-section { padding: 34px 0; }
+  .dt-css-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 1.9rem; }
+}
