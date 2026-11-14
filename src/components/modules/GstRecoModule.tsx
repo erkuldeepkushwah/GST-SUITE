@@ -330,7 +330,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               <select
                 value={current.mapping[field] || NOT_MAPPED}
                 onChange={(e) => updateMapping(side, field, e.target.value)}
-                className={`flex-1 min-w-0 text-[11px] bg-white border rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#2563eb]/30 focus:border-[#2563eb] ${
+                className={`flex-1 min-w-0 text-[11px] bg-white border rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#0159D3]/30 focus:border-[#0159D3] ${
                   (current.mapping[field] || NOT_MAPPED) === NOT_MAPPED
                     ? 'border-[#DDE4EE] text-[#94A3B8]'
                     : 'border-[#C8D1DF] text-[#0F172A]'
@@ -352,7 +352,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
           </span>
           <button
             onClick={() => importSide(side)}
-            className="px-3 py-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-semibold transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-[#0159D3] hover:bg-[#00347D] text-white text-[11px] font-semibold transition-colors"
           >
             {current.imported.length
               ? t('reco_reimport', lang, { n: current.imported.length })
@@ -391,7 +391,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               setSide(side, { ...current, imported: [] });
               setResults(null);
             }}
-            className="flex-1 min-w-0 text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#2563eb]/30 focus:border-[#2563eb]"
+            className="flex-1 min-w-0 text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#0159D3]/30 focus:border-[#0159D3]"
           >
             {(side === 'portal' ? FILE_TYPES.filter((f) => !f.books) : FILE_TYPES.filter((f) => f.books)).map((f) => (
               <option key={f.type} value={f.type}>
@@ -400,7 +400,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
             ))}
           </select>
         </label>
-        <label className="flex flex-col items-center justify-center gap-1.5 cursor-pointer py-3 bg-white border border-[#DDE4EE] rounded-lg hover:border-[#93c5fd] transition-colors">
+        <label className="flex flex-col items-center justify-center gap-1.5 cursor-pointer py-3 bg-white border border-[#DDE4EE] rounded-lg hover:border-[#7FA8E4] transition-colors">
           <Upload className="w-4 h-4 text-[#94A3B8]" />
           <span className="text-xs text-[#64748B] font-medium truncate max-w-[240px]">
             {current.fileName || t('reco_choose_file', lang)}
@@ -440,9 +440,9 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
           <p className="text-xs text-[#64748B] max-w-2xl leading-relaxed">{t('reco_intro', lang)}</p>
           <button
             onClick={handleLoadSample}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#F1F5F9] hover:bg-[#eff6ff] text-[#344056] rounded-lg text-xs font-semibold transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#F1F5F9] hover:bg-[#EAF1FC] text-[#344056] rounded-lg text-xs font-semibold transition-colors shrink-0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#2563eb]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#0159D3]" />
             {t('reco_load_sample', lang)}
           </button>
         </div>
@@ -474,7 +474,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
                 setResults(null);
                 setErrorMsg(null);
               }}
-              className="text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#2563eb]/30 focus:border-[#2563eb]"
+              className="text-[11px] bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#0159D3]/30 focus:border-[#0159D3]"
             >
               {RECO_PAIRS.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -490,14 +490,14 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
               step="0.01"
               value={tolerance}
               onChange={(e) => setTolerance(e.target.value)}
-              className="w-24 text-xs font-mono bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+              className="w-24 text-xs font-mono bg-white border border-[#C8D1DF] rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-[#0159D3]/30"
             />
           </label>
           </div>
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-lg text-xs font-bold shadow-xs transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#0159D3] hover:bg-[#00347D] text-white rounded-lg text-xs font-bold shadow-xs transition-colors disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             {isRunning ? t('reconciling', lang) : t('reco_run', lang)}
@@ -546,7 +546,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-3 text-xs font-semibold whitespace-nowrap transition-colors border-b-2 ${
                     activeTab === tab.id
-                      ? 'border-[#2563eb] text-[#2563eb] bg-white'
+                      ? 'border-[#0159D3] text-[#0159D3] bg-white'
                       : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
                   }`}
                 >
@@ -562,13 +562,13 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
 
               {activeTab === '3b' && (
                 <div className="space-y-3">
-                  <div className="text-xs text-[#47566B] bg-[#eff6ff] border border-[#DDE4EE] p-2.5 rounded-lg">
+                  <div className="text-xs text-[#47566B] bg-[#EAF1FC] border border-[#DDE4EE] p-2.5 rounded-lg">
                     {t('reco_3b_note', lang)}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs border-collapse">
                       <thead>
-                        <tr className="bg-[#1e40af] text-white">
+                        <tr className="bg-[#00347D] text-white">
                           <th className="text-left px-3 py-2 font-semibold">{t('reco_3b_particulars', lang)}</th>
                           <th className="text-right px-3 py-2 font-semibold">{t('reco_3b_portal', lang)}</th>
                           <th className="text-right px-3 py-2 font-semibold">{t('reco_3b_books', lang)}</th>
@@ -593,7 +593,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
                                         [key]: { ...threeB[key], [side]: parseFloat(e.target.value) || 0 },
                                       })
                                     }
-                                    className="w-28 text-right text-xs font-mono bg-white border border-[#C8D1DF] rounded px-2 py-1 outline-none focus:ring-2 focus:ring-[#2563eb]/30"
+                                    className="w-28 text-right text-xs font-mono bg-white border border-[#C8D1DF] rounded px-2 py-1 outline-none focus:ring-2 focus:ring-[#0159D3]/30"
                                   />
                                 </td>
                               ))}
@@ -620,7 +620,7 @@ export const GstRecoModule: React.FC<Props> = ({ commonPeriod, gstin, lang }) =>
                   <button
                     onClick={handleDownload}
                     disabled={isExporting}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-60 disabled:cursor-wait"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#0159D3] hover:bg-[#00347D] text-white rounded-xl text-xs font-bold shadow-sm transition-colors disabled:opacity-60 disabled:cursor-wait"
                   >
                     <Download className="w-4 h-4" />
                     {isExporting ? t('export_running', lang) : t('reco_export_btn', lang)}

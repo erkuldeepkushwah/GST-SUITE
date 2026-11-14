@@ -85,7 +85,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
         <select
           value={currentMode}
           onChange={(e) => handleModeChange(e.target.value as PeriodMode)}
-          className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-medium text-slate-800 focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb]"
+          className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-medium text-slate-800 focus:ring-1 focus:ring-[#0159D3] focus:border-[#0159D3]"
         >
           <option value="monthly">{t('mode_monthly', lang)}</option>
           <option value="quarterly">{t('mode_quarterly', lang)}</option>
@@ -103,7 +103,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
             type="month"
             value={value.start.slice(0, 7)}
             onChange={handleMonthChange}
-            className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#2563eb]"
+            className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#0159D3]"
           />
         </div>
       )}
@@ -117,7 +117,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
             <select
               value={activeFy}
               onChange={(e) => handleQuarterChange(Number(e.target.value), activeQ)}
-              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#2563eb]"
+              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#0159D3]"
             >
               {fyYears.map((yr) => (
                 <option key={yr} value={yr}>
@@ -133,7 +133,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
             <select
               value={activeQ}
               onChange={(e) => handleQuarterChange(activeFy, Number(e.target.value))}
-              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#2563eb]"
+              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#0159D3]"
             >
               <option value={1}>Q1 (Apr-Jun)</option>
               <option value={2}>Q2 (Jul-Sep)</option>
@@ -152,7 +152,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
           <select
             value={activeFy}
             onChange={(e) => handleFyChange(Number(e.target.value))}
-            className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#2563eb]"
+            className="w-full text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#0159D3]"
           >
             {fyYears.map((yr) => (
               <option key={yr} value={yr}>
@@ -173,7 +173,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
               type="date"
               value={value.start}
               onChange={(e) => handleCustomDateChange(e.target.value, undefined)}
-              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#2563eb]"
+              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#0159D3]"
             />
           </div>
           <div>
@@ -184,7 +184,7 @@ export const PeriodPicker: React.FC<Props> = ({ value, onChange, lang }) => {
               type="date"
               value={value.end}
               onChange={(e) => handleCustomDateChange(undefined, e.target.value)}
-              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#2563eb]"
+              className="w-full text-xs bg-white border border-slate-300 rounded-md px-2 py-1.5 text-slate-800 font-medium focus:ring-1 focus:ring-[#0159D3]"
             />
           </div>
         </div>

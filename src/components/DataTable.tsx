@@ -199,7 +199,7 @@ export const DataTable: React.FC<Props> = ({
                   setCurrentPage(1);
                 }}
                 placeholder="Search table..."
-                className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-hidden focus:ring-1 focus:ring-[#2563eb] focus:border-[#2563eb] w-48 transition-all"
+                className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-hidden focus:ring-1 focus:ring-[#0159D3] focus:border-[#0159D3] w-48 transition-all"
               />
             </div>
           )}
