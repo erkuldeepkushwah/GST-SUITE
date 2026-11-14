@@ -48,7 +48,11 @@ jobs:
 
       - name: Build
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/app/
+          # Relative, so the same build works whether it is served from
+          # /app/ on the Pages domain or from /GST-SUITE/app/ on github.io.
+          # An absolute base broke one of the two and the app came up
+          # unstyled, with its CSS and JS requested from a path that 404s.
+          VITE_BASE: ./
         run: npm run build
 
       - name: Publish dist into docs/app
