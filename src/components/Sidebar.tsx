@@ -51,27 +51,27 @@ export const Sidebar: React.FC<Props> = ({
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-white border-r border-[#DDE4EE] flex flex-col justify-between gap-6 p-5 text-[#344056] shadow-2xl md:sticky md:top-0 md:h-screen md:w-72 lg:w-80 md:shrink-0 md:z-auto md:shadow-none">
+    <aside className="fixed inset-y-0 left-0 z-50 w-full overflow-y-auto bg-white border-r border-[#E4EAF2] flex flex-col justify-between gap-6 p-5 text-[#344056] shadow-2xl md:sticky md:top-0 md:h-screen md:w-72 lg:w-80 md:shrink-0 md:z-auto md:shadow-none">
       <div className="space-y-7">
         {/* The logo now lives in the site navbar above, so the sidebar starts at the divider */}
-        <div className="h-px bg-[#DDE4EE]" />
+        <div className="rounded-2xl border border-[#DCE8F8] bg-gradient-to-br from-[#F0F6FF] to-white px-4 py-4">\n          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#0159D3]">Your workspace</p>\n          <h2 className="mt-1 text-base font-bold tracking-tight text-[#00347D]">Solutions &amp; Modules</h2>\n          <p className="mt-1 text-xs leading-5 text-[#64748B]">Select a module to start your reconciliation.</p>\n        </div>
 
 
 
         {/* Module selection */}
         <div>
           <SectionLabel>{t('sidebar_module', lang)}</SectionLabel>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {MODULE_KEYS.map((k) => {
               const isSelected = activeModule === k;
               return (
                 <button
                   key={k}
                   onClick={() => onModuleChange(k)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs transition-colors flex items-center justify-between gap-2 ${
+                  className={`w-full text-left px-4 py-3 rounded-xl text-xs transition-all duration-200 flex items-center justify-between gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0159D3] ${
                     isSelected
-                      ? 'bg-[#0159D3] text-white shadow-sm font-semibold'
-                      : 'bg-white text-[#344056] border border-[#DDE4EE] font-medium hover:bg-[#EAF1FC] hover:border-[#7FA8E4] hover:text-[#00347D]'
+                      ? 'bg-[#0159D3] text-white shadow-[0_5px_14px_rgba(1,89,211,0.16)] font-semibold'
+                      : 'bg-white text-[#344056] border border-[#E4EAF2] font-medium hover:bg-[#EAF1FC] hover:border-[#7FA8E4] hover:text-[#00347D]'
                   }`}
                 >
                   <span>{t(`mod_${k}`, lang)}</span>
