@@ -3,7 +3,7 @@ import { ModuleKey, LanguageCode, Period } from '../types';
 import { t } from '../i18n/translations';
 import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
-import { CheckCircle2, AlertCircle, X, Files, FileSpreadsheet, Scale, Landmark, ReceiptText, Boxes, ChevronRight, CalendarDays, Building2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, Files, FileSpreadsheet, Scale, Landmark, ReceiptText, Boxes, ChevronRight, CalendarDays, Building2 } from 'lucide-react';
 import { describeGstin, gstinIssueKey, validateGstin } from '../services/validation';
 
 interface Props {
@@ -51,32 +51,26 @@ export const Sidebar: React.FC<Props> = ({
     <aside id="gst-suite-sidebar" aria-label="Solutions navigation"
       className="fixed inset-y-0 left-0 z-50 flex w-[min(92vw,350px)] flex-col overflow-hidden border-r border-[#E3EAF3] bg-white text-[#344056] shadow-2xl md:sticky md:top-0 md:z-auto md:h-screen md:w-[280px] md:shrink-0 md:shadow-none xl:w-[308px]">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-6 pt-5 sm:px-5">
-        <div className="mb-6 rounded-2xl border border-[#D7E6FB] bg-gradient-to-br from-[#F0F6FF] via-white to-[#F7FAFF] p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-[#0159D3] ring-1 ring-[#DCE8F8]">
-              <ShieldCheck className="h-3.5 w-3.5" /> Workspace
-            </span>
-            <button type="button" aria-label="Close modules" onClick={onClose}
-              className="rounded-lg p-1.5 text-[#475569] hover:bg-[#EAF1FC] md:hidden">
-              <X className="h-5 w-5" />
-            </button>
+        <div className="mb-5 flex items-center justify-between border-b border-[#E8EDF5] pb-4">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0159D3]">Navigation</p>
+            <h2 className="mt-1 text-base font-bold tracking-tight text-[#00347D]">Modules</h2>
           </div>
-          <h2 className="text-lg font-extrabold tracking-tight text-[#00347D]">Solutions &amp; Modules</h2>
-          <p className="mt-1.5 text-xs leading-5 text-[#64748B]">One workspace for your accounting and reconciliation.</p>
+          <button type="button" aria-label="Close modules" onClick={onClose}
+            className="rounded-lg border border-[#E3EAF3] p-2 text-[#475569] hover:bg-[#EAF1FC] md:hidden">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <nav aria-label="Reconciliation modules" className="mb-6">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <SectionHeading icon={Files}>{t('sidebar_module', lang)}</SectionHeading>
-            <span className="mb-3 rounded-md bg-[#F1F5FA] px-2 py-1 text-[10px] font-semibold text-[#64748B]">06</span>
-          </div>
-          <div className="space-y-1.5">
+          <div className="mb-3"><SectionHeading icon={Files}>{t('sidebar_module', lang)}</SectionHeading></div>
+          <div className="space-y-1">
             {MODULES.map(({ key, icon: Icon, hint }) => {
               const selected = activeModule === key;
               return (
                 <button key={key} type="button" aria-current={selected ? 'page' : undefined}
                   onClick={() => onModuleChange(key)}
-                  className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0159D3] ${selected
+                  className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0159D3] ${selected
                     ? 'border-[#0159D3] bg-[#0159D3] text-white shadow-[0_6px_16px_rgba(1,89,211,.2)]'
                     : 'border-transparent bg-transparent text-[#334155] hover:border-[#DDE8F6] hover:bg-[#F2F7FF]'}`}>
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${selected ? 'bg-white/20 text-white' : 'bg-[#EFF5FD] text-[#0159D3] group-hover:bg-white'}`}>
