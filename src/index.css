@@ -46,3 +46,71 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Responsive Solutions & Modules workspace – presentation only. */
+@media (max-width: 767px) {
+  html, body, #root { max-width: 100%; overflow-x: clip; }
+  .gst2a-workspace { width: 100%; min-width: 0; }
+  .gst2a-form {
+    padding: 18px !important;
+    border-radius: 22px !important;
+    border-color: #dce5f2 !important;
+    box-shadow: 0 8px 24px rgba(0,52,125,.06);
+  }
+  .gst2a-upload-grid { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .gst2a-upload {
+    background: #f8fbff;
+    border-color: #cad9ef;
+    border-radius: 16px;
+    padding: 14px !important;
+    min-width: 0;
+  }
+  .gst2a-upload > div:first-child { margin-bottom: 10px; }
+  .gst2a-upload > div:first-child span:first-child {
+    color: #00347d;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .gst2a-file-picker {
+    min-height: 58px;
+    flex-direction: row;
+    padding: 10px 12px;
+    justify-content: flex-start;
+    border: 1px solid #a9c3e9;
+    border-radius: 12px;
+    color: #0159d3;
+    gap: 10px;
+  }
+  .gst2a-file-picker svg { width: 21px; height: 21px; flex-shrink: 0; color: #0159d3; }
+  .gst2a-file-picker span { color: #00347d; max-width: calc(100% - 32px); }
+  .gst2a-actions { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .gst2a-actions .gst2a-run {
+    width: 100%;
+    justify-content: center;
+    min-height: 54px;
+    font-size: 14px;
+    border-radius: 12px;
+    background: linear-gradient(110deg, #0159d3, #005af0);
+    box-shadow: 0 8px 18px rgba(1,89,211,.17);
+  }
+  .gst2a-actions .gst2a-sample {
+    align-self: center;
+    justify-content: center;
+    min-height: 42px;
+    width: min(100%, 290px);
+    font-size: 12px;
+    border: 1px solid #d9e2f1;
+  }
+  .fg-in { height: 72px; padding-inline: 16px; }
+  .fg-logo img { max-width: min(65vw, 280px); height: auto; max-height: 50px; object-fit: contain; }
+  .fg-burger { flex-shrink: 0; width: 42px; height: 42px; }
+  .fg-links.open { top: 72px; }
+  .fg-foot { padding: 32px 0 20px; }
+  .fg-foot .fg-wrap { padding-inline: 20px; }
+  .fg-grid { gap: 24px; padding-bottom: 24px; }
+  .fg-bottom { flex-wrap: wrap; justify-content: center; text-align: center; }
+}
+@media (max-width: 380px) {
+  .gst2a-form { padding: 12px !important; }
+  .gst2a-upload { padding: 10px !important; }
+}
