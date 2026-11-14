@@ -25,7 +25,7 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col md:flex-row antialiased relative">
+    <div className="min-h-screen bg-[#F5F8FC] text-[#0F172A] flex flex-col md:flex-row antialiased relative">
       {/* Backdrop while the sidebar overlays the content on small screens */}
       {isSidebarOpen && (
         <div
@@ -49,7 +49,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Workspace */}
-      <main className="flex-1 min-w-0 p-4 sm:p-7 lg:p-9 max-w-7xl mx-auto w-full transition-all duration-300">
+      <main className="flex-1 min-w-0 p-4 sm:p-7 lg:p-10 max-w-[1440px] mx-auto w-full transition-all duration-300">
         <HeaderHero
           module={activeModule}
           lang={lang}
