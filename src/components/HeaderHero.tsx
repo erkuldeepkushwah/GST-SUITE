@@ -52,11 +52,11 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true
           Built for accurate, streamlined reconciliation
         </div>
       </div>
-      <div aria-hidden="true" className="pointer-events-none absolute bottom-6 right-5 hidden h-48 w-44 items-center justify-center lg:flex">
+      <div aria-hidden="true" className="pointer-events-none absolute bottom-4 right-2 flex h-28 w-24 items-center justify-center opacity-25 sm:bottom-6 sm:right-5 sm:h-48 sm:w-44 sm:opacity-90">
         <div className="absolute inset-3 rounded-[40px] bg-white/10 blur-xl" />
         <div className="relative -rotate-3 rounded-2xl border border-white/30 bg-white p-5 shadow-2xl">
-          <FileCheck2 className="h-20 w-20 text-[#0159D3]" />
-          <span className="absolute -bottom-3 -right-4 rounded-full bg-[#1478FF] p-2 text-white shadow-lg"><CheckCircle2 className="h-9 w-9" /></span>
+          <FileCheck2 className="h-14 w-14 text-[#0159D3] sm:h-20 sm:w-20" />
+          <span className="absolute -bottom-3 -right-4 rounded-full bg-[#1478FF] p-2 text-white shadow-lg"><CheckCircle2 className="h-6 w-6 sm:h-9 sm:w-9" /></span>
         </div>
       </div>
     </div>
