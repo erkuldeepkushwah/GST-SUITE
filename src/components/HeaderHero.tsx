@@ -21,13 +21,13 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true
       <button
         onClick={onToggleSidebar}
         type="button"
-        title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-        aria-label={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+        title="Open modules"
+        aria-label="Open modules"
+        aria-controls="gst-suite-sidebar"
         aria-expanded={isSidebarOpen}
-        className="inline-flex items-center gap-2 rounded-xl border border-[#DDE4EE] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#00347D] shadow-sm transition-colors hover:border-[#7FA8E4] hover:bg-[#EAF1FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0159D3]"
+        className="inline-flex items-center justify-center rounded-xl border border-[#DDE4EE] bg-white p-2.5 text-[#0159D3] shadow-sm transition-colors hover:bg-[#EAF1FC] md:hidden"
       >
-        <Menu className="h-4 w-4" />
-        <span>{isSidebarOpen ? 'Hide modules' : 'Browse modules'}</span>
+        <Menu className="h-5 w-5" />
       </button>
     </div>
 
