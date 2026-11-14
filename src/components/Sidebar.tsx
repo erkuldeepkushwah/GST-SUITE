@@ -3,7 +3,6 @@ import { ModuleKey, LanguageCode, Period } from '../types';
 import { t } from '../i18n/translations';
 import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
-import { FIRM_NAME, FIRM_TAGLINE, FIRM_LOCATION } from '../services/branding';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { describeGstin, gstinIssueKey, validateGstin } from '../services/validation';
 
@@ -159,15 +158,6 @@ export const Sidebar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* About box in the sidebar footer */}
-      <div className="mt-2 border-t-2 border-[#0159D3]/30 pt-4 text-xs leading-relaxed text-[#64748B]">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-[#94A3B8]">
-          {t('about_heading', lang)}
-        </div>
-        <div className="font-semibold text-[#0159D3]">{FIRM_NAME}</div>
-        <div className="my-0.5 text-[11px] text-[#64748B]">{FIRM_TAGLINE}</div>
-        <div className="text-[11px] text-[#94A3B8]">{FIRM_LOCATION}</div>
-      </div>
     </aside>
   );
 };
