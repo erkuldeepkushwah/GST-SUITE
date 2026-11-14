@@ -38,10 +38,11 @@ export const App: React.FC = () => {
       {/* Sidebar Navigation */}
       <Sidebar
         isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
         lang={lang}
         onLanguageChange={setLang}
         activeModule={activeModule}
-        onModuleChange={setActiveModule}
+        onModuleChange={(mod) => { setActiveModule(mod); if (typeof window !== 'undefined' && window.innerWidth < 768) setIsSidebarOpen(false); }}
         gstin={gstin}
         onGstinChange={setGstin}
         commonPeriod={commonPeriod}
