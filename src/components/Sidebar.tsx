@@ -3,7 +3,7 @@ import { ModuleKey, LanguageCode, Period } from '../types';
 import { t } from '../i18n/translations';
 import { PeriodPicker } from './PeriodPicker';
 import { formatDateDisplay } from '../services/periodManager';
-import { CheckCircle2, AlertCircle, X, Files, FileSpreadsheet, Scale, Landmark, ReceiptText, Boxes, ChevronRight, CalendarDays, Building2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, Files, FileSpreadsheet, Scale, Landmark, ReceiptText, Boxes, CalendarDays, Building2 } from 'lucide-react';
 import { describeGstin, gstinIssueKey, validateGstin } from '../services/validation';
 
 interface Props {
@@ -29,7 +29,7 @@ const MODULES = [
 ] as const satisfies ReadonlyArray<{ key: ModuleKey; icon: React.ElementType; hint: string }>;
 
 const SectionHeading: React.FC<{ icon: React.ElementType; children: React.ReactNode }> = ({ icon: Icon, children }) => (
-  <h3 className="mb-3 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#718096]">
+  <h3 className="mb-2 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#718096]">
     <Icon className="h-4 w-4 text-[#0159D3]" aria-hidden="true" />
     {children}
   </h3>
@@ -50,11 +50,10 @@ export const Sidebar: React.FC<Props> = ({
   return (
     <aside id="gst-suite-sidebar" aria-label="Solutions navigation"
       className="fixed inset-y-0 left-0 z-50 flex w-[min(92vw,350px)] flex-col overflow-hidden border-r border-[#E3EAF3] bg-white text-[#344056] shadow-2xl md:sticky md:top-0 md:z-auto md:h-screen md:w-[280px] md:shrink-0 md:shadow-none xl:w-[308px]">
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-6 pt-5 sm:px-5">
-        <div className="mb-5 flex items-center justify-between border-b border-[#E8EDF5] pb-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3 pt-3 sm:px-4">
+        <div className="mb-3 flex items-center justify-between border-b border-[#E8EDF5] pb-2">
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0159D3]">Navigation</p>
-            <h2 className="mt-1 text-base font-bold tracking-tight text-[#00347D]">Modules</h2>
+            <h2 className="text-sm font-bold tracking-tight text-[#00347D]">Select Module</h2>
           </div>
           <button type="button" aria-label="Close modules" onClick={onClose}
             className="rounded-lg border border-[#E3EAF3] p-2 text-[#475569] hover:bg-[#EAF1FC] md:hidden">
@@ -62,35 +61,31 @@ export const Sidebar: React.FC<Props> = ({
           </button>
         </div>
 
-        <nav aria-label="Reconciliation modules" className="mb-6">
-          <div className="mb-3"><SectionHeading icon={Files}>{t('sidebar_module', lang)}</SectionHeading></div>
-          <div className="space-y-1">
-            {MODULES.map(({ key, icon: Icon, hint }) => {
+        <nav aria-label="Reconciliation modules" className="mb-3">
+          
+          <div className="space-y-0.5">
+            {MODULES.map(({ key, icon: Icon }) => {
               const selected = activeModule === key;
               return (
                 <button key={key} type="button" aria-current={selected ? 'page' : undefined}
                   onClick={() => onModuleChange(key)}
-                  className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0159D3] ${selected
+                  className={`group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-1 text-left transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0159D3] ${selected
                     ? 'border-[#0159D3] bg-[#0159D3] text-white shadow-[0_6px_16px_rgba(1,89,211,.2)]'
                     : 'border-transparent bg-transparent text-[#334155] hover:border-[#DDE8F6] hover:bg-[#F2F7FF]'}`}>
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${selected ? 'bg-white/20 text-white' : 'bg-[#EFF5FD] text-[#0159D3] group-hover:bg-white'}`}>
-                    <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${selected ? 'bg-white/20 text-white' : 'bg-[#EFF5FD] text-[#0159D3] group-hover:bg-white'}`}>
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-bold leading-5">{t(`mod_${key}`, lang)}</span>
-                    <span className={`block truncate text-[10px] leading-4 ${selected ? 'text-[#E1EBFF]' : 'text-[#8390A3]'}`}>{hint}</span>
-                  </span>
-                  <ChevronRight className={`h-4 w-4 shrink-0 ${selected ? 'text-white' : 'text-[#B3C0D0] group-hover:text-[#0159D3]'}`} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-semibold leading-5">{t(`mod_${key}`, lang)}</span>
                 </button>
               );
             })}
           </div>
         </nav>
 
-        <div className="mb-5 border-t border-[#E8EDF5] pt-5">
+        <div className="mb-3 border-t border-[#E8EDF5] pt-3">
           <SectionHeading icon={Building2}>{t('sidebar_company', lang)}</SectionHeading>
-          <div className="rounded-xl border border-[#E2E9F3] bg-[#FAFCFF] p-3">
-            <label className="mb-2 block text-[11px] font-semibold text-[#475569]" htmlFor="suite-gstin">
+          <div className="rounded-lg border border-[#E2E9F3] bg-[#FAFCFF] p-2.5">
+            <label className="mb-1 block text-[10px] font-semibold text-[#475569]" htmlFor="suite-gstin">
               {t('gstin_label', lang)}
             </label>
             <div className="relative">
@@ -107,13 +102,13 @@ export const Sidebar: React.FC<Props> = ({
                 aria-invalid={gstinCheck.status === 'invalid'}
                 aria-describedby="suite-gstin-help"
                 placeholder="Enter 15-digit GSTIN"
-                className={`w-full rounded-lg border bg-white py-2.5 pl-3 pr-9 font-mono text-xs uppercase tracking-wider text-[#0F172A] outline-none transition-shadow focus:border-[#0159D3] focus:ring-2 focus:ring-[#0159D3]/20 ${gstin.length > 0 && !isGstinValid
+                className={`w-full rounded-lg border bg-white py-2 pl-3 pr-9 font-mono text-xs uppercase tracking-wider text-[#0F172A] outline-none transition-shadow focus:border-[#0159D3] focus:ring-2 focus:ring-[#0159D3]/20 ${gstin.length > 0 && !isGstinValid
                   ? 'border-amber-400' : isGstinValid ? 'border-emerald-500' : 'border-[#D7E0EC]'}`}
               />
-              {isGstinValid && <CheckCircle2 className="absolute right-3 top-2.5 h-4 w-4 text-emerald-600" aria-hidden="true" />}
+              {isGstinValid && <CheckCircle2 className="absolute right-3 top-2 h-4 w-4 text-emerald-600" aria-hidden="true" />}
               {gstin.length > 0 && !isGstinValid && <AlertCircle className="absolute right-3 top-2.5 h-4 w-4 text-amber-500" aria-hidden="true" />}
             </div>
-            <div id="suite-gstin-help" className="mt-2 flex items-start justify-between gap-2 text-[10px] leading-4">
+            <div id="suite-gstin-help" className="mt-1 flex items-start justify-between gap-2 text-[10px] leading-4">
               <span className={`min-w-0 break-words ${gstinProblem ? 'font-medium text-amber-700' : 'text-[#718096]'}`}>
                 {gstinProblem || (isGstinValid ? describeGstin(gstin) : t('gstin_caption', lang))}
               </span>
@@ -122,11 +117,11 @@ export const Sidebar: React.FC<Props> = ({
           </div>
         </div>
 
-        <section aria-label="Reporting period" className="border-t border-[#E8EDF5] pt-5">
+        <section aria-label="Reporting period" className="border-t border-[#E8EDF5] pt-3">
           <SectionHeading icon={CalendarDays}>{t('common_period', lang)}</SectionHeading>
           <div className="rounded-xl border border-[#E2E9F3] bg-[#FAFCFF] p-3">
-            <PeriodPicker prefix="common" value={commonPeriod} onChange={onCommonPeriodChange} lang={lang} />
-            <div className="mt-3 rounded-lg border border-[#DAE8F9] bg-[#EDF5FF] px-3 py-2.5 text-[10px] leading-5 text-[#375779]">
+            <PeriodPicker compact prefix="common" value={commonPeriod} onChange={onCommonPeriodChange} lang={lang} />
+            <div className="mt-2 rounded-lg border border-[#DAE8F9] bg-[#EDF5FF] px-2 py-1.5 text-[10px] leading-4 text-[#375779]">
               {t('period_caption', lang, {
                 label: commonPeriod.label,
                 start: formatDateDisplay(commonPeriod.start),
@@ -135,11 +130,6 @@ export const Sidebar: React.FC<Props> = ({
             </div>
           </div>
         </section>
-      </div>
-      <div className="shrink-0 border-t border-[#E8EDF5] bg-white px-5 py-3">
-        <p className="flex items-center gap-2 text-[10px] font-semibold text-[#718096]">
-          <span className="h-2 w-2 rounded-full bg-[#16A34A]" /> Fingenuity Associates
-        </p>
       </div>
     </aside>
   );
