@@ -11,7 +11,7 @@
  * copied only when they exist. The app shell is never renamed or overwritten,
  * so the GitHub Pages build (which copies dist/ into docs/app/) is unaffected.
  */
-import { cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIST = 'dist';
@@ -38,7 +38,13 @@ if (!files.length) {
 // 1. keep a browsable copy at /landing/
 mkdirSync(join(DIST, 'landing'), { recursive: true });
 for (const file of files) {
-  cpSync(join(SRC, file), join(DIST, 'landing', file));
+  if (file === 'index.html') {
+    // Nested /landing/ pages resolve shared module images from ../assets/.
+    const html = readFileSync(join(SRC, file), 'utf8').replace(/src="assets\/(module-[^" ]+\.webp|dc98a4a4-7344-4884-af55-02bafb73ccc2\.png)"/g, 'src="../assets/$1"');
+    writeFileSync(join(DIST, 'landing', file), html);
+  } else {
+    cpSync(join(SRC, file), join(DIST, 'landing', file));
+  }
 }
 
 // 2. flat copies at the site root; the home page becomes home.html
