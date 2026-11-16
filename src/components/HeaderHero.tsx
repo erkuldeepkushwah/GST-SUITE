@@ -11,14 +11,14 @@ interface Props {
 }
 
 export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true, onToggleSidebar }) => (
-  <header className="mb-7">
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-[#64748B]">
+  <header className="mb-5 sm:mb-7">
+    <div className="mb-3 flex min-w-0 items-center justify-between gap-2 sm:mb-4">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[11px] font-medium text-[#64748B] sm:gap-2 sm:text-xs">
         <House className="h-4 w-4 text-[#0159D3]" aria-hidden="true" />
         <ChevronRight className="h-3.5 w-3.5 text-[#94A3B8]" aria-hidden="true" />
-        <span>Solutions &amp; Modules</span>
+        <span className="hidden min-[390px]:inline">Solutions &amp; Modules</span>
         <ChevronRight className="h-3.5 w-3.5 text-[#94A3B8]" aria-hidden="true" />
-        <span className="text-[#0159D3]">{t(`mod_${module}`, lang)}</span>
+        <span className="min-w-0 truncate font-semibold text-[#0159D3]">{t(`mod_${module}`, lang)}</span>
       </nav>
       <button
         onClick={onToggleSidebar}
@@ -27,7 +27,7 @@ export const HeaderHero: React.FC<Props> = ({ module, lang, isSidebarOpen = true
         aria-label="Open modules"
         aria-controls="gst-suite-sidebar"
         aria-expanded={isSidebarOpen}
-        className="inline-flex items-center justify-center rounded-xl border border-[#DDE4EE] bg-white p-2.5 text-[#0159D3] shadow-sm transition-colors hover:bg-[#EAF1FC] md:hidden"
+        className="hidden items-center justify-center rounded-xl border border-[#DDE4EE] bg-white p-2.5 text-[#0159D3] shadow-sm transition-colors hover:bg-[#EAF1FC] lg:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
