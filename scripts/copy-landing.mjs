@@ -40,7 +40,7 @@ mkdirSync(join(DIST, 'landing'), { recursive: true });
 for (const file of files) {
   if (file.endsWith('.html')) {
     // Nested /landing/ pages resolve shared module images from ../assets/.
-    const html = readFileSync(join(SRC, file), 'utf8').replace(/src="assets\/(module-[^" ]+\.webp|dc98a4a4-7344-4884-af55-02bafb73ccc2\.png|priya-mehta\.jpg|rohan-verma\.jpg)"/g, 'src="../assets/$1"');
+    const html = readFileSync(join(SRC, file), 'utf8').replace(/src="assets\/(module-[^" ]+\.webp|priya-mehta\.jpg|rohan-verma\.jpg)"/g, 'src="../assets/$1"');
     writeFileSync(join(DIST, 'landing', file), html);
   } else {
     cpSync(join(SRC, file), join(DIST, 'landing', file));
@@ -62,7 +62,6 @@ const MODULE_IMAGES = [
   'module-bank.webp',
   'module-tds.webp',
   'module-stock.webp',
-  'dc98a4a4-7344-4884-af55-02bafb73ccc2.png',
   'priya-mehta.jpg',
   'rohan-verma.jpg',
 ];
