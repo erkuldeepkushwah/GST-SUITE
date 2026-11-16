@@ -29,8 +29,7 @@ body .elementor-heading-title { text-wrap: pretty; }
 body :is(p,li) { overflow-wrap: break-word; }
 /* Keep contrast for intentional dark/colored regions and site footer. */
 body :is(footer,.footer,.site-footer,.wf-container-footer,#footer,.fg-foot,
-  .elementor-section[data-settings*="gradient"],
-  .elementor-section[class*="elementor-invisible"]) :is(h1,h2,h3,h4,h5,h6,.the7-heading-title,.elementor-heading-title) {
+  .elementor-section[data-settings*="gradient"]) :is(h1,h2,h3,h4,h5,h6,.the7-heading-title,.elementor-heading-title) {
   color: #FFFFFF !important;
 }
 body :is(footer,.footer,.site-footer,.wf-container-footer,#footer,.fg-foot,
