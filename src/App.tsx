@@ -9,6 +9,15 @@ import { BankRecoModule } from './components/modules/BankRecoModule';
 import { TdsRecoModule } from './components/modules/TdsRecoModule';
 import { StockRecoModule } from './components/modules/StockRecoModule';
 import { periodBounds } from './services/periodManager';
+import { t } from './i18n/translations';
+import { Files, FileSpreadsheet, Scale, Landmark, ReceiptText, Boxes, SlidersHorizontal } from 'lucide-react';
+
+const MOBILE_MODULES = [
+  { key: 'gst2a', icon: Files }, { key: 'gstr1', icon: FileSpreadsheet },
+  { key: 'gstreco', icon: Scale }, { key: 'bank', icon: Landmark },
+  { key: 'tds', icon: ReceiptText }, { key: 'stock', icon: Boxes },
+] as const;
+
 
 export const App: React.FC = () => {
   const [lang, setLang] = useState<LanguageCode>('en');
@@ -19,18 +28,18 @@ export const App: React.FC = () => {
 
   // Start collapsed on phones so the workspace gets the full width
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] text-[#0F172A] flex flex-col md:flex-row antialiased relative">
+    <div className="min-h-screen bg-[#F5F8FC] text-[#0F172A] flex flex-col lg:flex-row antialiased relative">
       {/* Backdrop while the sidebar overlays the content on small screens */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-opacity"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
           aria-hidden="true"
         />
       )}
@@ -50,7 +59,26 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Workspace */}
-      <main className="flex-1 min-w-0 p-4 sm:p-7 lg:p-10 max-w-[1440px] mx-auto w-full transition-all duration-300">
+      <main className="gst-app-main flex-1 min-w-0 w-full max-w-[1440px] mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:p-9 transition-all duration-300">
+        <nav className="gst-mobile-tabs lg:hidden" aria-label="Quick module navigation">
+          <div className="gst-mobile-tabs-track">
+            {MOBILE_MODULES.map(({ key, icon: Icon }) => (
+              <button key={key} type="button"
+                aria-current={activeModule === key ? 'page' : undefined}
+                className={`gst-mobile-tab ${activeModule === key ? 'is-active' : ''}`}
+                onClick={() => setActiveModule(key)}
+              >
+                <Icon size={17} aria-hidden="true" />
+                <span>{t(`mod_${key}`, lang)}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="gst-mobile-settings"
+            aria-label="Open company and reporting period settings"
+            onClick={() => setIsSidebarOpen(true)}>
+            <SlidersHorizontal size={19} />
+          </button>
+        </nav>
         <HeaderHero
           module={activeModule}
           lang={lang}
