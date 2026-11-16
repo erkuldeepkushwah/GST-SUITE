@@ -63,6 +63,7 @@ const MODULE_IMAGES = [
   'module-tds.webp',
   'module-stock.webp',
   'dc98a4a4-7344-4884-af55-02bafb73ccc2.png',
+  'priya-mehta.jpg',
 ];
 mkdirSync(join(DIST, 'assets'), { recursive: true });
 for (const image of MODULE_IMAGES) {
