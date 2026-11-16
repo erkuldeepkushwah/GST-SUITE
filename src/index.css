@@ -234,3 +234,17 @@
   .gst-app-main { padding-inline: 9px; }
   .gst-app-main .grid.grid-cols-1.sm\:grid-cols-2 { grid-template-columns: minmax(0,1fr); }
 }
+
+/* Shared content typography: dark blue titles, high-contrast body text.
+   Scope to light surfaces so hero banners, KPI gradients and buttons retain contrast. */
+.gst-app-main :is(.bg-white,.bg-slate-50,.bg-slate-50\/50,.bg-\[\#FAFCFF\]) :is(h1,h2,h3,h4,h5,h6) {
+  color: #00347D;
+}
+.gst-app-main :is(.bg-white,.bg-slate-50,.bg-slate-50\/50,.bg-\[\#FAFCFF\]) p {
+  color: #243247;
+  line-height: 1.65;
+}
+.gst-app-main :is(.bg-white,.bg-slate-50) :is(.text-slate-400,.text-slate-500,.text-slate-600) {
+  color: #405069;
+}
+.gst-app-main :is(.bg-white,.bg-slate-50) :is(h1,h2,h3,h4,h5,h6) a { color: inherit; }
