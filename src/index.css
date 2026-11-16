@@ -179,7 +179,7 @@
     padding: 14px; border-radius: 18px;
     box-shadow: 0 4px 22px rgba(11,23,54,.055);
   }
-  .gst-app-main .grid.grid-cols-1.md\\:grid-cols-2 {
+  .gst-app-main .grid.grid-cols-1.md\:grid-cols-2 {
     grid-template-columns: minmax(0,1fr);
   }
   .gst-app-main .border-dashed {
@@ -212,13 +212,13 @@
     min-height: 48px; justify-content: center; width: 100%;
     border-radius: 12px; font-size: 13px;
   }
-  .gst-app-main .grid.grid-cols-1.sm\\:grid-cols-2 {
+  .gst-app-main .grid.grid-cols-1.sm\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .gst-app-main .grid.grid-cols-1.sm\\:grid-cols-2 > div {
+  .gst-app-main .grid.grid-cols-1.sm\:grid-cols-2 > div {
     padding: 12px; min-width: 0;
   }
-  .gst-app-main .grid.grid-cols-1.sm\\:grid-cols-2 > div > div {
+  .gst-app-main .grid.grid-cols-1.sm\:grid-cols-2 > div > div {
     overflow-wrap: anywhere;
   }
   .gst-table-toolbar { padding: 10px; }
@@ -232,5 +232,5 @@
 @media (max-width: 359px) {
   .gst-mobile-tab { font-size: 11px; padding-inline: 9px; }
   .gst-app-main { padding-inline: 9px; }
-  .gst-app-main .grid.grid-cols-1.sm\\:grid-cols-2 { grid-template-columns: minmax(0,1fr); }
+  .gst-app-main .grid.grid-cols-1.sm\:grid-cols-2 { grid-template-columns: minmax(0,1fr); }
 }
