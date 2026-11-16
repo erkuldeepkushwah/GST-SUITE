@@ -1,0 +1,44 @@
+/* Fingenuity Associates - shared accessible typography palette.
+   Intended for public marketing pages and their generated copies. */
+:root {
+  --fg-heading: #0159D3;
+  --fg-heading-deep: #00347D;
+  --fg-body: #172033;
+  --fg-muted: #344256;
+}
+body { color: var(--fg-body); }
+body :is(h1,h2,h3,h4,h5,h6),
+body :is(.the7-heading-title,.elementor-heading-title,.box-heading) {
+  color: var(--fg-heading-deep) !important;
+}
+body :is(h1,h2,h3,h4,h5,h6) a,
+body :is(.the7-heading-title,.elementor-heading-title,.box-heading) a {
+  color: inherit !important;
+}
+body :is(.elementor-widget-text-editor,.elementor-widget-theme-post-content) :is(p,li),
+body .elementor-widget-container > p,
+body .elementor-widget-container > div > p {
+  color: var(--fg-body) !important;
+}
+body :is(.elementor-widget-text-editor,.elementor-widget-theme-post-content) {
+  line-height: 1.7;
+}
+/* Strong headings and text in light content containers. */
+body .the7-heading-title,
+body .elementor-heading-title { text-wrap: pretty; }
+body :is(p,li) { overflow-wrap: break-word; }
+/* Keep contrast for intentional dark/colored regions and site footer. */
+body :is(footer,.footer,.site-footer,.wf-container-footer,#footer,.fg-foot,
+  .elementor-section[data-settings*="gradient"],
+  .elementor-section[class*="elementor-invisible"]) :is(h1,h2,h3,h4,h5,h6,.the7-heading-title,.elementor-heading-title) {
+  color: #FFFFFF !important;
+}
+body :is(footer,.footer,.site-footer,.wf-container-footer,#footer,.fg-foot,
+  .elementor-section[data-settings*="gradient"]) :is(p,li) {
+  color: #E4EAF3 !important;
+}
+/* Never recolor text on CTA buttons and colored badges. */
+body :is(.elementor-button,.box-button,.button,.dt-btn,.cat-item-wrap) :is(span,svg) { color: inherit; }
+@media (max-width: 767px) {
+  body :is(p,.elementor-widget-text-editor) { line-height: 1.7; }
+}
