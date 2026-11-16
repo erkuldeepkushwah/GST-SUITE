@@ -177,9 +177,9 @@ export const DataTable: React.FC<Props> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+    <div className="gst-data-table bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col min-w-0">
       {/* Table toolbar */}
-      <div className="p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+      <div className="gst-table-toolbar p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
         <div className="flex items-center gap-2">
           {title && <span className="font-semibold text-slate-700 text-sm">{title}</span>}
           <span className="text-xs text-slate-500 font-medium bg-slate-200 px-2 py-0.5 rounded">
@@ -187,7 +187,7 @@ export const DataTable: React.FC<Props> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="gst-table-tools flex flex-wrap items-center gap-2">
           {!hideSearch && (
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" />
@@ -199,7 +199,7 @@ export const DataTable: React.FC<Props> = ({
                   setCurrentPage(1);
                 }}
                 placeholder="Search table..."
-                className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-hidden focus:ring-1 focus:ring-[#0159D3] focus:border-[#0159D3] w-48 transition-all"
+                className="gst-table-search pl-8 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#0159D3] focus:border-[#0159D3] w-48 max-w-full transition-all"
               />
             </div>
           )}
@@ -245,7 +245,7 @@ export const DataTable: React.FC<Props> = ({
       </div>
 
       {/* Table container */}
-      <div className="overflow-x-auto" style={{ maxHeight }}>
+      <div className="gst-table-scroller overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label={`${title || 'Reconciliation'} results table`} style={{ maxHeight }}>
         <table className="w-full text-left text-xs border-collapse">
           <thead className="bg-slate-100/80 text-slate-700 font-semibold sticky top-0 z-10 border-b border-slate-200 backdrop-blur-xs">
             <tr>
@@ -321,7 +321,7 @@ export const DataTable: React.FC<Props> = ({
 
       {/* Pagination footer */}
       {totalPages > 1 && (
-        <div className="p-2.5 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+        <div className="gst-table-pagination p-2.5 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 bg-slate-50/50">
           <div className="flex items-center gap-1.5">
             <span>Show</span>
             <select
