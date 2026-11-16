@@ -42,29 +42,6 @@ body :is(.elementor-button,.box-button,.button,.dt-btn,.cat-item-wrap) :is(span,
   body :is(p,.elementor-widget-text-editor) { line-height: 1.7; }
 }
 
-/* Static contact form: retain clean Elementor-style layout without WordPress's
-   unavailable AJAX form handler. Real POST is handled by FormSubmit. */
-#demo-contact-form { scroll-margin-top: 110px; width:100%; }
-#demo-contact-form .elementor-form-fields-wrapper { display:flex; flex-wrap:wrap; gap:16px 2%; align-items:flex-start; }
-#demo-contact-form .elementor-field-group { display:flex; flex-direction:column; min-width:0; margin:0; }
-#demo-contact-form .elementor-col-50 { flex:0 0 49%; }
-#demo-contact-form .elementor-col-100 { flex:0 0 100%; }
-#demo-contact-form .elementor-field-label { display:block; margin-bottom:7px; color:#00347d; font-weight:650; font-size:14px; }
-#demo-contact-form .elementor-field-textual {
-  display:block; width:100%; min-width:0; border:1px solid #cad8ea;
-  border-radius:10px; background:#fff; color:#172033;
-  padding:12px 14px; font:inherit; font-size:16px;
-}
-#demo-contact-form .elementor-field-textual:focus { outline:2px solid #80b9fb; outline-offset:1px; border-color:#0159d3; }
-#demo-contact-form textarea.elementor-field-textual { min-height:148px; resize:vertical; }
-#demo-contact-form .e-form__buttons { margin-top:3px; }
-#demo-contact-form button[type="submit"] {
-  width:100%; min-height:48px; border:none; border-radius:12px;
-  color:white; background:#0159d3; cursor:pointer; font-size:16px; font-weight:700;
-}
-#demo-contact-form button[type="submit"]:hover { background:#003e9b; }
-@media(max-width:767px) {
-  #demo-contact-form .elementor-col-50 { flex:0 0 100%; }
-  #demo-contact-form .elementor-form-fields-wrapper { gap:14px; }
-  #demo-contact-form { scroll-margin-top:80px; }
-}
+/* Anchor offset only: keep original Elementor form appearance. */
+#demo-contact-form { scroll-margin-top: 110px; }
+@media(max-width:767px) { #demo-contact-form { scroll-margin-top:80px; } }
