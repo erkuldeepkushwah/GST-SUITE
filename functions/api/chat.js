@@ -103,7 +103,7 @@ export async function onRequestPost({ request, env }) {
   let data;
   try { data = JSON.parse(raw); } catch { return json({ error: 'Invalid JSON.' }, 400); }
 
-  if (!Array.isArray(data?.messages) || data.messages.length < 1 || data.messages.length > 12) {
+  if (!Array.isArray(data?.messages) || data.messages.length < 1 || data.messages.length > 10) {
     return json({ error: 'Invalid chat history.' }, 400);
   }
 
