@@ -13,7 +13,7 @@
   window.__fgChatLoaded = true;
 
   var ENDPOINT = '/api/chat';
-  var MAX_TURNS = 12;          // the function accepts 1..12 messages
+  var MAX_TURNS = 10;          // keep the last 10 messages, oldest dropped
   var MAX_CHARS = 1500;        // matches the per-message cap upstream
   var STORE = 'fg-chat-history';
 
@@ -94,7 +94,7 @@
     panel.setAttribute('aria-label', 'Fingenuity AI assistant');
     panel.innerHTML =
       '<div class="fgc-head"><span class="fgc-dot" aria-hidden="true"></span>'
-      + '<div><strong>Fingenuity AI</strong><br><span>GST suite questions</span></div>'
+      + '<div><strong>Fingenuity AI</strong></div>'
       + '<button class="fgc-x" type="button" aria-label="Close the assistant">&times;</button></div>'
       + '<div class="fgc-body" id="fgc-body"></div>'
       + '<div class="fgc-chips" id="fgc-chips"></div>'
