@@ -41,7 +41,7 @@ for (const file of files) {
   if (file.endsWith('.html')) {
     // Nested /landing/ pages resolve shared module images from ../assets/.
     const html = readFileSync(join(SRC, file), 'utf8').replace(/src="assets\/(module-[^" ]+\.webp|priya-mehta\.jpg|rohan-verma\.jpg)"/g, 'src="../assets/$1"');
-    writeFileSync(join(DIST, 'landing', file), html);
+    writeFileSync(join(DIST, 'landing', file), html.replace(/src="chatbot\\.js"/g, 'src="../chatbot.js"'));
   } else {
     cpSync(join(SRC, file), join(DIST, 'landing', file));
   }
