@@ -14,10 +14,11 @@ const API_ROOT = 'https://generativelanguage.googleapis.com/v1beta/models/';
 // Fastest first. gemini-flash-latest always points at the current flash model,
 // so it survives retirements.
 const DEFAULT_MODELS = [
-  'gemini-2.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash',
+  'gemini-3.8-flash',
   'gemini-flash-latest',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
 ];
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
