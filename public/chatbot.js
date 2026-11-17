@@ -211,7 +211,7 @@
             remember();
           } else {
             var why = (out.data && out.data.error) || 'The assistant is unavailable right now.';
-            addErr(why + ' You can also call +91 731 000 0000 or use the contact page.');
+            addErr(why + ' You can also WhatsApp +91 99814 25096 or use the contact page.');
             chipsFor(['How do I book a demo?']);
           }
         })
