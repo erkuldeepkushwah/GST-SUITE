@@ -406,6 +406,33 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
 .fg-tax-copy a{display:inline-flex;gap:10px;align-items:center;margin-top:20px;color:#0159d3;text-decoration:none;font-size:13px;font-weight:700}
 .fg-tax-copy a:hover{text-decoration:underline}
 @media(max-width:760px){.fg-tax-services{padding:24px 15px 45px}.fg-tax-row{grid-template-columns:1fr;gap:20px;padding:28px 0}.fg-tax-photo{aspect-ratio:16/9}.fg-tax-copy h3{margin-bottom:9px}.fg-tax-heading{margin-bottom:12px}}
+
+/* Eight services arranged side-by-side: four in the left column, four in the right.
+   Keep each service's image at left and its copy at right. */
+.fg-tax-wrap{max-width:1240px}
+.fg-tax-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:column;grid-template-rows:repeat(4,auto);gap:20px 24px;align-items:stretch}
+.fg-tax-row{grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:17px;align-items:start;padding:18px;border:1px solid #e3ebf6;border-radius:12px;background:#fff;min-width:0}
+.fg-tax-row:last-child{border-bottom:1px solid #e3ebf6}
+.fg-tax-photo{aspect-ratio:4/3;border-radius:7px}
+.fg-tax-copy h3{font-size:17px;margin-bottom:8px}
+.fg-tax-copy p{font-size:12px;line-height:1.6;margin-bottom:10px}
+.fg-tax-copy ul{gap:6px}
+.fg-tax-copy li{font-size:11px;line-height:1.5;padding-left:16px}
+.fg-tax-copy a{font-size:11px;margin-top:12px}
+@media(max-width:960px){
+ .fg-tax-list{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row;gap:15px}
+ .fg-tax-row{grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:20px;padding:17px}
+ .fg-tax-photo{aspect-ratio:4/3}
+ .fg-tax-copy h3{font-size:19px}
+ .fg-tax-copy p{font-size:13px}
+ .fg-tax-copy li{font-size:12px}
+}
+@media(max-width:520px){
+ .fg-tax-row{grid-template-columns:1fr;gap:13px;padding:14px}
+ .fg-tax-photo{aspect-ratio:16/9}
+ .fg-tax-copy h3{font-size:19px}
+}
+
 </style>
 </head>
 <body id="the7-body" class="wp-singular page-template page-template-elementor_header_footer page page-id-8566 page-parent wp-custom-logo wp-embed-responsive wp-theme-dt-the7 theme-dt-the7 the7-core-ver-2.7.13 woocommerce-no-js dt-responsive-on right-mobile-menu-close-icon ouside-menu-close-icon mobile-close-right-caption fade-thin-mobile-menu-close-icon fade-medium-menu-close-icon srcset-enabled btn-flat custom-btn-color custom-btn-hover-color first-switch-logo-left first-switch-menu-right second-switch-logo-left second-switch-menu-right right-mobile-menu layzr-loading-on popup-message-style the7-ver-15.0.7 elementor-default elementor-template-full-width elementor-clear-template elementor-kit-19 elementor-page elementor-page-8566 elementor-page-50913"> <div id="page" >  <div class="fg-bar">
