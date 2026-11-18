@@ -1,10 +1,15 @@
 (function(){
 'use strict';
 function mount(){
-const page=location.pathname.split('/').pop();
-const isDashboard=page==='dashboard.html';
-const isLogin=page==='login.html';
-const isSignup=page==='signup.html';
+// Work out which screen this is from the path, and fall back to what is
+// actually on the page - a clean URL (/dashboard) or a /landing/ copy would
+// otherwise slip past a filename comparison and pull in the marketing menu.
+const path=(location.pathname||'').toLowerCase();
+const page=path.split('/').filter(Boolean).pop()||'';
+const match=(name)=>new RegExp('(^|/)'+name+'(/|\\.html)?/?$').test(path);
+const isDashboard=match('dashboard')||!!document.getElementById('app');
+const isLogin=match('login')||!!document.querySelector('.auth-shell[data-mode="login"], body[data-mode="login"]');
+const isSignup=match('signup')||!!document.querySelector('body[data-mode="signup"]');
 const item=(href,label,active,klass='')=>'<li><a href="'+href+'"'+(active?' aria-current="page"':'')+(klass?' class="'+klass+'"':'')+'>'+label+'</a></li>';
 const nav='<header class="fgsite-header" role="banner"><div class="fgsite-inner">'+
 '<a class="fgsite-logo" href="/" aria-label="Fingenuity Associates home"><img src="/logo.png" alt="Fingenuity Associates"></a>'+
