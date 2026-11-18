@@ -20,6 +20,7 @@ const MOBILE_MODULES = [
 
 
 export const App: React.FC = () => {
+  const embedded = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === '1';
   const [lang, setLang] = useState<LanguageCode>('en');
   const [activeModule, setActiveModule] = useState<ModuleKey>(() => {
     // Optional deep link from the Customer Portal's My Services cards.
@@ -29,22 +30,22 @@ export const App: React.FC = () => {
   });
   const [gstin, setGstin] = useState<string>('');
   const [commonPeriod, setCommonPeriod] = useState<Period>(() => periodBounds('monthly'));
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => !embedded);
 
   // Start collapsed on phones so the workspace gets the full width
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (embedded || (typeof window !== 'undefined' && window.innerWidth < 1024)) {
       setIsSidebarOpen(false);
     }
-  }, []);
+  }, [embedded]);
 
   return (
-    <div className="min-h-screen bg-[#F5F8FC] text-[#0F172A] flex flex-col lg:flex-row antialiased relative">
+    <div className={`${embedded ? 'embedded-gst-workspace ' : ''}min-h-screen bg-[#F5F8FC] text-[#0F172A] flex flex-col lg:flex-row antialiased relative`}>
       {/* Backdrop while the sidebar overlays the content on small screens */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+          className={`fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 transition-opacity ${embedded ? '' : 'lg:hidden'}`}
           aria-hidden="true"
         />
       )}
@@ -56,7 +57,7 @@ export const App: React.FC = () => {
         lang={lang}
         onLanguageChange={setLang}
         activeModule={activeModule}
-        onModuleChange={(mod) => { setActiveModule(mod); if (typeof window !== 'undefined' && window.innerWidth < 768) setIsSidebarOpen(false); }}
+        onModuleChange={(mod) => { setActiveModule(mod); if (embedded || (typeof window !== 'undefined' && window.innerWidth < 768)) setIsSidebarOpen(false); }}
         gstin={gstin}
         onGstinChange={setGstin}
         commonPeriod={commonPeriod}
@@ -65,7 +66,28 @@ export const App: React.FC = () => {
 
       {/* Main Content Workspace */}
       <main className="gst-app-main flex-1 min-w-0 w-full max-w-[1440px] mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:p-9 transition-all duration-300">
-        <nav className="gst-mobile-tabs lg:hidden" aria-label="Quick module navigation">
+        {embedded && (
+          <div className="gst-embedded-toolbar">
+            <nav className="gst-embedded-tabs" aria-label="Reconciliation modules">
+              {MOBILE_MODULES.map(({ key, icon: Icon }) => (
+                <button key={key} type="button"
+                  className={activeModule === key ? 'is-active' : ''}
+                  aria-current={activeModule === key ? 'page' : undefined}
+                  onClick={() => setActiveModule(key)}>
+                  <Icon size={16} aria-hidden="true" />
+                  <span>{t(`mod_${key}`, lang)}</span>
+                </button>
+              ))}
+            </nav>
+            <button type="button" className="gst-embedded-settings"
+              aria-label="Configure GSTIN and reporting period"
+              onClick={() => setIsSidebarOpen(true)}>
+              <SlidersHorizontal size={17} aria-hidden="true" />
+              <span>Settings</span>
+            </button>
+          </div>
+        )}
+        {!embedded && <nav className="gst-mobile-tabs lg:hidden" aria-label="Quick module navigation">
           <div className="gst-mobile-tabs-track">
             {MOBILE_MODULES.map(({ key, icon: Icon }) => (
               <button key={key} type="button"
@@ -83,7 +105,7 @@ export const App: React.FC = () => {
             onClick={() => setIsSidebarOpen(true)}>
             <SlidersHorizontal size={19} />
           </button>
-        </nav>
+        </nav>}
         <HeaderHero
           module={activeModule}
           lang={lang}
