@@ -36,4 +36,26 @@
 <div class="action-row"><button type="button" class="action primary" data-jump="documents"><i data-lucide="cloud-upload"></i> Upload Documents</button><button type="button" class="action" data-jump="services"><i data-lucide="layers-3"></i> My Services</button></div>
 </section>
 </main></div></div></div>
+<template id="document-upload-template">
+  <form class="document-form">
+    <label for="document-category">Document Category</label>
+    <select id="document-category" name="category" required>
+      <option value="">Select category</option>
+      <option>Sales Invoices</option>
+      <option>Purchase Bills</option>
+      <option>Bank Statements</option>
+      <option>Expense Sheets</option>
+      <option>Other Documents</option>
+    </select>
+    <label for="document-files">Attach Files</label>
+    <input id="document-files" type="file" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.csv,.xls,.xlsx">
+    <button class="document-drop" type="button">
+      <strong>Drag and drop files or browse</strong>
+      <small>PDF, JPG, PNG, CSV, XLS, XLSX · Up to 5 files, 10 MB each</small>
+    </button>
+    <ul class="document-files"></ul>
+    <button class="action primary" type="submit">Upload Documents</button>
+    <p role="status"></p>
+  </form>
+</template>
 <script type="module" src="dashboard.js"></script><script defer src="site-chrome.js"></script></body></html>
