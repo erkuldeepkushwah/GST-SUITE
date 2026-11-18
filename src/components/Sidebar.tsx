@@ -8,6 +8,7 @@ import { describeGstin, gstinIssueKey, validateGstin } from '../services/validat
 
 interface Props {
   isOpen: boolean;
+  settingsOnly?: boolean;
   onClose?: () => void;
   lang: LanguageCode;
   onLanguageChange: (lang: LanguageCode) => void;
@@ -36,7 +37,7 @@ const SectionHeading: React.FC<{ icon: React.ElementType; children: React.ReactN
 );
 
 export const Sidebar: React.FC<Props> = ({
-  isOpen, onClose, lang, onLanguageChange, activeModule, onModuleChange,
+  isOpen, onClose, settingsOnly = false, lang, onLanguageChange, activeModule, onModuleChange,
   gstin, onGstinChange, commonPeriod, onCommonPeriodChange,
 }) => {
   const gstinCheck = validateGstin(gstin);
@@ -48,20 +49,20 @@ export const Sidebar: React.FC<Props> = ({
   if (!isOpen) return null;
 
   return (
-    <aside id="gst-suite-sidebar" aria-label="Solutions navigation"
+    <aside id="gst-suite-sidebar" aria-label={settingsOnly ? "Company and reporting period settings" : "Solutions navigation"}
       className="fixed inset-y-0 left-0 z-50 flex w-[min(90vw,360px)] flex-col overflow-hidden border-r border-[#E3EAF3] bg-white text-[#344056] shadow-2xl lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[280px] lg:shrink-0 lg:shadow-none xl:w-[308px]">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3 pt-3 sm:px-4">
         <div className="mb-3 flex items-center justify-between border-b border-[#E8EDF5] pb-2">
           <div>
-            <h2 className="text-sm font-bold tracking-tight text-[#00347D]">Select Module</h2>
+            <h2 className="text-sm font-bold tracking-tight text-[#00347D]">{settingsOnly ? "Settings" : "Select Module"}</h2>
           </div>
           <button type="button" aria-label="Close modules" onClick={onClose}
-            className="rounded-lg border border-[#E3EAF3] p-2 text-[#475569] hover:bg-[#EAF1FC] lg:hidden">
+            className={`rounded-lg border border-[#E3EAF3] p-2 text-[#475569] hover:bg-[#EAF1FC] ${settingsOnly ? "" : "lg:hidden"}`}>
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <nav aria-label="Reconciliation modules" className="mb-3">
+        {!settingsOnly && <nav aria-label="Reconciliation modules" className="mb-3">
           
           <div className="space-y-0.5">
             {MODULES.map(({ key, icon: Icon }) => {
@@ -80,7 +81,7 @@ export const Sidebar: React.FC<Props> = ({
               );
             })}
           </div>
-        </nav>
+        </nav>}
 
         <div className="mb-3 border-t border-[#E8EDF5] pt-3">
           <SectionHeading icon={Building2}>{t('sidebar_company', lang)}</SectionHeading>
