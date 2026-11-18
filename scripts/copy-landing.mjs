@@ -66,6 +66,9 @@ const MODULE_IMAGES = [
   'rohan-verma.jpg',
   'login.jpg',
   'banner.jpg',
+  'service-gstr3b.webp',
+  'service-tds.webp',
+  'service-reconciliation.webp',
 ];
 mkdirSync(join(DIST, 'assets'), { recursive: true });
 for (const image of MODULE_IMAGES) {
