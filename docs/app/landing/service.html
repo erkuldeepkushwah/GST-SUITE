@@ -433,6 +433,26 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
  .fg-tax-copy h3{font-size:19px}
 }
 
+
+/* Large full-width service photos, matching the supplied reference proportions. */
+.fg-tax-row{display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden}
+.fg-tax-photo{display:block;width:100%;aspect-ratio:1.5;border-radius:0;overflow:hidden;background:#f0f4f9}
+.fg-tax-photo img{width:100%;height:100%;display:block;object-fit:cover}
+.fg-tax-copy{width:100%;padding:22px 24px 25px}
+.fg-tax-copy h3{font-size:22px}
+.fg-tax-copy p{font-size:13px}
+.fg-tax-copy li{font-size:12px}
+@media(max-width:960px){
+ .fg-tax-row{display:flex;flex-direction:column;padding:0;gap:0}
+ .fg-tax-photo{width:100%;aspect-ratio:1.5}
+ .fg-tax-copy{padding:19px 21px 23px}
+}
+@media(max-width:520px){
+ .fg-tax-photo{aspect-ratio:1.5}
+ .fg-tax-copy{padding:17px 17px 21px}
+ .fg-tax-copy h3{font-size:20px}
+}
+
 </style>
 </head>
 <body id="the7-body" class="wp-singular page-template page-template-elementor_header_footer page page-id-8566 page-parent wp-custom-logo wp-embed-responsive wp-theme-dt-the7 theme-dt-the7 the7-core-ver-2.7.13 woocommerce-no-js dt-responsive-on right-mobile-menu-close-icon ouside-menu-close-icon mobile-close-right-caption fade-thin-mobile-menu-close-icon fade-medium-menu-close-icon srcset-enabled btn-flat custom-btn-color custom-btn-hover-color first-switch-logo-left first-switch-menu-right second-switch-logo-left second-switch-menu-right right-mobile-menu layzr-loading-on popup-message-style the7-ver-15.0.7 elementor-default elementor-template-full-width elementor-clear-template elementor-kit-19 elementor-page elementor-page-8566 elementor-page-50913"> <div id="page" >  <div class="fg-bar">
