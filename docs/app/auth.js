@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
 const config = {
   apiKey: 'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yoA',
@@ -58,7 +58,7 @@ form.addEventListener('submit', async event => {
       await signInWithEmailAndPassword(auth, email, password);
       show('Signed in successfully. Opening your dashboard…', 'success');
     }
-    window.location.assign('/app/');
+    window.location.assign('/dashboard.html');
   } catch (err) {
     show(explain(err));
   } finally {
@@ -76,5 +76,5 @@ if (reset) reset.addEventListener('click', async event => {
     show('If this address is registered, a password reset email will arrive shortly.', 'success');
   } catch(err) { show(explain(err)); }
 });
-// Existing /app/ is public; this page establishes a Firebase login session,
-// but does not enforce server-side authorization or secure uploaded GST data.
+// Dashboard uses Firebase client-side session gating. The existing /app/ remains public;
+// real customer document access requires server-side authorization and storage rules.

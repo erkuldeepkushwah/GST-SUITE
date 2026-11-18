@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="description" content="Fingenuity customer account dashboard">
+<title>Customer Dashboard | Fingenuity GST & Tax Services</title><link rel="stylesheet" href="dashboard.css"></head>
+<body><div id="loading" class="loading" role="status">Checking secure login…</div>
+<div id="app"><div class="nav-backdrop" id="backdrop"></div><div class="layout">
+<aside class="sidebar" id="sidebar" aria-label="Customer menu"><div class="brand">Fingenuity <span>Portal</span></div>
+<nav class="nav" id="navigation">
+<button type="button" class="nav-item active" data-section="overview"><span class="nav-icon">⌂</span>Overview</button>
+<button type="button" class="nav-item" data-section="services"><span class="nav-icon">♙</span>My Services</button>
+<button type="button" class="nav-item" data-section="documents"><span class="nav-icon">⇧</span>Upload Documents</button>
+<button type="button" class="nav-item" data-section="downloads"><span class="nav-icon">⇩</span>Downloads &amp; Vault</button>
+<button type="button" class="nav-item" data-section="billing"><span class="nav-icon">▣</span>Billing &amp; Invoices</button>
+<button type="button" class="nav-item" data-section="support"><span class="nav-icon">♧</span>Support Center</button>
+<button type="button" class="nav-item" data-section="notifications"><span class="nav-icon">♧</span>Notifications</button>
+</nav><div class="sidebar-bottom nav">
+<button type="button" class="nav-item" data-section="profile"><span class="nav-icon">♙</span>My Profile</button>
+<button type="button" class="nav-item" data-section="settings"><span class="nav-icon">⚙</span>Settings</button>
+<button type="button" class="nav-item" id="logout"><span class="nav-icon">⇥</span>Logout</button>
+</div></aside>
+<div class="main-area"><header class="topbar"><button type="button" id="mobile-toggle" aria-label="Open menu">☰</button>
+<div style="margin-left:auto;display:flex;align-items:center;gap:18px">
+<button type="button" class="notification" id="notification-toggle" aria-label="Show notifications">♧</button>
+<div class="user"><div class="avatar" id="avatar">U</div><div><strong id="top-name">Customer</strong><small>Customer Account</small></div><span class="chevron">⌄</span></div></div></header>
+<main class="content" id="content">
+<section class="welcome"><div><h1>Welcome, <span id="welcome-name">Customer</span></h1><p>Here you can manage your GST &amp; Tax services, upload documents, track filing status and pay invoices.</p></div><div class="hero-graphic" aria-hidden="true"><span class="mini-check">●</span><div class="mini-screen"><div class="mini-bars"><i></i><i></i><i></i><i></i></div></div><span class="mini-check">✓</span></div></section>
+<section class="stats" aria-label="Account summary">
+<div class="stat"><div class="stat-icon">♧</div><div><div class="stat-label">Active Services</div><div class="stat-number">—</div><div class="stat-note">No data connected</div></div></div>
+<div class="stat"><div class="stat-icon">△</div><div><div class="stat-label">Pending Actions</div><div class="stat-number">—</div><div class="stat-note">No data connected</div></div></div>
+<div class="stat"><div class="stat-icon">▣</div><div><div class="stat-label">Upcoming Due Dates</div><div class="stat-number">—</div><div class="stat-note">No filing schedule linked</div></div></div>
+<div class="stat"><div class="stat-icon">▤</div><div><div class="stat-label">Unpaid Invoices</div><div class="stat-number">—</div><div class="stat-note">No billing data linked</div></div></div>
+</section>
+<section class="panel"><h2>Your Customer Workspace</h2><p>Your dashboard is ready. Services, filings, document storage and billing will display here once connected to a secure customer-data backend.</p>
+<div class="action-row"><button type="button" class="action primary" data-jump="documents">⇧ Upload Documents</button><button type="button" class="action" data-jump="services">＋ My Services</button></div>
+</section>
+</main></div></div></div>
+<script type="module" src="dashboard.js"></script></body></html>
