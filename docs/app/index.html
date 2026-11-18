@@ -4,6 +4,17 @@
 <link rel="icon" type="image/png" sizes="256x256" href="favicon.png?v=20261114" />
 
     <meta charset="UTF-8" />
+    <script>
+      // Reconciliation tools are presented through Customer Panel → My Services.
+      // Public visits to /app/ go through the Firebase-protected customer dashboard.
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var embedded = params.get('embedded') === '1';
+        if (!embedded || window.parent === window) {
+          location.replace('/dashboard.html');
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <title>Solutions & Modules | Fingenuity Associates</title>

@@ -41,13 +41,7 @@ function createServicesWorkspace(panel) {
   frame.loading = 'lazy';
   frame.referrerPolicy = 'same-origin';
   panel.append(frame);
-  const fallback = document.createElement('a');
-  fallback.className = 'workspace-fallback';
-  fallback.href = '/app/?module=gst2a';
-  fallback.target = '_blank';
-  fallback.rel = 'noopener';
-  fallback.textContent = 'Open full reconciliation workspace in a new tab';
-  panel.append(fallback);
+
 }
 
 let currentUser = null;
