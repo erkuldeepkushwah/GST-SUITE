@@ -25,13 +25,17 @@ for (const photo of document.querySelectorAll('img[data-banner]')) {
  photo.addEventListener('error', () => { photo.remove(); });
  if (photo.complete) activate();
 }
-document.body.insertAdjacentHTML('afterbegin',nav);
+// Authenticated customer dashboard has its own application header and sidebar.
+// Keep the website navigation only on public/login/signup pages.
+if (!isDashboard) {
+ document.body.insertAdjacentHTML('afterbegin',nav);
+ const button=document.querySelector('.fgsite-toggle');
+ const list=document.querySelector('.fgsite-nav');
+ button.addEventListener('click',()=>{const open=list.classList.toggle('open');button.setAttribute('aria-expanded',String(open));button.setAttribute('aria-label',open?'Close navigation':'Open navigation');button.textContent=open?'×':'☰';});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&list.classList.contains('open'))button.click();});
+ list.addEventListener('click',e=>{if(e.target.closest('a')&&list.classList.contains('open'))button.click();});
+}
 document.body.insertAdjacentHTML('beforeend',foot);
-const button=document.querySelector('.fgsite-toggle');
-const list=document.querySelector('.fgsite-nav');
-button.addEventListener('click',()=>{const open=list.classList.toggle('open');button.setAttribute('aria-expanded',String(open));button.setAttribute('aria-label',open?'Close navigation':'Open navigation');button.textContent=open?'×':'☰';});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&list.classList.contains('open'))button.click();});
-list.addEventListener('click',e=>{if(e.target.closest('a')&&list.classList.contains('open'))button.click();});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

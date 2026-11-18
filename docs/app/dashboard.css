@@ -72,3 +72,9 @@
 .welcome>div{position:relative;z-index:1;max-width:70%}
 .welcome h1{color:#0d2650}.welcome p{color:#425a79}
 @media(max-width:750px){.welcome{background-position:74% center;background-image:linear-gradient(90deg,rgba(247,251,255,.97),rgba(247,251,255,.82)),url('/assets/banner.jpg')}.welcome>div{max-width:100%}}
+
+/* Dashboard is a standalone authenticated shell: no public site navbar above it. */
+.loading{min-height:100dvh}
+.layout{min-height:100dvh}
+.sidebar{top:0;height:100dvh}
+@media(max-width:750px){.layout{min-height:100dvh}.sidebar{top:0;height:100dvh}}
