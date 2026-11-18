@@ -137,3 +137,32 @@
 .reconciliation-frame{display:block;width:100%;height:max(1000px,calc(100dvh - 190px));min-height:800px;border:1px solid #dce7f5;border-radius:12px;background:#f5f8fc}
 .workspace-fallback{display:inline-block;margin-top:12px;font-size:12px;font-weight:700;color:#0159d3;text-decoration:underline}
 @media(max-width:750px){.services-workspace{padding:12px 8px}.reconciliation-frame{height:1100px;min-height:800px;border-radius:9px}}
+
+.document-form {
+  display: grid;
+  justify-items: start;
+  gap: .75rem;
+  max-width: 44rem;
+}
+.document-form label { font-weight: 600; }
+.document-form select,
+.document-drop {
+  width: 100%;
+  border-radius: 10px;
+  padding: .85rem;
+  color: inherit;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  font: inherit;
+}
+.document-drop {
+  border-style: dashed;
+  padding: 1.5rem .85rem;
+  cursor: pointer;
+}
+.document-drop small { display: block; margin-top: .35rem; }
+.document-drop.dragging,
+.document-drop:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.document-files { margin: 0; padding-inline-start: 1.25rem; overflow-wrap: anywhere; }
+.document-files:empty,
+.document-form [role="status"]:empty { display: none; }
