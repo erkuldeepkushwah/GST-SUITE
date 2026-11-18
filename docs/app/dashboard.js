@@ -100,36 +100,9 @@ profileMenu.addEventListener('click',e=>{
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-container'))closeProfile();});
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){closeProfile();closeMenu();}
- if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
-   e.preventDefault();document.getElementById('dashboard-query').focus();
- }
-});
-const searchItems=[
- ['overview','overview dashboard home'],
- ['services','my services gst tax filing returns'],
- ['documents','upload documents bills files'],
- ['downloads','downloads vault filed returns'],
- ['billing','billing invoices payments'],
- ['support','support center help contact'],
- ['notifications','notifications alerts'],
- ['profile','profile account'],
- ['settings','settings password']
-];
-document.getElementById('dashboard-search').addEventListener('submit',e=>{
- e.preventDefault();
- const q=document.getElementById('dashboard-query').value.trim().toLowerCase();
- if(!q)return;
- const match=searchItems.find(([key,words])=>words.includes(q)||q.includes(key));
- if(match){showSection(match[0]);closeProfile();}
- else {
-   const input=document.getElementById('dashboard-query');
-   input.setCustomValidity('No matching portal section. Try services, documents or invoices.');
-   input.reportValidity();
-   setTimeout(()=>input.setCustomValidity(''),2000);
- }
-});
 
-document.getElementById('mobile-toggle').addEventListener('click', () => {sidebar.classList.add('open');backdrop.classList.add('open')});
+});
+document.getElementById('open-sidebar-menu').addEventListener('click', () => {closeProfile();sidebar.classList.add('open');backdrop.classList.add('open');});
 backdrop.addEventListener('click',closeMenu);
 async function logout() {
   const button = document.getElementById('logout');button.disabled = true;
