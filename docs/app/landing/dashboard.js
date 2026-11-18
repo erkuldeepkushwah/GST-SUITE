@@ -29,7 +29,32 @@ const sections = {
 };
 let currentUser = null;
 function refreshIcons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
-function closeMenu() { sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
+const layout = document.getElementById('dashboard-layout');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const isNarrow = () => window.matchMedia('(max-width: 750px)').matches;
+function syncSidebarToggle() {
+ const expanded = isNarrow() ? sidebar.classList.contains('open') : !layout.classList.contains('sidebar-collapsed');
+ sidebarToggle.setAttribute('aria-expanded', String(expanded));
+ sidebarToggle.setAttribute('aria-label', expanded ? 'Hide sidebar' : 'Show sidebar');
+}
+function closeMenu() {
+ sidebar.classList.remove('open');
+ backdrop.classList.remove('open');
+ syncSidebarToggle();
+}
+sidebarToggle.addEventListener('click', () => {
+ closeProfile();
+ if (isNarrow()) {
+   const opening = !sidebar.classList.contains('open');
+   sidebar.classList.toggle('open', opening);
+   backdrop.classList.toggle('open', opening);
+ } else {
+   layout.classList.toggle('sidebar-collapsed');
+ }
+ syncSidebarToggle();
+});
+window.addEventListener('resize', () => { if (!isNarrow()) closeMenu(); syncSidebarToggle(); });
+
 function showSection(section) {
   if (!sections[section]) section = 'overview';
   document.querySelectorAll('[data-section]').forEach(b => b.classList.toggle('active', b.dataset.section === section));
@@ -102,7 +127,7 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){closeProfile();closeMenu();}
 
 });
-document.getElementById('open-sidebar-menu').addEventListener('click', () => {closeProfile();sidebar.classList.add('open');backdrop.classList.add('open');});
+
 backdrop.addEventListener('click',closeMenu);
 async function logout() {
   const button = document.getElementById('logout');button.disabled = true;
@@ -116,3 +141,4 @@ document.getElementById('profile-logout').addEventListener('click',logout);
 // Initialize the icon set after DOM and on dashboard section rebuilds.
 refreshIcons();
 window.addEventListener('load', refreshIcons, { once: true });
+syncSidebarToggle();
