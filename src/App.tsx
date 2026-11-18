@@ -21,7 +21,12 @@ const MOBILE_MODULES = [
 
 export const App: React.FC = () => {
   const [lang, setLang] = useState<LanguageCode>('en');
-  const [activeModule, setActiveModule] = useState<ModuleKey>('gst2a');
+  const [activeModule, setActiveModule] = useState<ModuleKey>(() => {
+    // Optional deep link from the Customer Portal's My Services cards.
+    const allowed: ModuleKey[] = ['gst2a', 'gstr1', 'gstreco', 'bank', 'tds', 'stock'];
+    const requested = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('module');
+    return requested && allowed.includes(requested as ModuleKey) ? requested as ModuleKey : 'gst2a';
+  });
   const [gstin, setGstin] = useState<string>('');
   const [commonPeriod, setCommonPeriod] = useState<Period>(() => periodBounds('monthly'));
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
