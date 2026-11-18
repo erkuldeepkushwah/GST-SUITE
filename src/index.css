@@ -248,3 +248,18 @@
   color: #405069;
 }
 .gst-app-main :is(.bg-white,.bg-slate-50) :is(h1,h2,h3,h4,h5,h6) a { color: inherit; }
+
+
+/* Embedded Solutions & Modules inside authenticated customer panel. */
+.embedded-gst-workspace{display:block;min-height:0;background:#f5f8fc}
+.embedded-gst-workspace .gst-app-main{max-width:none;padding:12px 16px 24px}
+.embedded-gst-workspace #gst-suite-sidebar{position:fixed!important;top:0!important;left:0!important;bottom:0!important;z-index:60!important;height:100dvh!important;width:min(90vw,340px)!important;max-width:340px;box-shadow:0 14px 40px #10264b45!important}
+.embedded-gst-workspace #gst-suite-sidebar button[aria-label="Close modules"]{display:inline-flex!important}
+.gst-embedded-toolbar{display:flex;align-items:flex-start;gap:10px;margin:0 0 16px}
+.gst-embedded-tabs{display:flex;flex:1;flex-wrap:wrap;gap:8px;min-width:0}
+.gst-embedded-tabs button{display:inline-flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid #d5e2f3;border-radius:9px;background:#fff;color:#24446a;font-size:12px;font-weight:700;line-height:1.3}
+.gst-embedded-tabs button.is-active{background:#0159d3;border-color:#0159d3;color:#fff;box-shadow:0 4px 12px #0159d323}
+.gst-embedded-tabs button:not(.is-active):hover{border-color:#0159d3;background:#eff6ff}
+.gst-embedded-settings{display:inline-flex;align-items:center;gap:7px;flex:none;padding:10px 12px;border:1px solid #afc7e8;border-radius:9px;background:#fff;color:#0159d3;font-size:12px;font-weight:800}
+.gst-embedded-settings:hover{background:#edf5ff}
+@media(max-width:650px){.embedded-gst-workspace .gst-app-main{padding:10px 8px 18px}.gst-embedded-toolbar{flex-direction:column}.gst-embedded-tabs{flex-wrap:nowrap;width:100%;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin}.gst-embedded-tabs button{white-space:nowrap;flex:none}.gst-embedded-settings{align-self:flex-end}}
