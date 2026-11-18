@@ -64,6 +64,8 @@ const MODULE_IMAGES = [
   'module-stock.webp',
   'priya-mehta.jpg',
   'rohan-verma.jpg',
+  'login.jpg',
+  'banner.jpg',
 ];
 mkdirSync(join(DIST, 'assets'), { recursive: true });
 for (const image of MODULE_IMAGES) {
