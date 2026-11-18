@@ -371,6 +371,20 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
 .fg-links a{display:inline-block;font-size:14px;font-weight:600;color:#5B5B5B;text-decoration:none;
   padding-bottom:4px;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
 .fg-links a:hover,.fg-links a.on{color:#0159D3;border-color:#0159D3}
+
+/* Accessible Solutions & Modules dropdown for desktop and mobile */
+.fg-links .fg-dropdown{position:relative}
+.fg-links .fg-dropdown details{position:relative}
+.fg-links .fg-dropdown summary{display:flex;align-items:center;gap:6px;list-style:none;font-size:14px;font-weight:600;color:#5B5B5B;cursor:pointer;padding-bottom:6px;border-bottom:2px solid transparent;white-space:nowrap}
+.fg-links .fg-dropdown summary::-webkit-details-marker{display:none}
+.fg-links .fg-dropdown summary:hover,.fg-links .fg-dropdown details[open]>summary{color:#0159D3;border-bottom-color:#0159D3}
+.fg-links .fg-submenu{display:none;position:absolute;z-index:1200;top:100%;left:0;min-width:285px;flex-direction:column;align-items:stretch;gap:0;margin:0;padding:9px;background:white;border:1px solid #e1e9f5;border-radius:10px;box-shadow:0 12px 30px rgba(0,52,125,.14)}
+.fg-links .fg-dropdown:hover .fg-submenu,.fg-links .fg-dropdown details[open]>.fg-submenu{display:flex}
+.fg-links .fg-submenu li{width:100%;display:block}
+.fg-links .fg-submenu a{display:block;width:100%;padding:11px 12px;border:0;border-radius:7px;font-size:12px;font-weight:600;color:#273d5e;white-space:normal;line-height:1.4}
+.fg-links .fg-submenu a:hover,.fg-links .fg-submenu a:focus-visible{background:#edf5ff;color:#0159D3;border:0}
+@media(max-width:1024px){.fg-links .fg-dropdown,.fg-links .fg-dropdown details{width:100%}.fg-links .fg-dropdown summary{padding:12px 0}.fg-links .fg-submenu{position:static;display:none;min-width:0;width:100%;padding:4px 0 6px 10px;border:0;box-shadow:none;border-radius:0}.fg-links .fg-dropdown:hover .fg-submenu{display:none}.fg-links .fg-dropdown details[open]>.fg-submenu{display:flex}.fg-links .fg-submenu a{padding:10px 8px}}
+
 .fg-burger{display:none;width:44px;height:44px;border:1px solid #DDE3EA;border-radius:12px;
   background:#fff;font-size:20px;line-height:1;cursor:pointer;color:#2C3338;padding:0}
 @media (max-width:1024px){
@@ -393,6 +407,7 @@ var dtShare = {"shareButtonText":{"facebook":"Share on Facebook","twitter":"Shar
       <li><a href="index.html">Home</a></li>
       <li><a class="on" href="about.html">About</a></li>
       
+      <li class="fg-dropdown"><details><summary>Solutions &amp; Modules <span aria-hidden="true">⌄</span></summary><ul class="fg-submenu"><li><a href="/dashboard.html?section=services&module=gst2a">GST 2A/2B Reconciliation</a></li><li><a href="/dashboard.html?section=services&module=bank">Bank Reconciliation</a></li><li><a href="/dashboard.html?section=services&module=stock">Stock Reconciliation</a></li><li><a href="/dashboard.html?section=purchase-sales">Purchase & Sales Reconciliation</a></li><li><a href="/dashboard.html?section=reports">Reports & Analytics</a></li></ul></details></li>
       <li><a href="service.html">Services</a></li>
       <li><a href="contact.html">Contact</a></li>
       <li><a href="/login.html" aria-label="Customer Login">Login</a></li>

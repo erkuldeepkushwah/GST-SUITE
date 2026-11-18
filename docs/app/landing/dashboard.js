@@ -18,7 +18,9 @@ const sidebar = document.getElementById('sidebar');
 const backdrop = document.getElementById('backdrop');
 const sections = {
   overview: ['Overview', ''],
-  services: ['My Services', 'Your GST return, registration and tax service requests will appear here once a customer-services backend is connected.'],
+  services: ['My Services', 'Your GST Suite reconciliation workspace.'],
+  'purchase-sales': ['Purchase & Sales Reconciliation', 'This module is planned but is not available in the current GST Suite.'],
+  reports: ['Reports & Analytics', 'This reporting dashboard is planned but not available yet. Existing reconciliation reports remain available within supported modules.'],
   documents: ['Upload Documents', 'Secure document uploads require customer-specific storage rules and a backend. No file upload is enabled on this preview.'],
   downloads: ['Downloads & Vault', 'Filed returns and document downloads will appear here after customer-specific secure storage is configured.'],
   billing: ['Billing & Invoices', 'Service invoices and payments will appear here after billing integration. No amount is currently due in this preview because billing data is not connected.'],
@@ -28,7 +30,7 @@ const sections = {
   settings: ['Settings', 'Your account is authenticated using Firebase Email/Password. For password reset, use Forgot Password on the Login page.']
 };
 // Open the existing Solutions & Modules workspace in the user-panel shell.
-function createServicesWorkspace(panel) {
+function createServicesWorkspace(panel, moduleKey = 'gst2a') {
   panel.classList.add('services-workspace');
   const title = panel.querySelector('h2');
   if (title) title.textContent = 'Solutions & Modules';
@@ -37,7 +39,8 @@ function createServicesWorkspace(panel) {
   const frame = document.createElement('iframe');
   frame.className = 'reconciliation-frame';
   frame.title = 'GST Suite reconciliation workspace';
-  frame.src = '/app/?embedded=1&module=gst2a';
+  const allowedModules = new Set(['gst2a', 'gstr1', 'gstreco', 'bank', 'tds', 'stock']);
+  frame.src = '/app/?embedded=1&module=' + encodeURIComponent(allowedModules.has(moduleKey) ? moduleKey : 'gst2a');
   frame.loading = 'lazy';
   frame.referrerPolicy = 'same-origin';
   panel.append(frame);
@@ -72,7 +75,7 @@ sidebarToggle.addEventListener('click', () => {
 });
 window.addEventListener('resize', () => { if (!isNarrow()) closeMenu(); syncSidebarToggle(); });
 
-function showSection(section) {
+function showSection(section, moduleKey = 'gst2a') {
   if (!sections[section]) section = 'overview';
   document.querySelectorAll('[data-section]').forEach(b => b.classList.toggle('active', b.dataset.section === section));
   closeMenu();
@@ -85,7 +88,7 @@ function showSection(section) {
   const p = document.createElement('p'); p.textContent = summary;
   panel.append(h,p);
   if (section === 'services') {
-    createServicesWorkspace(panel);
+    createServicesWorkspace(panel, moduleKey);
   } else if (section === 'profile') {
     p.textContent = 'Your Firebase account information';
     const dl = document.createElement('dl'); dl.className = 'profile-grid';
@@ -116,7 +119,10 @@ onAuthStateChanged(auth, user => {
   document.getElementById('menu-email').textContent = user.email || '';
   document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
   app.style.display = 'block'; loading.hidden = true;
-  showSection('overview');
+  const params = new URLSearchParams(window.location.search);
+  const requestedSection = params.get('section');
+  const requestedModule = params.get('module') || 'gst2a';
+  showSection(requestedSection && sections[requestedSection] ? requestedSection : 'overview', requestedModule);
 }, () => { window.location.replace('/login.html'); });
 document.getElementById('navigation').addEventListener('click', e => {
   const target = e.target.closest('[data-section]'); if(target) showSection(target.dataset.section);
