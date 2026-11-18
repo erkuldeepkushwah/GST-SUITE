@@ -6,12 +6,12 @@
     <meta charset="UTF-8" />
     <script>
       // Reconciliation tools are presented through Customer Panel → My Services.
-      // Public visits to /app/ go through the Firebase-protected customer dashboard.
+      // Public visits to /app/ open the website Home; embedded tools stay within the customer panel.
       (function () {
         var params = new URLSearchParams(location.search);
         var embedded = params.get('embedded') === '1';
         if (!embedded || window.parent === window) {
-          location.replace('/dashboard.html');
+          location.replace('/');
         }
       })();
     </script>
