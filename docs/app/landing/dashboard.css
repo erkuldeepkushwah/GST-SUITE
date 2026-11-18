@@ -128,3 +128,12 @@
 .solution-open:hover,.solution-open:focus-visible{background:#003b9d;color:#fff}
 @media(max-width:1100px){.solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.solutions-grid{grid-template-columns:1fr;gap:13px}.solution-image{height:190px}.solution-body{padding:17px}}
+
+
+/* Existing reconciliation workspace within the Customer Panel shell. */
+.services-workspace{padding:18px 18px 24px;min-width:0}
+.services-workspace>h2{margin-bottom:5px}
+.services-workspace>p{margin-bottom:14px}
+.reconciliation-frame{display:block;width:100%;height:max(1000px,calc(100dvh - 190px));min-height:800px;border:1px solid #dce7f5;border-radius:12px;background:#f5f8fc}
+.workspace-fallback{display:inline-block;margin-top:12px;font-size:12px;font-weight:700;color:#0159d3;text-decoration:underline}
+@media(max-width:750px){.services-workspace{padding:12px 8px}.reconciliation-frame{height:1100px;min-height:800px;border-radius:9px}}
