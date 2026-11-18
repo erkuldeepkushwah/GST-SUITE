@@ -53,6 +53,7 @@ export const App: React.FC = () => {
       {/* Sidebar Navigation */}
       <Sidebar
         isOpen={isSidebarOpen}
+        settingsOnly={embedded}
         onClose={() => setIsSidebarOpen(false)}
         lang={lang}
         onLanguageChange={setLang}
