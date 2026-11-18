@@ -66,6 +66,8 @@ onAuthStateChanged(auth, user => {
   currentUser = user;
   const name = user.displayName?.trim() || user.email?.split('@')[0] || 'Customer';
   document.getElementById('top-name').textContent = name;
+  document.getElementById('menu-name').textContent = name;
+  document.getElementById('menu-email').textContent = user.email || '';
   document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
   app.style.display = 'block'; loading.hidden = true;
   showSection('overview');
@@ -79,11 +81,59 @@ document.querySelector('.sidebar-bottom').addEventListener('click', e => {
 content.addEventListener('click', e => {
   const target = e.target.closest('[data-jump]'); if(target) showSection(target.dataset.jump);
 });
-document.getElementById('notification-toggle').addEventListener('click', () => showSection('notifications'));
+document.getElementById('notification-toggle').addEventListener('click', () => {closeProfile();showSection('notifications');});
+
+const profileToggle=document.getElementById('profile-toggle');
+const profileMenu=document.getElementById('profile-menu');
+function closeProfile(){profileMenu.hidden=true;profileToggle.setAttribute('aria-expanded','false');}
+profileToggle.addEventListener('click',()=>{
+ const willOpen=profileMenu.hidden;
+ profileMenu.hidden=!willOpen;
+ profileToggle.setAttribute('aria-expanded',String(willOpen));
+});
+profileMenu.addEventListener('click',e=>{
+ const btn=e.target.closest('[data-section]');
+ if(btn){showSection(btn.dataset.section);closeProfile();}
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.profile-container'))closeProfile();});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'){closeProfile();closeMenu();}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
+   e.preventDefault();document.getElementById('dashboard-query').focus();
+ }
+});
+const searchItems=[
+ ['overview','overview dashboard home'],
+ ['services','my services gst tax filing returns'],
+ ['documents','upload documents bills files'],
+ ['downloads','downloads vault filed returns'],
+ ['billing','billing invoices payments'],
+ ['support','support center help contact'],
+ ['notifications','notifications alerts'],
+ ['profile','profile account'],
+ ['settings','settings password']
+];
+document.getElementById('dashboard-search').addEventListener('submit',e=>{
+ e.preventDefault();
+ const q=document.getElementById('dashboard-query').value.trim().toLowerCase();
+ if(!q)return;
+ const match=searchItems.find(([key,words])=>words.includes(q)||q.includes(key));
+ if(match){showSection(match[0]);closeProfile();}
+ else {
+   const input=document.getElementById('dashboard-query');
+   input.setCustomValidity('No matching portal section. Try services, documents or invoices.');
+   input.reportValidity();
+   setTimeout(()=>input.setCustomValidity(''),2000);
+ }
+});
+
 document.getElementById('mobile-toggle').addEventListener('click', () => {sidebar.classList.add('open');backdrop.classList.add('open')});
 backdrop.addEventListener('click',closeMenu);
-document.getElementById('logout').addEventListener('click', async () => {
+async function logout() {
   const button = document.getElementById('logout');button.disabled = true;
+  document.getElementById('profile-logout').disabled = true;
   try { await signOut(auth); window.location.replace('/login.html'); }
-  catch { button.disabled = false; alert('Could not log out. Please try again.'); }
-});
+  catch { button.disabled = false; document.getElementById('profile-logout').disabled = false; alert('Could not log out. Please try again.'); }
+}
+document.getElementById('logout').addEventListener('click',logout);
+document.getElementById('profile-logout').addEventListener('click',logout);
