@@ -28,12 +28,13 @@ const sections = {
   settings: ['Settings', 'Your account is authenticated using Firebase Email/Password. For password reset, use Forgot Password on the Login page.']
 };
 let currentUser = null;
+function refreshIcons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
 function closeMenu() { sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
 function showSection(section) {
   if (!sections[section]) section = 'overview';
   document.querySelectorAll('[data-section]').forEach(b => b.classList.toggle('active', b.dataset.section === section));
   closeMenu();
-  if (section === 'overview') { content.innerHTML = overview; content.querySelector('#welcome-name').textContent = currentUser?.displayName?.trim() || currentUser?.email?.split('@')[0] || 'Customer'; return; }
+  if (section === 'overview') { content.innerHTML = overview; content.querySelector('#welcome-name').textContent = currentUser?.displayName?.trim() || currentUser?.email?.split('@')[0] || 'Customer'; refreshIcons(); return; }
   const [title, summary] = sections[section];
   content.replaceChildren();
   const panel = document.createElement('section');
@@ -60,6 +61,7 @@ function showSection(section) {
     }
   }
   content.append(panel);
+  refreshIcons();
 }
 onAuthStateChanged(auth, user => {
   if (!user) { window.location.replace('/login.html'); return; }
@@ -137,3 +139,7 @@ async function logout() {
 }
 document.getElementById('logout').addEventListener('click',logout);
 document.getElementById('profile-logout').addEventListener('click',logout);
+
+// Initialize the icon set after DOM and on dashboard section rebuilds.
+refreshIcons();
+window.addEventListener('load', refreshIcons, { once: true });
