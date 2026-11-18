@@ -1,41 +1,41 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="description" content="Fingenuity customer account dashboard">
-<title>Customer Dashboard | Fingenuity GST & Tax Services</title><link rel="stylesheet" href="dashboard.css"><link rel="stylesheet" href="site-chrome.css"></head>
+<title>Customer Dashboard | Fingenuity GST & Tax Services</title><link rel="stylesheet" href="dashboard.css"><link rel="stylesheet" href="site-chrome.css"><script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script></head>
 <body><div id="loading" class="loading" role="status">Checking secure login…</div>
 <div id="app"><div class="nav-backdrop" id="backdrop"></div><div class="layout">
-<aside class="sidebar" id="sidebar" aria-label="Customer menu"><div class="brand"><div class="portal-mark" aria-hidden="true">▥</div><div><strong>GST &amp; Tax Services</strong><span>Customer Portal</span></div></div>
+<aside class="sidebar" id="sidebar" aria-label="Customer menu"><div class="brand"><div class="portal-mark" aria-hidden="true"><i data-lucide="chart-no-axes-column-increasing"></i></div><div><strong>GST &amp; Tax Services</strong><span>Customer Portal</span></div></div>
 <nav class="nav" id="navigation">
-<button type="button" class="nav-item active" data-section="overview"><span class="nav-icon">⌂</span>Overview</button>
-<button type="button" class="nav-item" data-section="services"><span class="nav-icon">▱</span>My Services</button>
-<button type="button" class="nav-item" data-section="documents"><span class="nav-icon">⇧</span>Upload Documents</button>
-<button type="button" class="nav-item" data-section="downloads"><span class="nav-icon">▢</span>Downloads &amp; Vault</button>
-<button type="button" class="nav-item" data-section="billing"><span class="nav-icon">▤</span>Billing &amp; Invoices</button>
-<button type="button" class="nav-item" data-section="support"><span class="nav-icon">☏</span>Support Center</button>
-<button type="button" class="nav-item" data-section="notifications"><span class="nav-icon">♧</span>Notifications</button>
+<button type="button" class="nav-item active" data-section="overview"><span class="nav-icon"><i data-lucide="house"></i></span>Overview</button>
+<button type="button" class="nav-item" data-section="services"><span class="nav-icon"><i data-lucide="layers-3"></i></span>My Services</button>
+<button type="button" class="nav-item" data-section="documents"><span class="nav-icon"><i data-lucide="cloud-upload"></i></span>Upload Documents</button>
+<button type="button" class="nav-item" data-section="downloads"><span class="nav-icon"><i data-lucide="folder-open"></i></span>Downloads &amp; Vault</button>
+<button type="button" class="nav-item" data-section="billing"><span class="nav-icon"><i data-lucide="receipt-text"></i></span>Billing &amp; Invoices</button>
+<button type="button" class="nav-item" data-section="support"><span class="nav-icon"><i data-lucide="message-circle"></i></span>Support Center</button>
+<button type="button" class="nav-item" data-section="notifications"><span class="nav-icon"><i data-lucide="bell"></i></span>Notifications</button>
 </nav><div class="sidebar-bottom nav">
-<button type="button" class="nav-item" data-section="profile"><span class="nav-icon">♙</span>My Profile</button>
-<button type="button" class="nav-item" data-section="settings"><span class="nav-icon">⚙</span>Settings</button>
-<button type="button" class="nav-item" id="logout"><span class="nav-icon">⇥</span>Logout</button>
+<button type="button" class="nav-item" data-section="profile"><span class="nav-icon"><i data-lucide="user-round"></i></span>My Profile</button>
+<button type="button" class="nav-item" data-section="settings"><span class="nav-icon"><i data-lucide="settings"></i></span>Settings</button>
+<button type="button" class="nav-item" id="logout"><span class="nav-icon"><i data-lucide="log-out"></i></span>Logout</button>
 </div><div class="sidebar-wave" aria-hidden="true"></div></aside>
 <div class="main-area"><header class="topbar" aria-label="Customer dashboard tools">
-<button type="button" id="mobile-toggle" aria-label="Open sidebar">☰</button>
-<form class="dashboard-search" id="dashboard-search" role="search"><span aria-hidden="true">⌕</span><input id="dashboard-query" type="search" placeholder="Search services, invoices, or documents..." aria-label="Search customer pages" autocomplete="off"><kbd>Ctrl K</kbd></form>
+<button type="button" id="mobile-toggle" aria-label="Open sidebar"><i data-lucide="menu"></i></button>
+<form class="dashboard-search" id="dashboard-search" role="search"><span class="search-icon" aria-hidden="true"><i data-lucide="search"></i></span><input id="dashboard-query" type="search" placeholder="Search services, invoices, or documents..." aria-label="Search customer pages" autocomplete="off"><kbd>Ctrl K</kbd></form>
 <div class="topbar-tools">
-<button type="button" class="notification" id="notification-toggle" aria-label="Show notifications"><span aria-hidden="true">♧</span></button>
-<div class="profile-container"><button type="button" class="profile-trigger" id="profile-toggle" aria-expanded="false" aria-controls="profile-menu" aria-label="Open account menu"><span class="avatar" id="avatar">U</span><span class="profile-copy"><strong id="top-name">Customer</strong><small>Customer</small></span><span class="chevron" aria-hidden="true">⌄</span></button>
+<button type="button" class="notification" id="notification-toggle" aria-label="Show notifications"><i data-lucide="bell" aria-hidden="true"></i></button>
+<div class="profile-container"><button type="button" class="profile-trigger" id="profile-toggle" aria-expanded="false" aria-controls="profile-menu" aria-label="Open account menu"><span class="avatar" id="avatar">U</span><span class="profile-copy"><strong id="top-name">Customer</strong><small>Customer</small></span><span class="chevron" aria-hidden="true"><i data-lucide="chevron-down"></i></span></button>
 <div class="profile-menu" id="profile-menu" hidden><div class="profile-heading"><strong id="menu-name">Customer</strong><span id="menu-email"></span></div><button type="button" data-section="profile">My Profile</button><button type="button" data-section="settings">Settings</button><button type="button" id="profile-logout">Logout</button></div></div>
 </div></header>
 <main class="content" id="content">
-<section class="welcome"><div><h1><span class="welcome-hand" aria-hidden="true">👋</span> Welcome, <span id="welcome-name">Customer</span></h1><p>Here you can manage your GST &amp; Tax services, upload documents, track filing status and pay invoices.</p></div><div class="hero-graphic" aria-hidden="true"><span class="mini-check">●</span><div class="mini-screen"><div class="mini-bars"><i></i><i></i><i></i><i></i></div></div><span class="mini-check">✓</span></div></section>
+<section class="welcome"><div><h1><span class="welcome-hand" aria-hidden="true">👋</span> Welcome, <span id="welcome-name">Customer</span></h1><p>Here you can manage your GST &amp; Tax services, upload documents, track filing status and pay invoices.</p></div><div class="hero-graphic" aria-hidden="true"><div class="hero-card"><span class="hero-check left"></span><div class="hero-screen"><div class="hero-screen-title">GST &amp; TAX</div><div class="hero-bars"><span></span><span></span><span></span><span></span></div></div><span class="hero-check right">✓</span></div></div></section>
 <section class="stats" aria-label="Account summary">
-<div class="stat"><div class="stat-icon">♧</div><div><div class="stat-label">Active Services</div><div class="stat-number">—</div><div class="stat-note">No data connected</div></div></div>
-<div class="stat"><div class="stat-icon">△</div><div><div class="stat-label">Pending Actions</div><div class="stat-number">—</div><div class="stat-note">No data connected</div></div></div>
-<div class="stat"><div class="stat-icon">▣</div><div><div class="stat-label">Upcoming Due Dates</div><div class="stat-number">—</div><div class="stat-note">No filing schedule linked</div></div></div>
-<div class="stat"><div class="stat-icon">▤</div><div><div class="stat-label">Unpaid Invoices</div><div class="stat-number">—</div><div class="stat-note">No billing data linked</div></div></div>
+<div class="stat"><div class="stat-icon"><i data-lucide="layers-3"></i></div><div><div class="stat-label">Active Services</div><div class="stat-number">—</div><div class="stat-note">No data connected</div></div></div>
+<div class="stat"><div class="stat-icon danger"><i data-lucide="triangle-alert"></i></div><div><div class="stat-label">Pending Actions</div><div class="stat-number">—</div><div class="stat-note">No data connected</div></div></div>
+<div class="stat"><div class="stat-icon"><i data-lucide="calendar-days"></i></div><div><div class="stat-label">Upcoming Due Dates</div><div class="stat-number">—</div><div class="stat-note">No filing schedule linked</div></div></div>
+<div class="stat"><div class="stat-icon"><i data-lucide="receipt-text"></i></div><div><div class="stat-label">Unpaid Invoices</div><div class="stat-number">—</div><div class="stat-note">No billing data linked</div></div></div>
 </section>
 <section class="panel"><h2>Your Customer Workspace</h2><p>Your dashboard is ready. Services, filings, document storage and billing will display here once connected to a secure customer-data backend.</p>
-<div class="action-row"><button type="button" class="action primary" data-jump="documents">⇧ Upload Documents</button><button type="button" class="action" data-jump="services">＋ My Services</button></div>
+<div class="action-row"><button type="button" class="action primary" data-jump="documents"><i data-lucide="cloud-upload"></i> Upload Documents</button><button type="button" class="action" data-jump="services"><i data-lucide="layers-3"></i> My Services</button></div>
 </section>
 </main></div></div></div>
 <script type="module" src="dashboard.js"></script><script defer src="site-chrome.js"></script></body></html>
