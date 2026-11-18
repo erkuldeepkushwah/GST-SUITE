@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Login to your Fingenuity GST and tax services account">
+<title>Login | Fingenuity GST & Tax Services</title>
+<link rel="stylesheet" href="auth.css"></head>
+<body data-mode="login">
+<main class="auth-shell">
+<section class="auth-hero" aria-label="GST and tax services">
+  <div class="hero-copy"><div class="hero-line" aria-hidden="true"></div>
+   <h1>Customer Login Portal <span>GST &amp; Tax Services</span></h1>
+   <p>Upload documents, track filing status, download returns, and manage your tax services — all in one place.</p>
+  </div>
+  <div class="hero-visual" aria-hidden="true"><div class="laptop"><div class="laptop-screen"><div class="screen-top">◉ &nbsp; GST &amp; Tax Dashboard</div><div class="screen-main"><h3>My Services</h3><div class="tile-row"><div>GSTR-1</div><div>GSTR-3B</div><div>Returns</div><div>Invoices</div></div><div class="chart"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div><div class="laptop-base"></div></div><div class="checklist"><b>Filing Checklist</b><div>GSTR-1</div><div>GSTR-3B</div><div>ITR Filing</div><div>TDS</div></div></div>
+  <div class="hero-features"><div><span class="symbol">⇧</span>Upload<br>Documents</div><div><span class="symbol">◷</span>Track<br>Live Status</div><div><span class="symbol">⇩</span>Download<br>Returns</div><div><span class="symbol">▣</span>Pay<br>Invoices</div></div>
+</section>
+<section class="auth-right"><div class="auth-card">
+<h2>Login</h2>
+<p class="subtitle">Login to access your GST & Tax Services account.</p>
+<div class="alert" id="notice" role="status" aria-live="polite"></div>
+<form id="auth-form">
+
+<div class="field"><label for="email">Email Address <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">✉</span><input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required></div></div>
+<div class="field"><label for="password">Password <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">♧</span><input id="password" name="password" type="password" minlength="6" autocomplete="current-password" placeholder="Enter your password" required><button type="button" class="toggle-password" data-toggle-password aria-label="Show password">Show</button></div></div>
+<div class="actions"><label class="remember"><input type="checkbox" name="remember" checked> Remember Me</label><a class="link" href="#" id="reset-password">Forgot Password?</a></div>
+<button class="primary" type="submit">Login</button>
+</form>
+<p class="switch">New to Fingenuity? <a class="link" href="signup.html">Create an Account →</a></p>
+<p class="secure-note">Protected by Firebase Email/Password Authentication</p>
+</div></section></main><script type="module" src="auth.js"></script>
+</body></html>
