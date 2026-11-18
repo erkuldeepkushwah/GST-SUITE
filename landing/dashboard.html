@@ -3,7 +3,12 @@
 <meta name="robots" content="noindex,nofollow"><meta name="description" content="Fingenuity customer account dashboard">
 <title>Customer Dashboard | Fingenuity GST & Tax Services</title><link rel="stylesheet" href="dashboard.css"><link rel="stylesheet" href="site-chrome.css"><script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script></head>
 <body><div id="loading" class="loading" role="status">Checking secure login…</div>
-<div id="app"><div class="nav-backdrop" id="backdrop"></div><div class="layout">
+<div id="app"><div class="nav-backdrop" id="backdrop"></div><header class="topbar" aria-label="Customer dashboard tools"><div class="portal-top-left"><button type="button" id="sidebar-toggle" class="sidebar-toggle" aria-label="Hide sidebar" aria-expanded="true" aria-controls="sidebar"><i data-lucide="menu"></i></button><a class="portal-logo" href="/" aria-label="Fingenuity Associates home"><img src="/logo.png" alt="Fingenuity Associates"></a></div>
+<div class="topbar-tools">
+<button type="button" class="notification" id="notification-toggle" aria-label="Show notifications"><i data-lucide="bell" aria-hidden="true"></i></button>
+<div class="profile-container"><button type="button" class="profile-trigger" id="profile-toggle" aria-expanded="false" aria-controls="profile-menu" aria-label="Open account menu"><span class="avatar" id="avatar">U</span><span class="profile-copy"><strong id="top-name">Customer</strong><small>Customer</small></span><span class="chevron" aria-hidden="true"><i data-lucide="chevron-down"></i></span></button>
+<div class="profile-menu" id="profile-menu" hidden><div class="profile-heading"><strong id="menu-name">Customer</strong><span id="menu-email"></span></div><button type="button" data-section="profile">My Profile</button><button type="button" data-section="settings">Settings</button><button type="button" id="profile-logout">Logout</button></div></div>
+</div></header><div class="layout" id="dashboard-layout">
 <aside class="sidebar" id="sidebar" aria-label="Customer menu">
 <nav class="nav" id="navigation">
 <button type="button" class="nav-item active" data-section="overview"><span class="nav-icon"><i data-lucide="house"></i></span>Overview</button>
@@ -18,12 +23,7 @@
 <button type="button" class="nav-item" data-section="settings"><span class="nav-icon"><i data-lucide="settings"></i></span>Settings</button>
 <button type="button" class="nav-item" id="logout"><span class="nav-icon"><i data-lucide="log-out"></i></span>Logout</button>
 </div></aside>
-<div class="main-area"><header class="topbar" aria-label="Customer dashboard tools">
-<div class="topbar-tools">
-<button type="button" class="notification" id="notification-toggle" aria-label="Show notifications"><i data-lucide="bell" aria-hidden="true"></i></button>
-<div class="profile-container"><button type="button" class="profile-trigger" id="profile-toggle" aria-expanded="false" aria-controls="profile-menu" aria-label="Open account menu"><span class="avatar" id="avatar">U</span><span class="profile-copy"><strong id="top-name">Customer</strong><small>Customer</small></span><span class="chevron" aria-hidden="true"><i data-lucide="chevron-down"></i></span></button>
-<div class="profile-menu" id="profile-menu" hidden><div class="profile-heading"><strong id="menu-name">Customer</strong><span id="menu-email"></span></div><button type="button" id="open-sidebar-menu" class="mobile-menu-entry">☰ Customer Menu</button><button type="button" data-section="profile">My Profile</button><button type="button" data-section="settings">Settings</button><button type="button" id="profile-logout">Logout</button></div></div>
-</div></header>
+<div class="main-area">
 <main class="content" id="content">
 <section class="welcome"><div><h1><span class="welcome-hand" aria-hidden="true">👋</span> Welcome, <span id="welcome-name">Customer</span></h1><p>Here you can manage your GST &amp; Tax services, upload documents, track filing status and pay invoices.</p></div></section>
 <section class="stats" aria-label="Account summary">
