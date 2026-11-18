@@ -106,3 +106,9 @@
  .main-area{padding-top:10px}
 }
 @media(max-width:420px){.portal-logo img{height:29px;max-width:35vw}}
+
+/* Keep the three-line sidebar toggle flush to the extreme left of the user-panel header. */
+#app>.topbar{padding-left:0}
+#app>.topbar .portal-top-left{margin-left:0;gap:10px}
+#app>.topbar .sidebar-toggle{margin:0;width:36px;min-width:36px;border-radius:0 8px 8px 0}
+@media(max-width:750px){#app>.topbar{padding-left:0}#app>.topbar .portal-top-left{gap:7px}#app>.topbar .sidebar-toggle{width:34px;min-width:34px}}
