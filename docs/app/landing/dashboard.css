@@ -50,3 +50,11 @@
 .topbar{justify-content:flex-end}
 .mobile-menu-entry{display:none!important}
 @media(max-width:750px){.mobile-menu-entry{display:block!important}}
+
+
+/* Customer welcome artwork: only the cropped GST-themed illustration, never the Staff Dashboard heading. */
+.hero-graphic{position:relative;overflow:hidden;border-radius:11px}
+.customer-banner-art{display:none;width:245px;height:122px;object-fit:cover;object-position:center center;border-radius:10px}
+.hero-graphic.has-reference .customer-banner-art{display:block}
+.hero-graphic.has-reference .hero-card{display:none}
+@media(max-width:750px){.hero-graphic{display:none}}

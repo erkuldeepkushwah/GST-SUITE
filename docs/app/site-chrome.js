@@ -17,6 +17,14 @@ const foot='<footer class="fgsite-footer"><div class="fgsite-foot-inner"><div cl
 '<div><h3>Quick Links</h3><ul><li><a href="/">Home</a></li><li><a href="/about.html">About Us</a></li><li><a href="/service.html">Services</a></li><li><a href="/app/">Solutions &amp; Modules</a></li></ul></div>'+
 '<div><h3>Get In Touch</h3><ul><li>Indore, Madhya Pradesh, India</li><li><a href="/contact.html">Contact &amp; Support</a></li><li><a href="/login.html">Customer Portal</a></li></ul></div></div>'+
 '<div class="fgsite-foot-bottom"><span>© '+new Date().getFullYear()+' Fingenuity Associates. All rights reserved.</span><a href="/contact.html">Contact Us</a></div></div></footer>';
+// Activate the uploaded reference artwork only if the image is actually available.
+// A missing asset leaves the existing CSS illustration fully visible.
+for (const photo of document.querySelectorAll('img[data-banner]')) {
+ const activate = () => { if (photo.naturalWidth > 0) photo.parentElement.classList.add('has-reference'); };
+ photo.addEventListener('load', activate);
+ photo.addEventListener('error', () => { photo.remove(); });
+ if (photo.complete) activate();
+}
 document.body.insertAdjacentHTML('afterbegin',nav);
 document.body.insertAdjacentHTML('beforeend',foot);
 const button=document.querySelector('.fgsite-toggle');

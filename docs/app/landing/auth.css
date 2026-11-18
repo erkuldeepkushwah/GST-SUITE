@@ -58,3 +58,17 @@ body{background:#F5F8FC;color:#1B1D1F;font-family:Manrope,Inter,system-ui,sans-s
 .auth-card,.auth-hero{min-width:0}
 @media(max-width:980px){.auth-shell{min-height:calc(100dvh - 72px);grid-template-columns:1fr}.auth-hero{min-height:220px}.auth-right{padding:28px 20px 40px}}
 @media(max-width:480px){.auth-hero{min-height:190px}.auth-card{border-radius:16px;padding:26px 20px}.auth-right{padding:18px 12px 34px}}
+
+
+/* Uploaded customer portal artwork, with existing layout as a no-image fallback. */
+.auth-hero{position:relative}
+.auth-reference-image{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;z-index:0}
+.auth-hero.has-reference .auth-reference-image{display:block}
+.auth-hero.has-reference:before,.auth-hero.has-reference:after{display:none}
+.auth-hero.has-reference .hero-copy,.auth-hero.has-reference .hero-visual,.auth-hero.has-reference .hero-features{visibility:hidden}
+@media(max-width:980px){
+ .auth-hero.has-reference .auth-reference-image{display:none}
+ .auth-hero.has-reference .hero-copy{visibility:visible}
+ .auth-hero.has-reference .hero-visual,.auth-hero.has-reference .hero-features{visibility:visible}
+ .auth-hero.has-reference:before,.auth-hero.has-reference:after{display:block}
+}
