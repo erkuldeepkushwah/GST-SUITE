@@ -27,6 +27,50 @@ const sections = {
   profile: ['My Profile', ''],
   settings: ['Settings', 'Your account is authenticated using Firebase Email/Password. For password reset, use Forgot Password on the Login page.']
 };
+const solutionModules = [
+  { title: 'GST 2A / 2B Reconciliation', description: 'Compare purchase records with GST 2A / 2B data and review differences.', image: '/assets/module-gst-2a.webp', key: 'gst2a', icon: 'files' },
+  { title: 'GSTR-1 & GSTR-3B Reconciliation', description: 'Review outward supplies and compare GSTR-1 with GSTR-3B.', image: '/assets/module-gstr1-3b.webp', key: 'gstr1', icon: 'file-spreadsheet' },
+  { title: 'GST Reconciliation', description: 'Match GST invoices and books, and identify mismatched entries.', image: '/assets/module-gst-reconciliation.webp', key: 'gstreco', icon: 'scale' },
+  { title: 'Bank Reconciliation', description: 'Match bank transactions against your book records.', image: '/assets/module-bank.webp', key: 'bank', icon: 'landmark' },
+  { title: 'TDS Reconciliation', description: 'Compare TDS records and highlight discrepancies.', image: '/assets/module-tds.webp', key: 'tds', icon: 'receipt-text' },
+  { title: 'Stock Reconciliation', description: 'Compare physical and system stock to identify variances.', image: '/assets/module-stock.webp', key: 'stock', icon: 'boxes' }
+];
+function createServicesGrid(panel) {
+  const intro = panel.querySelector('p');
+  if (intro) intro.textContent = 'Explore all six GST Suite Solutions & Modules. Select a module to open its reconciliation workspace.';
+  const grid = document.createElement('div');
+  grid.className = 'solutions-grid';
+  for (const item of solutionModules) {
+    const card = document.createElement('article');
+    card.className = 'solution-card';
+    const photo = document.createElement('img');
+    photo.src = item.image;
+    photo.alt = '';
+    photo.loading = 'lazy';
+    photo.className = 'solution-image';
+    const body = document.createElement('div');
+    body.className = 'solution-body';
+    const label = document.createElement('div');
+    label.className = 'solution-icon';
+    const symbol = document.createElement('i');
+    symbol.setAttribute('data-lucide', item.icon);
+    label.append(symbol);
+    const heading = document.createElement('h3');
+    heading.textContent = item.title;
+    const description = document.createElement('p');
+    description.textContent = item.description;
+    const open = document.createElement('a');
+    open.className = 'solution-open';
+    open.href = '/app/?module=' + encodeURIComponent(item.key);
+    open.textContent = 'Open Module';
+    open.setAttribute('aria-label', 'Open ' + item.title);
+    body.append(label, heading, description, open);
+    card.append(photo, body);
+    grid.append(card);
+  }
+  panel.append(grid);
+}
+
 let currentUser = null;
 function refreshIcons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
 const layout = document.getElementById('dashboard-layout');
@@ -67,7 +111,9 @@ function showSection(section) {
   const h = document.createElement('h2'); h.textContent = title;
   const p = document.createElement('p'); p.textContent = summary;
   panel.append(h,p);
-  if (section === 'profile') {
+  if (section === 'services') {
+    createServicesGrid(panel);
+  } else if (section === 'profile') {
     p.textContent = 'Your Firebase account information';
     const dl = document.createElement('dl'); dl.className = 'profile-grid';
     const entries = [['Full Name', currentUser?.displayName || 'Not provided'], ['Email Address', currentUser?.email || 'Not available'], ['Email Verified', currentUser?.emailVerified ? 'Yes' : 'No']];
