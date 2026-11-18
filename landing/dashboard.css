@@ -58,3 +58,9 @@
 .hero-graphic.has-reference .customer-banner-art{display:block}
 .hero-graphic.has-reference .hero-card{display:none}
 @media(max-width:750px){.hero-graphic{display:none}}
+
+
+/* Display the GST illustration at the right of the staff reference banner, avoiding its staff heading. */
+.customer-banner-art{object-position:right center;width:245px;height:122px}
+.hero-graphic.has-reference{min-width:225px}
+@media(max-width:750px){.hero-graphic.has-reference{display:none}}
