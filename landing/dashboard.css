@@ -78,3 +78,31 @@
 .layout{min-height:100dvh}
 .sidebar{top:0;height:100dvh}
 @media(max-width:750px){.layout{min-height:100dvh}.sidebar{top:0;height:100dvh}}
+
+
+/* Standalone user-panel header: no public website navigation. */
+#app>.topbar{position:sticky;top:0;z-index:1050;width:100%;height:64px;min-height:64px;margin:0;padding:8px clamp(12px,2vw,28px);border-radius:0;display:flex;align-items:center;justify-content:space-between;border-left:0;border-right:0;background:#fff}
+.portal-top-left{display:flex;align-items:center;gap:14px;min-width:0}
+.sidebar-toggle{display:grid;place-items:center;flex:none;width:40px;height:40px;color:#253d5b;background:transparent;border:0;border-radius:9px;cursor:pointer}
+.sidebar-toggle:hover,.sidebar-toggle:focus-visible{background:#eaf2ff;color:#0159d3}
+.sidebar-toggle svg{width:22px;height:22px;stroke-width:2}
+.portal-logo{display:flex;align-items:center;min-width:0}
+.portal-logo img{display:block;height:38px;width:auto;max-width:min(215px,45vw);object-fit:contain}
+#app>.topbar .topbar-tools{margin-left:auto}
+.layout{min-height:calc(100dvh - 64px)}
+.sidebar{top:64px;height:calc(100dvh - 64px);min-height:0}
+.layout.sidebar-collapsed .sidebar{display:none}
+.layout.sidebar-collapsed .main-area{width:100%;flex:1}
+.main-area{padding-top:14px}
+@media(max-width:750px){
+ #app>.topbar{height:60px;min-height:60px;padding:6px 10px}
+ .portal-top-left{gap:7px}
+ .sidebar-toggle{width:36px;height:36px}
+ .portal-logo img{height:33px;max-width:39vw}
+ .layout,.layout.sidebar-collapsed{min-height:calc(100dvh - 60px)}
+ .sidebar,.layout.sidebar-collapsed .sidebar{display:flex;position:fixed;left:0;top:60px;height:calc(100dvh - 60px);min-height:0;transform:translateX(-110%);transition:transform .23s ease;z-index:1200}
+ .sidebar.open,.layout.sidebar-collapsed .sidebar.open{transform:translateX(0)}
+ .nav-backdrop.open{top:60px;z-index:1100}
+ .main-area{padding-top:10px}
+}
+@media(max-width:420px){.portal-logo img{height:29px;max-width:35vw}}
