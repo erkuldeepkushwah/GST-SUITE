@@ -263,3 +263,11 @@
 .gst-embedded-settings{display:inline-flex;align-items:center;gap:7px;flex:none;padding:10px 12px;border:1px solid #afc7e8;border-radius:9px;background:#fff;color:#0159d3;font-size:12px;font-weight:800}
 .gst-embedded-settings:hover{background:#edf5ff}
 @media(max-width:650px){.embedded-gst-workspace .gst-app-main{padding:10px 8px 18px}.gst-embedded-toolbar{flex-direction:column}.gst-embedded-tabs{flex-wrap:nowrap;width:100%;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin}.gst-embedded-tabs button{white-space:nowrap;flex:none}.gst-embedded-settings{align-self:flex-end}}
+
+
+/* Inside Customer Panel → My Services, hide the public marketing chrome
+   that comes from index.html. Keep it visible on the standalone /app/ page. */
+body:has(.embedded-gst-workspace) > .fg-bar,
+body:has(.embedded-gst-workspace) > .fg-foot{display:none!important}
+body:has(.embedded-gst-workspace){margin:0;background:#f5f8fc}
+body:has(.embedded-gst-workspace) #root{min-height:100%;width:100%}
