@@ -47,6 +47,22 @@ async function googleToken(secret) {
   return (await response.json()).access_token;
 }
 
+async function googleUserToken(secret) {
+  const { client_id, client_secret, refresh_token } = JSON.parse(secret);
+  if (!client_id || !client_secret || !refresh_token) {
+    throw new Error('Incomplete Google OAuth credentials');
+  }
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    body: new URLSearchParams({
+      grant_type: 'refresh_token', client_id, client_secret, refresh_token,
+    }),
+  });
+  if (!response.ok) throw new Error('Google OAuth refresh failed');
+  return (await response.json()).access_token;
+}
+
 export async function onRequestPost({ request, env }) {
   const idToken = request.headers.get('Authorization')?.match(/^Bearer (\S+)$/i)?.[1];
   if (!idToken) return json({ error: 'Sign in before uploading documents.' }, 401);
@@ -57,7 +73,9 @@ export async function onRequestPost({ request, env }) {
   if (!lookup || lookup.status >= 500) return json({ error: 'Sign-in verification is temporarily unavailable.' }, 503);
   const user = lookup.ok ? (await lookup.json()).users?.[0] : null;
   if (!user?.localId) return json({ error: 'Your session expired. Sign in again.' }, 401);
-  if (!env.GST_GOOGLE_SERVICE_ACCOUNT_JSON) {
+  const userOAuth = env.GST_GOOGLE_OAUTH_JSON;
+  const serviceAccount = env.GST_GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!userOAuth && !serviceAccount) {
     return json({ error: 'Google Drive and Sheets are not configured on the upload server.' }, 503);
   }
   if (Number(request.headers.get('Content-Length')) > 5 * maxFileSize + 65536) {
@@ -72,7 +90,7 @@ export async function onRequestPost({ request, env }) {
     !(file instanceof File) || !extension.test(file.name) || !file.size || file.size > maxFileSize
   )) return json({ error: 'Choose a valid category and up to five supported files, 10 MB each.' }, 400);
 
-  const token = await googleToken(env.GST_GOOGLE_SERVICE_ACCOUNT_JSON).catch(() => null);
+  const token = await (userOAuth ? googleUserToken(userOAuth) : googleToken(serviceAccount)).catch(() => null);
   if (!token) return json({ error: 'The upload server could not authenticate with Google.' }, 503);
   const authorization = { Authorization: `Bearer ${token}` };
   const saved = [];
@@ -116,5 +134,5 @@ export async function onRequestPost({ request, env }) {
   }
 
   return saved.length ? json({ saved, errors }, 201)
-    : json({ saved, errors, error: 'Google could not save the upload. Check Shared Drive and Sheet access.' }, 502);
+    : json({ saved, errors, error: 'Google could not save the upload. Check the configured Google account’s folder and Sheet access.' }, 502);
 }
