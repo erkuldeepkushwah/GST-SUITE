@@ -102,3 +102,13 @@ body.otp-step .auth-card > :not(.otp-panel){display:none!important}
 .otp-panel .otp-resend:disabled{cursor:default;opacity:1}
 .otp-panel .otp-cancel{font-size:11px;color:#64748b;margin-top:16px}
 @media(max-width:480px){.otp-panel h2{font-size:24px!important}.otp-digits{gap:7px}.otp-digits input{height:45px}}
+
+
+/* Stable authentication card footprint across login, signup, OTP and reset.
+   Allow scrolling inside the card for validation messages or larger text. */
+.auth-card{width:100%;max-width:570px;height:580px;flex-shrink:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;display:flex;flex-direction:column;justify-content:safe center}
+.auth-card > *{flex-shrink:0}
+body.otp-step .auth-card > .otp-panel{width:100%;margin:0}
+@media(max-width:480px){
+ .auth-card{height:530px;max-width:100%;padding:26px 20px}
+}
