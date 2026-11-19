@@ -28,6 +28,11 @@ export async function onRequestPost({request,env}){
  return reply({email:row.email});
  }
  const u=await userFor(request,env);if(!u)return reply({error:'Authentication required'},401);
+ if(action==='logout'){
+ const cookie=request.headers.get('Cookie')?.match(/(?:^|;\s*)gst_otp=([a-f0-9]{64})(?:;|$)/)?.[1];
+ if(cookie)await db.prepare('DELETE FROM otp_sessions WHERE digest=? AND uid=?').bind(await digest(env,cookie),u.localId).run();
+ return reply({loggedOut:true},200,{'Set-Cookie':'gst_otp=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'});
+ }
  const policy=await db.prepare('SELECT active,otp FROM account_policy WHERE uid=?').bind(u.localId).first();if(policy?.active===0)return reply({error:'Account inactive. Contact administrator.'},403);
  const needsOtp=policy?.otp==null?required(env,u):!!policy.otp;
  if(action==='register'){
@@ -41,10 +46,11 @@ export async function onRequestPost({request,env}){
  return reply({registered:true});
  }
  if(!needsOtp)return reply({required:false,verified:true});
+ if(['send','verify'].includes(action)&&(!Number.isFinite(u.authTime)||now-u.authTime*1000>15*60*1000))return reply({error:'Please sign in again'},403);
  if(action==='status'){
  const cookie=request.headers.get('Cookie')?.match(/(?:^|;\s*)gst_otp=([a-f0-9]{64})(?:;|$)/)?.[1];
- const row=cookie?await db.prepare('SELECT uid FROM otp_sessions WHERE digest=? AND uid=? AND auth_time=? AND expires>?').bind(await digest(env,cookie),u.localId,u.authTime,now).first():null;
- return reply({required:true,verified:!!row});
+ const row=cookie?await db.prepare('SELECT uid,expires FROM otp_sessions WHERE digest=? AND uid=? AND auth_time=? AND expires>?').bind(await digest(env,cookie),u.localId,u.authTime,now).first():null;
+ return reply({required:true,verified:!!row,expiresAt:row?.expires||null});
  }
  if(action==='send'){
  if(!Number.isFinite(u.authTime)||now-u.authTime*1000>15*60*1000)return reply({error:'Please sign in again'},403);
@@ -66,8 +72,8 @@ export async function onRequestPost({request,env}){
  const hash=await digest(env,id+':'+u.localId+':'+code);
  const r=await db.prepare('UPDATE otp_challenges SET attempts=attempts+1,consumed=CASE WHEN digest=? THEN 1 ELSE consumed END WHERE id=? AND uid=? AND consumed=0 AND expires>? AND attempts<5 RETURNING consumed').bind(hash,id,u.localId,now).first();
  if(!r||r.consumed!==1)return reply({error:'Invalid or expired OTP'},400);
- const raw=hex(crypto.getRandomValues(new Uint8Array(32)));await db.prepare('INSERT INTO otp_sessions(digest,uid,auth_time,expires) VALUES(?,?,?,?)').bind(await digest(env,raw),u.localId,u.authTime,now+28800000).run();
- return reply({verified:true},200,{'Set-Cookie':'gst_otp='+raw+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=28800'});
+ const raw=hex(crypto.getRandomValues(new Uint8Array(32)));await db.prepare('INSERT INTO otp_sessions(digest,uid,auth_time,expires) VALUES(?,?,?,?)').bind(await digest(env,raw),u.localId,u.authTime,now+36000000).run();
+ return reply({verified:true,expiresAt:now+36000000},200,{'Set-Cookie':'gst_otp='+raw+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=36000'});
  }
  return reply({error:'Invalid action'},400);
  }catch{return reply({error:'Authentication service unavailable'},503);}
