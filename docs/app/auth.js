@@ -110,6 +110,11 @@ async function otpApi(action, data={}, authenticated=true) {
   if(!r.ok) throw Object.assign(new Error('OTP request failed'),{otpMessage:result.error||'Unable to complete verification'});
   return result;
 }
+async function revokeOtpSession(){
+ const user=auth.currentUser;if(!user)return;
+ const response=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'logout'}),cache:'no-store',signal:AbortSignal.timeout(10000)});
+ if(!response.ok)throw Error('Unable to terminate verification session');
+}
 async function completeOtp(user){
  const state=await otpApi('status');
  if(!state.required||state.verified)return true;
@@ -126,7 +131,7 @@ async function completeOtp(user){
  async function requestCode(){send.disabled=true;verify.disabled=true;try{const result=await otpApi('send');challenge=result.challenge;box.querySelector('#otp-info').textContent='Enter the 6-digit code sent to '+result.masked+'.';show('Verification code sent','success');verify.disabled=false;inputs.forEach(x=>x.value='');inputs[0].focus();}catch(e){show(e.otpMessage||'Unable to send OTP.');}let left=30;send.textContent='Resend OTP in 00:30';clearInterval(timer);timer=setInterval(()=>{left--;send.textContent='Resend OTP in 00:'+String(left).padStart(2,'0');if(left<=0){clearInterval(timer);send.disabled=false;send.textContent='Resend OTP';}},1000);}
  send.onclick=requestCode;
  verify.onclick=async()=>{const code=inputs.map(x=>x.value).join('');if(code.length!==6)return show('Enter all six digits.');verify.disabled=true;try{await otpApi('verify',{challenge,code});clearInterval(timer);if(!user.emailVerified){try{await sendEmailVerification(user);}catch{}}const role=await identifyRole(user);window.location.assign(role.role==='staff'?'/staff.html':'/dashboard.html');}catch(e){show(e.otpMessage||'Verification failed.');verify.disabled=false;}};
- box.querySelector('#otp-cancel').onclick=async()=>{clearInterval(timer);await signOut(auth);window.location.assign('/login.html');};
+ box.querySelector('#otp-cancel').onclick=async()=>{clearInterval(timer);try{await revokeOtpSession();}catch{}await signOut(auth);window.location.assign('/login.html');};
  await requestCode();return false;
 }
 if (mode === 'login' && new URLSearchParams(window.location.search).get('adminDenied') === '1') {

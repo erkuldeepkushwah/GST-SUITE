@@ -54,7 +54,12 @@ function open(name){
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&data&&Date.now()-lastSync>=30000)void syncStaff();});
 setInterval(()=>{if(!document.hidden&&data&&Date.now()-lastSync>=30000)void syncStaff();},30000);
 onAuthStateChanged(auth,async user=>{const id=++generation;data=null;$('app').hidden=true;$('loading').hidden=false;if(!user){location.replace('/login.html');return;}if(!await recheck()||id!==generation)return;$('admin-name').textContent=data.name;$('menu-name').textContent=data.name;$('menu-email').textContent=data.email;$('staff-role').textContent=data.role;$('avatar').textContent=data.name.charAt(0).toUpperCase();showPage('Dashboard');$('loading').hidden=true;$('app').hidden=false;sync();},()=>location.replace('/login.html'));
-async function logout(){await signOut(auth);location.replace('/login.html');}
+async function revokeOtpSession(){
+ const user=auth.currentUser;if(!user)return;
+ const response=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'logout'}),cache:'no-store',signal:AbortSignal.timeout(10000)});
+ if(!response.ok)throw Error('Unable to terminate verification session');
+}
+async function logout(){try{await revokeOtpSession();await signOut(auth);location.replace('/login.html');}catch{alert('Could not log out. Please try again.');}}
 $('logout').onclick=logout;$('profile-logout').onclick=logout;$('profile').onclick=$('side-profile').onclick=()=>open('My Profile');$('settings').onclick=$('side-settings').onclick=()=>open('Settings');$('reports').onclick=()=>open('Reports');$('notification-toggle').onclick=()=>open('Notifications');
 $('menu').onclick=()=>{closeProfile();if(narrow()){const open=$('sidebar').classList.toggle('open');$('backdrop').classList.toggle('open',open);}else $('layout').classList.toggle('sidebar-collapsed');sync();};
 $('backdrop').onclick=closeSidebar;$('profile-toggle').onclick=()=>{const open=$('profile-menu').hidden;$('profile-menu').hidden=!open;$('profile-toggle').setAttribute('aria-expanded',String(open));};

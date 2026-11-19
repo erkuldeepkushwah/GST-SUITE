@@ -110,6 +110,22 @@ function showSection(section) {
   content.append(panel);
   refreshIcons();
 }
+let otpExpiryTimer,otpRefreshBusy=false;
+function scheduleOtpExpiry(user,status){
+ clearTimeout(otpExpiryTimer);
+ if(status.required&&status.expiresAt)otpExpiryTimer=setTimeout(()=>{if(auth.currentUser?.uid===user.uid)void checkOtpSession();},Math.max(0,status.expiresAt-Date.now()));
+}
+async function checkOtpSession(){
+ const user=auth.currentUser;if(!user||otpRefreshBusy)return;otpRefreshBusy=true;
+ try{
+ const response=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store',signal:AbortSignal.timeout(10000)});
+ const state=await response.json();if(auth.currentUser?.uid!==user.uid)return;
+ if(response.status===401||response.status===403||(response.ok&&!state.verified)){await signOut(auth);location.replace('/login.html');return;}
+ if(response.ok)scheduleOtpExpiry(user,state);
+ }catch{}finally{otpRefreshBusy=false;}
+}
+setInterval(()=>{if(!document.hidden)void checkOtpSession();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkOtpSession();});
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.replace('/login.html'); return; }
   try {
@@ -120,6 +136,7 @@ onAuthStateChanged(auth, async user => {
     const result=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store'});
     const status=await result.json();
     if(!result.ok||status.verified!==true)throw new Error('Login verification required');
+     scheduleOtpExpiry(user,status);
   } catch {
     await signOut(auth);
     window.location.replace('/login.html');
@@ -164,10 +181,15 @@ document.addEventListener('keydown',e=>{
 });
 
 backdrop.addEventListener('click',closeMenu);
+async function revokeOtpSession(){
+ const user=auth.currentUser;if(!user)return;
+ const response=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'logout'}),cache:'no-store',signal:AbortSignal.timeout(10000)});
+ if(!response.ok)throw Error('Unable to terminate verification session');
+}
 async function logout() {
   const button = document.getElementById('logout');button.disabled = true;
   document.getElementById('profile-logout').disabled = true;
-  try { await signOut(auth); window.location.replace('/login.html'); }
+  try { await revokeOtpSession(); await signOut(auth); window.location.replace('/login.html'); }
   catch { button.disabled = false; document.getElementById('profile-logout').disabled = false; alert('Could not log out. Please try again.'); }
 }
 document.getElementById('logout').addEventListener('click',logout);
