@@ -16,6 +16,8 @@ async function otpVerified(request,env,u){
  return !!await env.GST_AUTH_DB.prepare('SELECT uid FROM otp_sessions WHERE digest=? AND uid=? AND auth_time=? AND expires>?').bind(hash,u.localId,u.authTime,Date.now()).first();
 }
 
+const firmSql="SELECT uid,email FROM staff_roles UNION SELECT a.uid,a.email FROM portal_accounts a JOIN customer_profiles p ON p.uid=a.uid WHERE p.account_type='professional'";
+async function isFirm(db,uid,email){return !!await db.prepare("SELECT uid FROM ("+firmSql+") WHERE uid=? AND email=?").bind(uid,email).first();}
 async function firebaseDirectory(env,email,pageToken){
  if(!env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON)throw Error('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON is not configured');
  const sa=JSON.parse(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON);
@@ -53,25 +55,25 @@ export async function onRequestPost({request,env}){
  if(b.action==='identify'){
  await db.prepare('INSERT INTO portal_accounts(uid,email,name,verified,seen_at) VALUES(?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET email=excluded.email,name=excluded.name,verified=excluded.verified,seen_at=excluded.seen_at').bind(u.localId,email,String(u.displayName||email).slice(0,150),u.emailVerified?1:0,Date.now()).run();
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
- const profile=!admin&&!row?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row?'staff':'customer',staffRole:row?.role||null,name:u.displayName||email,accountType:profile?.account_type||'legacy',profile});
+ const profile=!admin?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row||profile?.account_type==='professional'?'firm':'customer',name:u.displayName||email,accountType:row?'professional':profile?.account_type||'legacy',profile});
  }
- if(['clientStaff','assignClient','unassignClient','accountPolicy','directory','assign','revoke','listRoles','assignWork','listWork','removeWork'].includes(b.action)){
+ if(['clientFirms','assignClient','unassignClient','accountPolicy','directory'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
- if(b.action==='clientStaff'){
- const rows=(await db.prepare('SELECT r.uid,r.email,r.role FROM staff_roles r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email').all()).results;
+ if(b.action==='clientFirms'){
+ const rows=(await db.prepare("SELECT r.uid,r.email,'Firm' AS role FROM ("+firmSql+") r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email").all()).results;
  return json({rows});
  }
  if(b.action==='assignClient'){
- const uid=String(b.uid||''),staffUid=String(b.staffUid||''),mail=String(b.email||'').trim().toLowerCase();
- if(!uid||!staffUid||uid===staffUid||uid===ADMIN||staffUid===ADMIN)return json({error:'Invalid assignment'},400);
- const sr=await db.prepare('SELECT uid,email FROM staff_roles WHERE uid=?').bind(staffUid).first();
- if(!sr||(await policy(db,staffUid))?.active===0||(await policy(db,uid))?.active===0||await db.prepare('SELECT uid FROM staff_roles WHERE uid=?').bind(uid).first())return json({error:'Select an active customer and staff member'},400);
+ const uid=String(b.uid||''),firmUid=String(b.firmUid||''),mail=String(b.email||'').trim().toLowerCase();
+ if(!uid||!firmUid||uid===firmUid||uid===ADMIN||firmUid===ADMIN)return json({error:'Invalid assignment'},400);
+ const sr=await db.prepare('SELECT uid,email FROM ('+firmSql+') WHERE uid=?').bind(firmUid).first();
+ if(!sr||(await policy(db,firmUid))?.active===0||(await policy(db,uid))?.active===0||await isFirm(db,uid,mail))return json({error:'Select an active client and firm'},400);
  const [c,d]=await Promise.all([firebaseDirectory(env,mail,null),firebaseDirectory(env,sr.email,null)]);
  const client=c.users.find(x=>x.uid===uid&&x.email===mail&&!x.disabled);
- if(!client||!d.users.some(x=>x.uid===staffUid&&x.email===sr.email&&!x.disabled))return json({error:'Active Firebase account not found'},400);
+ if(!client||!d.users.some(x=>x.uid===firmUid&&x.email===sr.email&&!x.disabled))return json({error:'Active Firebase account not found'},400);
  const id='client:'+uid;
- await db.prepare("INSERT INTO staff_assignments(id,staff_uid,section,title,reference,status,notes,updated) VALUES(?,?,'Assigned Clients',?,?,'Assigned','',?) ON CONFLICT(id) DO UPDATE SET staff_uid=excluded.staff_uid,title=excluded.title,reference=excluded.reference,updated=excluded.updated").bind(id,staffUid,client.name||client.email,client.email,Date.now()).run();
- return json({saved:true,staffEmail:sr.email});
+ await db.prepare("INSERT INTO staff_assignments(id,staff_uid,section,title,reference,status,notes,updated) VALUES(?,?,'Assigned Clients',?,?,'Assigned','',?) ON CONFLICT(id) DO UPDATE SET staff_uid=excluded.staff_uid,title=excluded.title,reference=excluded.reference,updated=excluded.updated").bind(id,firmUid,client.name||client.email,client.email,Date.now()).run();
+ return json({saved:true,firmEmail:sr.email});
  }
  if(b.action==='unassignClient'){
  const uid=String(b.uid||'');if(!uid||uid===ADMIN)return json({error:'Invalid client'},400);
@@ -85,26 +87,14 @@ export async function onRequestPost({request,env}){
  return json({saved:true});
  }
  if(b.action==='directory'){
- try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare('SELECT uid,email,role FROM staff_roles').all()).results;const map=new Map(roles.map(r=>[r.uid,r]));const clients=new Map((await db.prepare("SELECT w.id,r.email FROM staff_assignments w JOIN staff_roles r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x.email]));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedStaff:clients.get(x.uid)||null,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?map.get(x.uid).role:'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
+ try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const map=new Map(roles.map(r=>[r.uid,r]));const clients=new Map((await db.prepare("SELECT w.id,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x.email]));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:clients.get(x.uid)||null,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
  }
- if(b.action==='listRoles')return json({rows:(await db.prepare('SELECT uid,email,role,assigned_at FROM staff_roles ORDER BY assigned_at DESC LIMIT 500').all()).results});
- if(b.action==='assign'){
- const target=String(b.email||'').trim().toLowerCase();const role=String(b.role||'Staff');if(!['Staff','Tax Associate','Accountant','Support Executive','Filing Executive'].includes(role))return json({error:'Invalid staff role'},400);
- let rows;
- try{if(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON){const d=await firebaseDirectory(env,target,null);rows=d.users.filter(x=>x.email===target&&!x.disabled);}else{rows=(await db.prepare('SELECT uid,email FROM portal_accounts WHERE email=? LIMIT 2').bind(target).all()).results;}}catch(e){return json({error:e.message},503);}
- if(rows.length!==1||rows[0].uid===ADMIN||target==='kuldeep@gmail.com')return json({error:'Active registered account not found or ambiguous.'},400);
- await db.prepare('INSERT INTO staff_roles(uid,email,role,assigned_at) VALUES(?,?,?,?) ON CONFLICT(uid) DO UPDATE SET email=excluded.email,role=excluded.role,assigned_at=excluded.assigned_at').bind(rows[0].uid,target,role,Date.now()).run();return json({saved:true});
+ return json({error:'Invalid admin action'},400);
  }
- if(b.action==='revoke'){await db.prepare('DELETE FROM staff_roles WHERE uid=?').bind(String(b.uid||'')).run();return json({saved:true});}
- if(b.action==='listWork')return json({rows:(await db.prepare('SELECT w.*,r.email FROM staff_assignments w LEFT JOIN staff_roles r ON r.uid=w.staff_uid ORDER BY w.updated DESC LIMIT 500').all()).results});
- if(b.action==='removeWork'){await db.prepare('DELETE FROM staff_assignments WHERE id=?').bind(String(b.id||'')).run();return json({saved:true});}
- const uid=String(b.uid||''),section=String(b.section||''),title=String(b.title||'').trim(),reference=String(b.reference||'').trim(),notes=String(b.notes||'').trim();if(!sections.includes(section)||!title||title.length>150||reference.length>250||notes.length>2000||!await db.prepare('SELECT uid FROM staff_roles WHERE uid=?').bind(uid).first())return json({error:'Invalid assignment'},400);
- await db.prepare('INSERT INTO staff_assignments(id,staff_uid,section,title,reference,status,notes,updated) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),uid,section,title,reference,'Pending',notes,Date.now()).run();return json({saved:true});
- }
- const staff=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();if(!staff||admin)return json({error:'Staff access required'},403);
+ if(admin||!await isFirm(db,u.localId,email))return json({error:'Firm access required'},403);
  if(!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
- if(b.action==='staffData')return json({name:u.displayName||email,email,role:staff.role,rows:(await db.prepare('SELECT id,section,title,reference,status,notes,updated FROM staff_assignments WHERE staff_uid=? ORDER BY updated DESC LIMIT 500').bind(u.localId).all()).results});
- if(b.action==='staffUpdate'){
+ if(b.action==='firmData')return json({name:u.displayName||email,email,role:'Firm',rows:(await db.prepare('SELECT id,section,title,reference,status,notes,updated FROM staff_assignments WHERE staff_uid=? ORDER BY updated DESC LIMIT 500').bind(u.localId).all()).results});
+ if(b.action==='firmUpdate'){
  const status=String(b.status||'');if(!['Pending','In Progress','Completed'].includes(status))return json({error:'Invalid status'},400);
  const q=await db.prepare("UPDATE staff_assignments SET status=?,updated=? WHERE id=? AND staff_uid=? AND section IN ('My Tasks','Document Review','Filing & Updates','Client Support')").bind(status,Date.now(),String(b.id||''),u.localId).run();return q.meta.changes?json({saved:true}):json({error:'Assignment unavailable'},404);
  }
