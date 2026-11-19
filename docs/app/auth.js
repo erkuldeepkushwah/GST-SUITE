@@ -51,6 +51,18 @@ form.addEventListener('submit', async event => {
       await setPersistence(auth, browserLocalPersistence);
       const account = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(account.user, { displayName: name });
+      // Email failures must not undo successful Firebase account creation.
+      try {
+        const token = await account.user.getIdToken(true);
+        const response = await fetch('/api/welcome', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) console.warn('Welcome email service unavailable.');
+      } catch {
+        console.warn('Welcome email service unavailable.');
+      }
       show('Account created! Opening your dashboard…', 'success');
     } else {
       const remember = form.elements.remember.checked;
