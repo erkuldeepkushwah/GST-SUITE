@@ -46,17 +46,37 @@ function createServicesWorkspace(panel) {
 
 }
 
-let currentUser = null, accountType='legacy', customerProfile=null;
-const businessSections=new Set(['overview','services','documents','dueDates','billing','support','profile','settings','notifications']);
+let currentUser = null, accountType='legacy', customerProfile=null, portalRole='customer';
+const menuConfig={
+ business:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['dueDates','Due Dates','calendar-days'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
+ firm:[['overview','Dashboard','house'],['assigned','Assigned Clients','users'],['companies','Client Companies','building-2'],['documents','Upload Documents','cloud-upload'],['tools','My Tools','layers-3'],['orders','Order Services','shopping-cart'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
+ legacy:[['overview','Overview','house'],['services','My Services','layers-3'],['documents','Upload Documents','cloud-upload'],['downloads','Downloads & Vault','folder-open'],['billing','Billing & Invoices','receipt-text'],['support','Support Center','message-circle'],['notifications','Notifications','bell'],['profile','My Profile','user-round'],['settings','Settings','settings'],['logout','Logout','log-out']]
+};
+Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Your assigned client companies.'],tools:['My Tools','GST reconciliation workspace.'],orders:['Order Services','Service assignments and requests for your firm.'],filings:['Filing Status','Track your filing and task records.']});
+const menu=()=>menuConfig[portalRole==='firm'?'firm':accountType==='business'?'business':'legacy'];
 function configureCustomerMenu(){
- if(accountType!=='business')return;
- const nav=document.getElementById('navigation');
- for(const btn of nav.querySelectorAll('[data-section]')){
- if(!businessSections.has(btn.dataset.section)||btn.dataset.section==='notifications'){btn.remove();continue;}
- if(btn.dataset.section==='billing'||btn.dataset.section==='support'){const label=btn.dataset.section==='billing'?'Invoices':'Support';for(const node of [...btn.childNodes])if(node.nodeType===3)node.remove();btn.append(document.createTextNode(label));}
+ const nav=document.getElementById('navigation'),bottom=document.querySelector('.sidebar-bottom');nav.replaceChildren();bottom.replaceChildren();
+ for(const [key,label,glyph] of menu()){
+  const btn=document.createElement('button');btn.type='button';btn.className='nav-item';if(key==='logout'){btn.id='logout';btn.addEventListener('click',logout);}else{btn.dataset.section=key;sections[key][0]=label;}
+  const icon=document.createElement('span');icon.className='nav-icon';const i=document.createElement('i');i.dataset.lucide=glyph;icon.append(i);btn.append(icon,document.createTextNode(label));(['profile','settings','logout'].includes(key)?bottom:nav).append(btn);
  }
- const due=document.createElement('button');due.type='button';due.className='nav-item';due.dataset.section='dueDates';const icon=document.createElement('span');icon.className='nav-icon';const i=document.createElement('i');i.dataset.lucide='calendar-days';icon.append(i);due.append(icon,document.createTextNode('Due Dates'));nav.insertBefore(due,nav.querySelector('[data-section=billing]'));
- sections.billing[0]='Invoices';sections.support[0]='Support';refreshIcons();
+ document.querySelector('.profile-copy small').textContent=portalRole==='firm'?'Firm':'Client';
+ const settings=document.querySelector('#profile-menu [data-section=settings]');if(settings)settings.hidden=!menu().some(x=>x[0]==='settings');
+ refreshIcons();
+}
+async function firmApi(payload){
+ const response=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await currentUser.getIdToken()},body:JSON.stringify(payload),cache:'no-store',signal:AbortSignal.timeout(15000)});
+ const result=await response.json();if(!response.ok)throw Error(result.error||'Unable to load firm records');return result;
+}
+async function renderFirmRecords(panel,section){
+ const message=document.createElement('p');message.textContent='Loading records…';panel.append(message);
+ try{const {rows}=await firmApi({action:'firmData'});if(!panel.isConnected)return;
+ const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],orders:['Service Management','My Tasks'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
+ const records=rows.filter(r=>(map[section]||[]).includes(r.section));message.textContent=records.length?records.length+' record(s)':'No records available yet.';
+ if(!records.length)return;const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Title','Client / Reference','Status','Instructions','Action']){const cell=document.createElement('th');cell.textContent=label;cell.style.padding='10px';head.append(cell);}
+ const body=table.createTBody();for(const r of records){const tr=body.insertRow();for(const value of [r.title,r.reference,r.status,r.notes]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3';}const td=tr.insertCell();if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const sel=document.createElement('select');for(const status of ['Pending','In Progress','Completed'])sel.add(new Option(status,status));sel.value=r.status;const button=document.createElement('button');button.className='action';button.textContent='Update';button.onclick=async()=>{button.disabled=true;try{await firmApi({action:'firmUpdate',id:r.id,status:sel.value});tr.cells[2].textContent=sel.value;message.textContent='Status updated.';}catch(e){message.textContent=e.message;}finally{button.disabled=false;}};td.append(sel,button);}else td.textContent='View only';}
+ wrap.append(table);panel.append(wrap);
+ }catch(e){message.textContent=e.message;}
 }
 function refreshIcons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
 const layout = document.getElementById('dashboard-layout');
@@ -86,10 +106,10 @@ sidebarToggle.addEventListener('click', () => {
 window.addEventListener('resize', () => { if (!isNarrow()) closeMenu(); syncSidebarToggle(); });
 
 function showSection(section) {
-  if (!sections[section]||(accountType==='business'&&!businessSections.has(section))) section = 'overview';
+  if (!sections[section]||(!menu().some(x=>x[0]===section)&&section!=='notifications')) section = 'overview';
   document.querySelectorAll('[data-section]').forEach(b => b.classList.toggle('active', b.dataset.section === section));
   closeMenu();
-  if (section === 'overview') { content.innerHTML = overview; content.querySelector('#welcome-name').textContent = currentUser?.displayName?.trim() || currentUser?.email?.split('@')[0] || 'Customer'; refreshIcons(); return; }
+  if (section === 'overview') { content.innerHTML = overview; content.querySelector('#welcome-name').textContent = currentUser?.displayName?.trim() || currentUser?.email?.split('@')[0] || 'Customer'; if(portalRole==='firm'){content.querySelector('.welcome p').textContent='Manage assigned clients, filing work and software tools.';const stats=content.querySelector('.stats');stats.replaceChildren();const summary=document.createElement('div');summary.className='panel';stats.append(summary);summary.textContent='Loading firm summary…';firmApi({action:'firmData'}).then(({rows})=>{if(summary.isConnected)summary.textContent='Assigned Clients: '+rows.filter(x=>x.section==='Assigned Clients').length+' · Pending Work: '+rows.filter(x=>x.status==='Pending').length;}).catch(e=>{summary.textContent=e.message;});const box=content.querySelector('.panel h2');if(box)box.textContent='Firm Workspace';content.querySelectorAll('[data-jump=services]').forEach(x=>{x.dataset.jump='assigned';x.textContent='Assigned Clients';});} refreshIcons(); return; }
   const [title, summary] = sections[section];
   content.replaceChildren();
   const panel = document.createElement('section');
@@ -98,7 +118,12 @@ function showSection(section) {
   const p = document.createElement('p'); p.textContent = summary;
   panel.append(h,p);
   if (section === 'services') {
-    if(accountType!=='business')createServicesWorkspace(panel);else{const empty=document.createElement('div');empty.className='empty';empty.textContent='No filing services assigned yet.';panel.append(empty);}
+    if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
+  } else if (section === 'tools' && portalRole==='firm') {
+    createServicesWorkspace(panel);
+  } else if (portalRole==='firm' && ['assigned','companies','orders','filings','billing','support','notifications'].includes(section)) {
+    void renderFirmRecords(panel,section);
+    if(section==='support'){const link=document.createElement('a');link.href='/contact.html';link.textContent='Contact support';link.className='action';panel.append(link);}
   } else if (section === 'documents') {
     panel.append(createDocumentForm(currentUser));
   } else if (section === 'profile') {
@@ -144,8 +169,8 @@ onAuthStateChanged(auth, async user => {
   try {
     const roleResponse=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'identify'}),cache:'no-store'});
     const role=await roleResponse.json();if(!roleResponse.ok)throw Error('Role check failed');
-    if(role.role==='staff'||role.role==='admin'){window.location.replace(role.role==='staff'?'/staff.html':'/admin.html');return;}
-    if(role.role!=='customer')throw Error('Access denied');
+    if(role.role==='admin'){window.location.replace('/admin.html');return;}
+    if(!['customer','firm'].includes(role.role))throw Error('Access denied');portalRole=role.role;
     accountType=role.accountType||'legacy';customerProfile=role.profile||null;
     const result=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store'});
     const status=await result.json();
@@ -206,7 +231,7 @@ async function logout() {
   try { await revokeOtpSession(); await signOut(auth); window.location.replace('/login.html'); }
   catch { button.disabled = false; document.getElementById('profile-logout').disabled = false; alert('Could not log out. Please try again.'); }
 }
-document.getElementById('logout').addEventListener('click',logout);
+
 document.getElementById('profile-logout').addEventListener('click',logout);
 
 // Initialize the icon set after DOM and on dashboard section rebuilds.
