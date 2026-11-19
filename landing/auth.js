@@ -18,7 +18,7 @@ const show = (message, type='error') => { notice.textContent = message; notice.c
 const messages = {
   'auth/email-already-in-use': 'This email is already registered. Please log in.',
   'auth/invalid-email': 'Enter a valid email address.',
-  'auth/weak-password': 'Use a stronger password (at least 6 characters).',
+  'auth/weak-password': 'Use a stronger password (at least 8 characters).',
   'auth/invalid-credential': 'Invalid email or password.',
   'auth/user-disabled': 'This account has been disabled.',
   'auth/too-many-requests': 'Too many attempts. Please try again later.',
@@ -36,12 +36,50 @@ document.querySelectorAll('[data-toggle-password]').forEach(el => {
     el.setAttribute('aria-label', revealed ? 'Hide password' : 'Show password');
   });
 });
+
+function fieldError(name,message=''){
+ const input=form.elements.namedItem(name);if(!input||!input.id)return;
+ input.setAttribute('aria-invalid',String(!!message));const el=document.getElementById(input.id+'-error');if(el)el.textContent=message;
+}
+function signupData(){
+ const f=form.elements,type=f.accountType.value;
+ const p={accountType:type,name:f.name.value.trim(),mobile:f.mobile.value,email:f.email.value.trim()};
+ if(type==='business'){p.businessName=f.businessName.value.trim();p.gstin=f.gstin.value.trim().toUpperCase();}
+ else{p.profession=f.profession.value;p.firmName=f.firmName.value.trim();}
+ return p;
+}
+function validateSignup(){
+ const p=signupData(),errors={};
+ if(p.name.length<2)errors.name='Enter your full name.';
+ if(!/^[6-9]\d{9}$/.test(p.mobile))errors.mobile='Enter a 10-digit mobile number starting with 6–9.';
+ if(!p.email||!form.elements.email.validity.valid)errors.email='Enter a valid email address.';
+ if(form.elements.password.value.length<8)errors.password='Use at least 8 characters.';
+ if(p.accountType==='business'){
+ if(!p.businessName)errors.businessName='Enter your business name.';
+ if(!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(p.gstin))errors.gstin='Enter a valid 15-character GSTIN.';
+ }else if(!['CA','CS','Advocate'].includes(p.profession))errors.profession='Select your profession.';
+ Array.from(form.querySelectorAll('input:not([type=radio]),select')).filter(x=>!x.disabled).forEach(x=>fieldError(x.name,errors[x.name]||''));
+ const first=Object.keys(errors)[0];if(first){form.elements[first].focus();return null;}return p;
+}
+if(mode==='signup'&&form.elements.accountType){
+ const syncType=()=>{for(const block of form.querySelectorAll('[data-account-fields]')){const visible=block.dataset.accountFields===form.elements.accountType.value;block.hidden=!visible;for(const input of block.querySelectorAll('input,select')){input.disabled=!visible;if(!visible)fieldError(input.name);}}};
+ form.querySelectorAll('[name=accountType]').forEach(x=>x.addEventListener('change',syncType));syncType();
+ const mobile=form.elements.mobile;mobile.addEventListener('beforeinput',e=>{if(e.data&&/\D/.test(e.data))e.preventDefault();});mobile.addEventListener('input',()=>{mobile.value=mobile.value.replace(/\D/g,'').slice(0,10);});
+ const gst=form.elements.gstin;gst.addEventListener('input',()=>{gst.value=gst.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,15);});
+ for(const x of form.querySelectorAll('input:not([type=radio]),select')){x.addEventListener('input',()=>fieldError(x.name));x.addEventListener('change',()=>fieldError(x.name));}
+}
+async function saveSignupProfile(user,profile){
+ const response=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'registerProfile',profile}),signal:AbortSignal.timeout(15000)});
+ const j=await response.json();if(!response.ok){for(const [name,msg] of Object.entries(j.errors||{}))fieldError(name,msg);throw Object.assign(Error(j.error||'Unable to save profile'),{otpMessage:j.error||'Unable to save profile'});}
+}
+
 form.addEventListener('submit', async event => {
   event.preventDefault();
   let email = form.elements.email.value.trim();
   const password = form.elements.password.value;
+  const profile=mode==='signup'?validateSignup():null;
+  if(mode==='signup'&&!profile)return;
   if (!email || !password) return show('Please fill in all required fields.');
-  if (mode === 'signup' && password.length < 6) return show('Password must have at least 6 characters.');
   button.disabled = true;
   button.textContent = mode === 'signup' ? 'Creating account…' : 'Signing in…';
   try {
@@ -49,7 +87,9 @@ form.addEventListener('submit', async event => {
       const name = form.elements.name.value.trim();
       if (name.length < 2) { show('Enter your full name.'); return; }
       await setPersistence(auth, browserLocalPersistence);
-      const account = await createUserWithEmailAndPassword(auth, email, password);
+      let account;
+      if(auth.currentUser&&auth.currentUser.email?.toLowerCase()===email.toLowerCase()){account=await signInWithEmailAndPassword(auth,email,password);}else{account=await createUserWithEmailAndPassword(auth,email,password);}
+      await saveSignupProfile(account.user,profile);
       await updateProfile(account.user, { displayName: name });
       try { await identifyRole(account.user); } catch { console.warn('Account directory unavailable; retry on login.'); }
       // Email failures must not undo successful Firebase account creation.
@@ -92,7 +132,7 @@ form.addEventListener('submit', async event => {
     }
     window.location.assign('/dashboard.html');
   } catch (err) {
-    show(err?.otpMessage || explain(err));
+    if(mode==='signup'&&['auth/email-already-in-use','auth/invalid-email','auth/weak-password'].includes(err?.code)){fieldError(err.code==='auth/weak-password'?'password':'email',explain(err));}else show(err?.otpMessage || explain(err));
   } finally {
     button.disabled = false;
     button.textContent = mode === 'signup' ? 'Create Account' : 'Login';
