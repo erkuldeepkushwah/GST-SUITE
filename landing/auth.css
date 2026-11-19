@@ -112,3 +112,22 @@ body.otp-step .auth-card > .otp-panel{width:100%;margin:0}
 @media(max-width:480px){
  .auth-card{height:530px;max-width:100%;padding:26px 20px}
 }
+
+/* Signup-only additions retain the existing authentication theme and card size. */
+body[data-mode="signup"] .auth-card{justify-content:flex-start}
+body[data-mode="signup"] .subtitle{margin-bottom:16px}
+body[data-mode="signup"] .field{margin-bottom:12px}
+.account-types{border:0;padding:0;margin:0 0 16px;min-width:0}
+.account-types legend{font-size:14px;font-weight:700;color:#233753;margin-bottom:8px}
+.account-types legend em{color:#eb254c;font-style:normal}
+.type-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.type-card{display:flex;align-items:flex-start;gap:7px;border:1px solid #cad8eb;border-radius:11px;padding:12px 9px;cursor:pointer;background:#fff;color:#233753}
+.type-card:has(input:checked){border-color:#0159D3;background:#f0f6ff;box-shadow:0 0 0 1px #0159D3}
+.type-card input{accent-color:#0159D3;margin:3px 0 0;flex-shrink:0}
+.type-card strong,.type-card small{display:block;overflow-wrap:anywhere}
+.type-card strong{font-size:13px}.type-card small{font-size:11px;color:#63718a;margin-top:4px}
+body[data-mode="signup"] .input-wrap select{min-width:0;width:100%;padding:13px;background:#fff;border:0;outline:0;font:inherit;font-size:14px;color:#091b45}
+.field-error{display:block;color:#b42318;font-size:12px;line-height:1.4;margin-top:5px}
+.field-error:empty{display:none}
+body[data-mode="signup"] .field:has([aria-invalid="true"]) .input-wrap{border-color:#b42318}
+body[data-mode="signup"] [data-account-fields][hidden]{display:none!important}
