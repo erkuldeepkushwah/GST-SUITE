@@ -13,6 +13,25 @@ async function otpVerified(request,env,u){
  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.RESEND_API_KEY),{name:'HMAC',hash:'SHA-256'},false,['sign']);const hash=Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode('gst-auth-v1:'+cookie))),x=>x.toString(16).padStart(2,'0')).join('');
  return !!await env.GST_AUTH_DB.prepare('SELECT uid FROM otp_sessions WHERE digest=? AND uid=? AND auth_time=? AND expires>?').bind(hash,u.localId,u.authTime,Date.now()).first();
 }
+
+async function firebaseDirectory(env,email,pageToken){
+ if(!env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON)throw Error('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON is not configured');
+ const sa=JSON.parse(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON);
+ if(sa.project_id!=='paypoint-e14c9'||!sa.client_email||!sa.private_key)throw Error('Firebase service account must belong to paypoint-e14c9');
+ const enc=new TextEncoder(),b64=bytes=>btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
+ const now=Math.floor(Date.now()/1000),url='https://oauth2.googleapis.com/token';
+ const unsigned=b64(enc.encode(JSON.stringify({alg:'RS256',typ:'JWT'})))+'.'+b64(enc.encode(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/identitytoolkit',aud:url,iat:now,exp:now+300})));
+ const key=await crypto.subtle.importKey('pkcs8',Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----|\s/g,'')),c=>c.charCodeAt(0)),{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+ const assertion=unsigned+'.'+b64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,enc.encode(unsigned))));
+ const t=await fetch(url,{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion})});
+ if(!t.ok)throw Error('Firebase service account authentication failed');const access=(await t.json()).access_token;
+ const base='https://identitytoolkit.googleapis.com/v1/projects/'+encodeURIComponent(sa.project_id);
+ const headers={Authorization:'Bearer '+access,'Content-Type':'application/json'};
+ const response=email?await fetch(base+'/accounts:lookup',{method:'POST',headers,body:JSON.stringify({email:[email]})}):await fetch(base+'/accounts:batchGet?'+new URLSearchParams({maxResults:'100',...(pageToken?{nextPageToken:pageToken}:{})}),{headers});
+ if(!response.ok)throw Error('Firebase directory request failed ('+response.status+'). Check Identity Toolkit API and Firebase Authentication Viewer permission.');
+ const result=await response.json();return {users:(result.users||[]).filter(u=>u.localId&&u.email).map(u=>({uid:u.localId,email:u.email.toLowerCase(),name:u.displayName||'',phone:u.phoneNumber||'',verified:!!u.emailVerified,disabled:!!u.disabled,createdAt:u.createdAt||null,lastLoginAt:u.lastLoginAt||null})),nextPageToken:result.nextPageToken||null};
+}
+
 export async function onRequestPost({request,env}){
  if(request.headers.get('Origin')&&request.headers.get('Origin')!==new URL(request.url).origin)return json({error:'Invalid origin'},403);
  if(!env.GST_AUTH_DB||!env.FIREBASE_WEB_API_KEY)return json({error:'Role service unavailable'},503);
@@ -24,13 +43,17 @@ export async function onRequestPost({request,env}){
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
  return json({role:admin?'admin':row?'staff':'customer',staffRole:row?.role||null,name:u.displayName||email});
  }
- if(['assign','revoke','listRoles','assignWork','listWork','removeWork'].includes(b.action)){
+ if(['directory','assign','revoke','listRoles','assignWork','listWork','removeWork'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
+ if(b.action==='directory'){
+ try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare('SELECT uid,email,role FROM staff_roles').all()).results;const map=new Map(roles.map(r=>[r.uid,r]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,role:map.get(x.uid)?.email===x.email?map.get(x.uid).role:'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
+ }
  if(b.action==='listRoles')return json({rows:(await db.prepare('SELECT uid,email,role,assigned_at FROM staff_roles ORDER BY assigned_at DESC LIMIT 500').all()).results});
  if(b.action==='assign'){
  const target=String(b.email||'').trim().toLowerCase();const role=String(b.role||'Staff');if(!['Staff','Tax Associate','Accountant','Support Executive','Filing Executive'].includes(role))return json({error:'Invalid staff role'},400);
- const rows=(await db.prepare('SELECT uid,email FROM portal_accounts WHERE email=? LIMIT 2').bind(target).all()).results;
- if(rows.length!==1||rows[0].uid===ADMIN||target==='kuldeep@gmail.com')return json({error:'Registered account not found or ambiguous. Ask the user to sign in once.'},400);
+ let rows;
+ try{if(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON){const d=await firebaseDirectory(env,target,null);rows=d.users.filter(x=>x.email===target&&!x.disabled);}else{rows=(await db.prepare('SELECT uid,email FROM portal_accounts WHERE email=? LIMIT 2').bind(target).all()).results;}}catch(e){return json({error:e.message},503);}
+ if(rows.length!==1||rows[0].uid===ADMIN||target==='kuldeep@gmail.com')return json({error:'Active registered account not found or ambiguous.'},400);
  await db.prepare('INSERT INTO staff_roles(uid,email,role,assigned_at) VALUES(?,?,?,?) ON CONFLICT(uid) DO UPDATE SET email=excluded.email,role=excluded.role,assigned_at=excluded.assigned_at').bind(rows[0].uid,target,role,Date.now()).run();return json({saved:true});
  }
  if(b.action==='revoke'){await db.prepare('DELETE FROM staff_roles WHERE uid=?').bind(String(b.uid||'')).run();return json({saved:true});}
