@@ -20,14 +20,39 @@ function showPage(name){if(!data)return;current=name;const content=$('content');
  const status=make('p','','admin-status');status.setAttribute('role','status');panel.append(status);const rows=name==='Reports'?data.rows:data.rows.filter(r=>r.section===name);
  const search=make('input',undefined,'admin-search');search.type='search';search.placeholder='Search assigned records';search.setAttribute('aria-label','Search assignments');panel.append(search);
  const wrap=make('div',undefined,'admin-table-wrap');panel.append(wrap);
- function draw(){wrap.replaceChildren();const q=search.value.toLowerCase();const filtered=rows.filter(r=>[r.title,r.reference,r.status,r.notes].some(v=>String(v||'').toLowerCase().includes(q)));if(!filtered.length){wrap.append(make('p','No assignments yet.','empty'));return;}const t=make('table',undefined,'admin-table');const th=make('thead'),hr=make('tr');['Section','Title','Reference','Status','Instructions','Action'].forEach(v=>hr.append(make('th',v)));th.append(hr);t.append(th);const tb=make('tbody');for(const r of filtered){const tr=make('tr');[r.section,r.title,r.reference,r.status,r.notes].forEach(v=>tr.append(make('td',v||'')));const td=make('td');if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const select=make('select');select.setAttribute('aria-label','Assignment status');for(const v of ['Pending','In Progress','Completed']){const o=make('option',v);select.append(o);}select.value=r.status;const btn=make('button','Update','action');btn.onclick=async()=>{btn.disabled=true;try{await api({action:'staffUpdate',id:r.id,status:select.value});r.status=select.value;draw();status.textContent='Status updated.';}catch(e){status.textContent=e.message;if(e.status===403)await recheck();}finally{btn.disabled=false;}};td.append(select,btn);}else td.textContent='View only';tr.append(td);tb.append(tr);}t.append(tb);wrap.append(t);}
+ function draw(){wrap.replaceChildren();const q=search.value.toLowerCase();const filtered=rows.filter(r=>[r.title,r.reference,r.status,r.notes].some(v=>String(v||'').toLowerCase().includes(q)));if(!filtered.length){wrap.append(make('p','No assignments yet.','empty'));return;}const t=make('table',undefined,'admin-table');const th=make('thead'),hr=make('tr');['Section','Title','Reference','Status','Instructions','Action'].forEach(v=>hr.append(make('th',v)));th.append(hr);t.append(th);const tb=make('tbody');for(const r of filtered){const tr=make('tr');[r.section,r.title,r.reference,r.status,r.notes].forEach(v=>tr.append(make('td',v||'')));const td=make('td');if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const select=make('select');select.setAttribute('aria-label','Assignment status');for(const v of ['Pending','In Progress','Completed']){const o=make('option',v);select.append(o);}select.value=r.status;const btn=make('button','Update','action');btn.onclick=async()=>{btn.disabled=true;try{await api({action:'staffUpdate',id:r.id,status:select.value});r.status=select.value;draw();status.textContent='Status updated.';}catch(e){status.textContent=e.message;if(e.status===401||e.status===403){data=null;$('app').hidden=true;await recheck();}}finally{btn.disabled=false;}};td.append(select,btn);}else td.textContent='View only';tr.append(td);tb.append(tr);}t.append(tb);wrap.append(t);}
  search.oninput=draw;draw();
  if(name==='Reports'){const btn=make('button','Download CSV','action');btn.onclick=()=>{const safe=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};const csv=[['Section','Title','Reference','Status','Instructions'],...rows.map(r=>[r.section,r.title,r.reference,r.status,r.notes])].map(row=>row.map(safe).join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=make('a');a.href=url;a.download='staff-assignments.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};panel.append(btn);}
  refresh();
 }
 sections.forEach((name,i)=>{const b=make('button',undefined,'nav-item');b.type='button';b.dataset.page=name;const span=make('span',undefined,'nav-icon');const icon=make('i');icon.dataset.lucide=icons[i];span.append(icon);b.append(span,document.createTextNode(name));b.onclick=()=>open(name);$('nav').append(b);});
-async function recheck(){try{const role=await api({action:'identify'});if(role.role!=='staff'){location.replace(role.role==='admin'?'/admin.html':'/dashboard.html');return false;}data=await api({action:'staffData'});return true;}catch(e){if(e.status===401||e.status===403){await signOut(auth);location.replace('/login.html');}else{data=null;$('app').hidden=true;$('loading').hidden=false;$('loading').textContent='Unable to verify staff access. Refresh to retry.';}return false;}}
-async function open(name){if(await recheck())showPage(name);}
+async function recheck(){try{const role=await api({action:'identify'});if(role.role!=='staff'){location.replace(role.role==='admin'?'/admin.html':'/dashboard.html');return false;}data=await api({action:'staffData'});lastSync=Date.now();return true;}catch(e){if(e.status===401||e.status===403){await signOut(auth);location.replace('/login.html');}else{data=null;$('app').hidden=true;$('loading').hidden=false;$('loading').textContent='Unable to verify staff access. Refresh to retry.';}return false;}}
+let lastSync=0,syncJob=null;
+async function syncStaff(){
+ if(syncJob)return syncJob;
+ const user=auth.currentUser,version=generation;
+ syncJob=(async()=>{
+  try{
+   const fresh=await api({action:'staffData'});
+   if(version!==generation||auth.currentUser?.uid!==user?.uid)return;
+   const changed=JSON.stringify(fresh)!==JSON.stringify(data);
+   data=fresh;lastSync=Date.now();
+   if(changed){const active=document.activeElement;if(!$('content').contains(active))showPage(current);}
+  }catch(e){
+   if(version!==generation)return;
+   if(e.status===401||e.status===403){data=null;$('app').hidden=true;await recheck();}
+   else console.warn('Staff data refresh failed; retry on next navigation.');
+  }
+ })();
+ try{await syncJob;}finally{syncJob=null;}
+}
+function open(name){
+ if(!data)return;
+ if(name!==current)showPage(name);else{closeSidebar();closeProfile();}
+ if(Date.now()-lastSync>=30000)void syncStaff();
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&data&&Date.now()-lastSync>=30000)void syncStaff();});
+setInterval(()=>{if(!document.hidden&&data&&Date.now()-lastSync>=30000)void syncStaff();},30000);
 onAuthStateChanged(auth,async user=>{const id=++generation;data=null;$('app').hidden=true;$('loading').hidden=false;if(!user){location.replace('/login.html');return;}if(!await recheck()||id!==generation)return;$('admin-name').textContent=data.name;$('menu-name').textContent=data.name;$('menu-email').textContent=data.email;$('staff-role').textContent=data.role;$('avatar').textContent=data.name.charAt(0).toUpperCase();showPage('Dashboard');$('loading').hidden=true;$('app').hidden=false;sync();},()=>location.replace('/login.html'));
 async function logout(){await signOut(auth);location.replace('/login.html');}
 $('logout').onclick=logout;$('profile-logout').onclick=logout;$('profile').onclick=$('side-profile').onclick=()=>open('My Profile');$('settings').onclick=$('side-settings').onclick=()=>open('Settings');$('reports').onclick=()=>open('Reports');$('notification-toggle').onclick=()=>open('Notifications');
