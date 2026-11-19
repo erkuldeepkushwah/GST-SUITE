@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, sendEmailVerification, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
 const config = {
   apiKey: 'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yoA',
@@ -38,7 +38,7 @@ document.querySelectorAll('[data-toggle-password]').forEach(el => {
 });
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  const email = form.elements.email.value.trim();
+  let email = form.elements.email.value.trim();
   const password = form.elements.password.value;
   if (!email || !password) return show('Please fill in all required fields.');
   if (mode === 'signup' && password.length < 6) return show('Password must have at least 6 characters.');
@@ -63,21 +63,48 @@ form.addEventListener('submit', async event => {
       } catch {
         console.warn('Welcome email service unavailable.');
       }
+      if (!(await completeOtp(account.user))) return;
       show('Account created! Opening your dashboard…', 'success');
     } else {
       const remember = form.elements.remember.checked;
       await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
-      await signInWithEmailAndPassword(auth, email, password);
+      if (/^(?:\+91)?[6-9]\d{9}$/.test(email.replace(/\s/g,''))) { const resolved=await otpApi('resolve',{mobile:email,password},false); email=resolved.email; }
+      const account=await signInWithEmailAndPassword(auth, email, password);
+      if (!(await completeOtp(account.user))) return;
       show('Signed in successfully. Opening your dashboard…', 'success');
     }
     window.location.assign('/dashboard.html');
   } catch (err) {
-    show(explain(err));
+    show(err?.otpMessage || explain(err));
   } finally {
     button.disabled = false;
     button.textContent = mode === 'signup' ? 'Create Account' : 'Login';
   }
 });
+async function otpApi(action, data={}, authenticated=true) {
+  const headers={'Content-Type':'application/json'};
+  if(authenticated) headers.Authorization='Bearer '+await auth.currentUser.getIdToken();
+  const r=await fetch('/api/otp',{method:'POST',headers,body:JSON.stringify({action,...data}),signal:AbortSignal.timeout(15000)});
+  const result=await r.json();
+  if(!r.ok) throw Object.assign(new Error('OTP request failed'),{otpMessage:result.error||'Unable to complete verification'});
+  return result;
+}
+async function completeOtp(user){
+ const state=await otpApi('status');
+ if(!state.required||state.verified)return true;
+ form.hidden=true;
+ const box=document.createElement('section');box.setAttribute('aria-label','Email OTP verification');box.style.cssText='display:grid;gap:14px;margin:18px 0';
+ box.innerHTML='<h2>Enter OTP</h2><p class="subtitle" id="otp-info">Sending OTP to your registered email…</p><div style="display:flex;gap:6px;justify-content:space-between" id="otp-digits"></div><button type="button" class="primary" id="otp-submit">Verify &amp; Login</button><button type="button" class="link" id="otp-resend">Resend OTP</button><button type="button" class="link" id="otp-cancel">Back to Login</button>';
+ form.after(box);
+ const inputs=Array.from({length:6},(_,i)=>{const input=document.createElement('input');input.type='text';input.inputMode='numeric';input.maxLength=1;input.autocomplete=i===0?'one-time-code':'off';input.setAttribute('aria-label','OTP digit '+(i+1));input.style.cssText='width:14%;min-width:0;height:48px;text-align:center;font-size:22px;border:1px solid #b6c9e3;border-radius:6px';box.querySelector('#otp-digits').append(input);return input;});
+ inputs.forEach((el,i)=>{el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'').slice(0,1);if(el.value&&i<5)inputs[i+1].focus();});el.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!el.value&&i>0)inputs[i-1].focus();});el.addEventListener('paste',e=>{const digits=e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);if(digits.length===6){e.preventDefault();inputs.forEach((x,j)=>x.value=digits[j]);inputs[5].focus();}});});
+ const send=box.querySelector('#otp-resend'),verify=box.querySelector('#otp-submit');let challenge='',timer=null;
+ async function requestCode(){send.disabled=true;verify.disabled=true;try{const result=await otpApi('send');challenge=result.challenge;box.querySelector('#otp-info').textContent='OTP sent to '+result.masked+'. Do not share it.';show('Verification code sent.','success');verify.disabled=false;inputs.forEach(x=>x.value='');inputs[0].focus();}catch(e){show(e.otpMessage||'Unable to send OTP.');}let left=30;send.textContent='Resend OTP in 00:30';clearInterval(timer);timer=setInterval(()=>{left--;send.textContent='Resend OTP in 00:'+String(left).padStart(2,'0');if(left<=0){clearInterval(timer);send.disabled=false;send.textContent='Resend OTP';}},1000);}
+ send.onclick=requestCode;
+ verify.onclick=async()=>{const code=inputs.map(x=>x.value).join('');if(code.length!==6)return show('Enter all six digits.');verify.disabled=true;try{await otpApi('verify',{challenge,code});clearInterval(timer);if(!user.emailVerified){try{await sendEmailVerification(user);}catch{}}window.location.assign('/dashboard.html');}catch(e){show(e.otpMessage||'Verification failed.');verify.disabled=false;}};
+ box.querySelector('#otp-cancel').onclick=async()=>{clearInterval(timer);await signOut(auth);window.location.assign('/login.html');};
+ await requestCode();return false;
+}
 const reset = document.querySelector('#reset-password');
 if (reset) reset.addEventListener('click', async event => {
   event.preventDefault();

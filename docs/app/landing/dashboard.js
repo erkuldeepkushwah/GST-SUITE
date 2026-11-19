@@ -110,8 +110,17 @@ function showSection(section) {
   content.append(panel);
   refreshIcons();
 }
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   if (!user) { window.location.replace('/login.html'); return; }
+  try {
+    const result=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store'});
+    const status=await result.json();
+    if(!result.ok||status.verified!==true)throw new Error('Login verification required');
+  } catch {
+    await signOut(auth);
+    window.location.replace('/login.html');
+    return;
+  }
   currentUser = user;
   const name = user.displayName?.trim() || user.email?.split('@')[0] || 'Customer';
   document.getElementById('top-name').textContent = name;
