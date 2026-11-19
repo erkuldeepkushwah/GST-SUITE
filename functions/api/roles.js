@@ -1,5 +1,5 @@
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
-const ADMIN='iNoxSD4NGrNXsghUXgxhyqyd9N03';
+const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
 const sections=['Assigned Clients','My Tasks','Service Management','Document Review','Filing & Updates','Invoices & Payments','Client Support','Notifications'];
 async function policy(db,uid){return await db.prepare('SELECT active,otp FROM account_policy WHERE uid=?').bind(uid).first();}
 function otpDefault(env,email){return env.GST_OTP_MODE==='required'||(env.GST_OTP_MODE==='test'&&email===String(env.GST_OTP_TEST_EMAIL||'').toLowerCase());}
