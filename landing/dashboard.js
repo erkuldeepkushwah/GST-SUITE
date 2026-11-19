@@ -113,6 +113,10 @@ function showSection(section) {
 onAuthStateChanged(auth, async user => {
   if (!user) { window.location.replace('/login.html'); return; }
   try {
+    const roleResponse=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'identify'}),cache:'no-store'});
+    const role=await roleResponse.json();if(!roleResponse.ok)throw Error('Role check failed');
+    if(role.role==='staff'||role.role==='admin'){window.location.replace(role.role==='staff'?'/staff.html':'/admin.html');return;}
+    if(role.role!=='customer')throw Error('Access denied');
     const result=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store'});
     const status=await result.json();
     if(!result.ok||status.verified!==true)throw new Error('Login verification required');
