@@ -28,17 +28,19 @@ export async function onRequestPost({request,env}){
  return reply({email:row.email});
  }
  const u=await userFor(request,env);if(!u)return reply({error:'Authentication required'},401);
+ const policy=await db.prepare('SELECT active,otp FROM account_policy WHERE uid=?').bind(u.localId).first();if(policy?.active===0)return reply({error:'Account inactive. Contact administrator.'},403);
+ const needsOtp=policy?.otp==null?required(env,u):!!policy.otp;
  if(action==='register'){
  const n=normalize(body.mobile);if(!/^[6-9]\d{9}$/.test(n))return reply({error:'Enter a valid 10-digit mobile number'},400);
  // Pilot only: prevent existing users claiming arbitrary numbers outside the test cohort.
- if(!required(env,u))return reply({registered:false});
+ if(!needsOtp)return reply({registered:false});
  if(!u.emailVerified)return reply({error:'Verify your email before registering a mobile number'},403);
  await db.prepare('INSERT OR IGNORE INTO mobile_accounts(mobile,uid,email) VALUES(?,?,?)').bind(n,u.localId,u.email).run();
  const row=await db.prepare('SELECT uid,mobile FROM mobile_accounts WHERE uid=?').bind(u.localId).first();
  if(row?.mobile!==n)return reply({error:'Mobile number unavailable or already registered'},409);
  return reply({registered:true});
  }
- if(!required(env,u))return reply({required:false,verified:true});
+ if(!needsOtp)return reply({required:false,verified:true});
  if(action==='status'){
  const cookie=request.headers.get('Cookie')?.match(/(?:^|;\s*)gst_otp=([a-f0-9]{64})(?:;|$)/)?.[1];
  const row=cookie?await db.prepare('SELECT uid FROM otp_sessions WHERE digest=? AND uid=? AND auth_time=? AND expires>?').bind(await digest(env,cookie),u.localId,u.authTime,now).first():null;
