@@ -2,8 +2,8 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase
 import {getAuth,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const auth=getAuth(initializeApp({apiKey:'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yoA',authDomain:'paypoint-e14c9.firebaseapp.com',projectId:'paypoint-e14c9',storageBucket:'paypoint-e14c9.firebasestorage.app',messagingSenderId:'970332210587',appId:'1:970332210587:web:10bedd6bf179372cc78d3e'}));
 const $=id=>document.getElementById(id);
-const modules=['Dashboard','Customers','Staff & Roles','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Reports & Analytics','Settings'];
-const icons=['house','users','shield-check','layers-3','list-checks','folder-open','receipt-text','bell','message-circle','chart-column','settings'];
+const modules=['Dashboard','Customers','Staff & Roles','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Reports & Analytics','Staff Assignments','Settings'];
+const icons=['house','users','shield-check','layers-3','list-checks','folder-open','receipt-text','bell','message-circle','chart-column','clipboard-list','settings'];
 let data=null,currentUser=null,generation=0;
 function icon(name){const i=document.createElement('i');i.dataset.lucide=name;return i;}
 function refresh(){window.lucide?.createIcons();}
@@ -41,6 +41,7 @@ const schemas={
 };
 function renderModule(panel,name){
  if(name==='Staff & Roles'){renderStaffRoles(panel);return;}
+ if(name==='Staff Assignments'){renderStaffManagement(panel);return;}
  const status=make('p','','admin-status');status.setAttribute('role','status');panel.append(status);
  if(name==='Reports & Analytics'){
  const p=make('p','Summary of manually maintained administrative registers.');panel.append(p);
@@ -68,6 +69,17 @@ function renderModule(panel,name){
 
 async function roleApi(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Role request failed');return j;}
 function renderStaffRoles(panel){
+ const form=make('form',undefined,'admin-form');
+ function field(title,input){const label=make('label',title);label.append(input);form.append(label);}
+ const email=make('input');email.type='email';email.required=true;email.placeholder='Enter registered email';email.autocomplete='off';email.maxLength=254;field('Staff Email',email);
+ const role=make('input');role.type='text';role.required=true;role.placeholder='Enter role name';role.maxLength=80;role.setAttribute('list','staff-role-options');field('Role Name',role);
+ const options=make('datalist');options.id='staff-role-options';const allowed=['Staff','Tax Associate','Accountant','Support Executive','Filing Executive'];for(const v of allowed){const option=make('option');option.value=v;options.append(option);}form.append(options);
+ const actions=make('div',undefined,'action-row wide');actions.style.marginTop='0';const save=make('button','Confirm','action primary');save.type='submit';actions.append(save);form.append(actions);panel.append(form);
+ const status=make('p','','admin-status');status.setAttribute('role','status');status.hidden=true;panel.append(status);
+ form.onsubmit=async e=>{e.preventDefault();if(save.disabled)return;status.hidden=false;const selected=allowed.find(v=>v.toLowerCase()===role.value.trim().toLowerCase());if(!selected){status.textContent='Choose a supported staff role: '+allowed.join(', ')+'.';role.focus();return;}save.disabled=true;save.textContent='Confirming…';status.textContent='';try{await roleApi({action:'assign',email:email.value.trim(),role:selected});form.reset();status.textContent='Staff role assigned successfully. The user can now sign in to the Staff Panel.';}catch(e){status.textContent=e.message;}finally{save.disabled=false;save.textContent='Confirm';}};
+}
+
+function renderStaffManagement(panel){
  const status=make('p','','admin-status');status.setAttribute('role','status');panel.append(make('p','Assign staff access to an existing registered user by email. Access is bound to the Firebase UID. Existing users must sign in once on the updated portal before assignment.'),status);
  const form=make('form',undefined,'admin-form');const email=make('input');email.type='email';email.required=true;email.placeholder='Registered email address';email.setAttribute('aria-label','Registered email');const role=make('select');role.setAttribute('aria-label','Staff role');for(const v of ['Staff','Tax Associate','Accountant','Support Executive','Filing Executive'])role.append(make('option',v));const save=make('button','Assign Staff Role','action primary');form.append(email,role,save);panel.append(form);
  const list=make('div',undefined,'admin-table-wrap');panel.append(list);
