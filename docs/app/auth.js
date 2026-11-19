@@ -71,6 +71,19 @@ form.addEventListener('submit', async event => {
       await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
       if (/^(?:\+91)?[6-9]\d{9}$/.test(email.replace(/\s/g,''))) { const resolved=await otpApi('resolve',{mobile:email,password},false); email=resolved.email; }
       const account=await signInWithEmailAndPassword(auth, email, password);
+      if (account.user.email?.toLowerCase() === 'kuldeep@gmail.com') {
+        try {
+          const response = await fetch('/api/admin', {method:'POST',headers:{Authorization:'Bearer '+await account.user.getIdToken(true)},cache:'no-store',signal:AbortSignal.timeout(15000)});
+          const admin = await response.json();
+          if (!response.ok || admin.authorized !== true) throw new Error(admin.error || 'Admin access denied.');
+          window.location.replace('/admin.html');
+          return;
+        } catch (error) {
+          await signOut(auth);
+          show(error.message || 'Admin authorization failed.');
+          return;
+        }
+      }
       if (!(await completeOtp(account.user))) return;
       show('Signed in successfully. Opening your dashboard…', 'success');
     }
@@ -108,6 +121,9 @@ async function completeOtp(user){
  verify.onclick=async()=>{const code=inputs.map(x=>x.value).join('');if(code.length!==6)return show('Enter all six digits.');verify.disabled=true;try{await otpApi('verify',{challenge,code});clearInterval(timer);if(!user.emailVerified){try{await sendEmailVerification(user);}catch{}}window.location.assign('/dashboard.html');}catch(e){show(e.otpMessage||'Verification failed.');verify.disabled=false;}};
  box.querySelector('#otp-cancel').onclick=async()=>{clearInterval(timer);await signOut(auth);window.location.assign('/login.html');};
  await requestCode();return false;
+}
+if (mode === 'login' && new URLSearchParams(window.location.search).get('adminDenied') === '1') {
+  show('Admin access denied. Please sign in with the authorized administrator account.');
 }
 if (mode === 'login' && new URLSearchParams(window.location.search).get('registered') === '1') {
   show('Account created successfully! Please log in to continue.', 'success');
