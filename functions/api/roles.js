@@ -41,10 +41,19 @@ export async function onRequestPost({request,env}){
  const u=await identity(request,env);if(!u)return json({error:'Authentication required'},401);
  const db=env.GST_AUTH_DB;const b=await request.json();const email=u.email.toLowerCase();const admin=u.localId===ADMIN&&email==='kuldeep@gmail.com';
  if(!admin&&(await policy(db,u.localId))?.active===0)return json({error:'Account inactive. Contact administrator.'},403);
+ if(b.action==='registerProfile'){
+ if(admin||await db.prepare('SELECT uid FROM staff_roles WHERE uid=?').bind(u.localId).first())return json({error:'Customer account required'},403);
+ const p=b.profile||{},type=p.accountType,name=String(p.name||'').trim(),mobile=String(p.mobile||''),business=String(p.businessName||'').trim(),gstin=String(p.gstin||'').trim().toUpperCase(),profession=String(p.profession||''),firm=String(p.firmName||'').trim();
+ const errors={};if(!['business','professional'].includes(type))errors.accountType='Select account type.';if(name.length<2||name.length>100)errors.name='Enter your full name.';if(!/^[6-9]\d{9}$/.test(mobile))errors.mobile='Enter a valid 10-digit mobile number.';
+ if(type==='business'){if(!business||business.length>150)errors.businessName='Enter business name.';if(!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin))errors.gstin='Enter a valid 15-character GSTIN.';}
+ if(type==='professional'){if(!['CA','CS','Advocate'].includes(profession))errors.profession='Select profession.';if(firm.length>150)errors.firmName='Maximum 150 characters.';}
+ if(Object.keys(errors).length)return json({error:'Check registration fields.',errors},400);
+ await db.prepare('INSERT INTO customer_profiles(uid,account_type,name,mobile,business_name,gstin,profession,firm_name,created_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(uid) DO NOTHING').bind(u.localId,type,name,mobile,type==='business'?business:null,type==='business'?gstin:null,type==='professional'?profession:null,type==='professional'?firm:null,Date.now()).run();return json({saved:true});
+ }
  if(b.action==='identify'){
  await db.prepare('INSERT INTO portal_accounts(uid,email,name,verified,seen_at) VALUES(?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET email=excluded.email,name=excluded.name,verified=excluded.verified,seen_at=excluded.seen_at').bind(u.localId,email,String(u.displayName||email).slice(0,150),u.emailVerified?1:0,Date.now()).run();
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
- return json({role:admin?'admin':row?'staff':'customer',staffRole:row?.role||null,name:u.displayName||email});
+ const profile=!admin&&!row?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row?'staff':'customer',staffRole:row?.role||null,name:u.displayName||email,accountType:profile?.account_type||'legacy',profile});
  }
  if(['clientStaff','assignClient','unassignClient','accountPolicy','directory','assign','revoke','listRoles','assignWork','listWork','removeWork'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
