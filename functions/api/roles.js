@@ -46,8 +46,28 @@ export async function onRequestPost({request,env}){
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
  return json({role:admin?'admin':row?'staff':'customer',staffRole:row?.role||null,name:u.displayName||email});
  }
- if(['accountPolicy','directory','assign','revoke','listRoles','assignWork','listWork','removeWork'].includes(b.action)){
+ if(['clientStaff','assignClient','unassignClient','accountPolicy','directory','assign','revoke','listRoles','assignWork','listWork','removeWork'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
+ if(b.action==='clientStaff'){
+ const rows=(await db.prepare('SELECT r.uid,r.email,r.role FROM staff_roles r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email').all()).results;
+ return json({rows});
+ }
+ if(b.action==='assignClient'){
+ const uid=String(b.uid||''),staffUid=String(b.staffUid||''),mail=String(b.email||'').trim().toLowerCase();
+ if(!uid||!staffUid||uid===staffUid||uid===ADMIN||staffUid===ADMIN)return json({error:'Invalid assignment'},400);
+ const sr=await db.prepare('SELECT uid,email FROM staff_roles WHERE uid=?').bind(staffUid).first();
+ if(!sr||(await policy(db,staffUid))?.active===0||(await policy(db,uid))?.active===0||await db.prepare('SELECT uid FROM staff_roles WHERE uid=?').bind(uid).first())return json({error:'Select an active customer and staff member'},400);
+ const [c,d]=await Promise.all([firebaseDirectory(env,mail,null),firebaseDirectory(env,sr.email,null)]);
+ const client=c.users.find(x=>x.uid===uid&&x.email===mail&&!x.disabled);
+ if(!client||!d.users.some(x=>x.uid===staffUid&&x.email===sr.email&&!x.disabled))return json({error:'Active Firebase account not found'},400);
+ const id='client:'+uid;
+ await db.prepare("INSERT INTO staff_assignments(id,staff_uid,section,title,reference,status,notes,updated) VALUES(?,?,'Assigned Clients',?,?,'Assigned','',?) ON CONFLICT(id) DO UPDATE SET staff_uid=excluded.staff_uid,title=excluded.title,reference=excluded.reference,updated=excluded.updated").bind(id,staffUid,client.name||client.email,client.email,Date.now()).run();
+ return json({saved:true,staffEmail:sr.email});
+ }
+ if(b.action==='unassignClient'){
+ const uid=String(b.uid||'');if(!uid||uid===ADMIN)return json({error:'Invalid client'},400);
+ await db.prepare("DELETE FROM staff_assignments WHERE id=? AND section='Assigned Clients'").bind('client:'+uid).run();return json({saved:true});
+ }
  if(b.action==='accountPolicy'){
  const target=String(b.uid||''),mail=String(b.email||'').trim().toLowerCase();
  if(!target||target===ADMIN||mail==='kuldeep@gmail.com'||!['active','otp'].includes(b.field)||typeof b.value!=='boolean')return json({error:'Invalid account setting'},400);
@@ -56,7 +76,7 @@ export async function onRequestPost({request,env}){
  return json({saved:true});
  }
  if(b.action==='directory'){
- try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare('SELECT uid,email,role FROM staff_roles').all()).results;const map=new Map(roles.map(r=>[r.uid,r]));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?map.get(x.uid).role:'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
+ try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare('SELECT uid,email,role FROM staff_roles').all()).results;const map=new Map(roles.map(r=>[r.uid,r]));const clients=new Map((await db.prepare("SELECT w.id,r.email FROM staff_assignments w JOIN staff_roles r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x.email]));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedStaff:clients.get(x.uid)||null,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?map.get(x.uid).role:'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
  }
  if(b.action==='listRoles')return json({rows:(await db.prepare('SELECT uid,email,role,assigned_at FROM staff_roles ORDER BY assigned_at DESC LIMIT 500').all()).results});
  if(b.action==='assign'){
