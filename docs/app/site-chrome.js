@@ -30,10 +30,9 @@ for (const photo of document.querySelectorAll('img[data-banner]')) {
  photo.addEventListener('error', () => { photo.remove(); });
  if (photo.complete) activate();
 }
-// The customer portal - login, signup and the authenticated dashboard - runs
-// without the website navigation. Those screens carry their own header, so the
-// marketing menu would only duplicate it and push the form down.
-const showSiteNav = !isDashboard && !isLogin && !isSignup;
+// Show the public website header on authentication pages, including OTP and
+// password reset panels in the login shell. The dashboard keeps its own header.
+const showSiteNav = !isDashboard;
 if (showSiteNav) {
  document.body.insertAdjacentHTML('afterbegin',nav);
  const button=document.querySelector('.fgsite-toggle');
