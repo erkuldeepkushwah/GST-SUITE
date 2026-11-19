@@ -113,14 +113,43 @@ if (mode === 'login' && new URLSearchParams(window.location.search).get('registe
   show('Account created successfully! Please log in to continue.', 'success');
 }
 const reset = document.querySelector('#reset-password');
-if (reset) reset.addEventListener('click', async event => {
+if (reset) reset.addEventListener('click', event => {
   event.preventDefault();
-  const email = form.elements.email.value.trim();
-  if (!email) return show('Enter your email above to receive a password reset link.');
-  try {
-    await sendPasswordResetEmail(auth, email);
-    show('If this address is registered, a password reset email will arrive shortly.', 'success');
-  } catch(err) { show(explain(err)); }
+  if (button.disabled || document.querySelector('#reset-panel')) return;
+  const originalParent=notice.parentNode, originalNext=notice.nextSibling;
+  const entered=form.elements.email.value.trim();
+  document.body.classList.add('otp-step');
+  const panel=document.createElement('section');
+  panel.id='reset-panel';panel.className='otp-panel';
+  panel.setAttribute('aria-labelledby','reset-heading');
+  panel.innerHTML='<svg class="otp-mail-icon" viewBox="0 0 32 28" fill="none" aria-hidden="true"><rect x="1.5" y="3" width="29" height="22" rx="3" stroke="currentColor" stroke-width="2"/><path d="M3 5l13 11L29 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><h2 id="reset-heading">Forgot Password?</h2><p class="subtitle">Enter your registered email address to receive a password reset link.</p><form id="password-reset-form"><div class="field" style="text-align:left"><label for="reset-email">Email Address <em>*</em></label><div class="input-wrap"><input id="reset-email" type="email" name="resetEmail" autocomplete="email" placeholder="Enter your registered email" required></div></div><button class="primary" type="submit">Send Reset Link</button></form><button type="button" class="link otp-cancel" id="reset-back">Back to Login</button>';
+  form.after(panel);
+  const resetForm=panel.querySelector('#password-reset-form');
+  panel.insertBefore(notice,resetForm);
+  notice.className='alert';notice.textContent='';
+  const input=panel.querySelector('#reset-email');
+  if (entered.includes('@')) input.value=entered;
+  input.focus();
+  const send=resetForm.querySelector('button[type=submit]');
+  const back=panel.querySelector('#reset-back');
+  resetForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(send.disabled)return;
+    send.disabled=true;back.disabled=true;send.textContent='Sending…';
+    try{
+      await sendPasswordResetEmail(auth,input.value.trim());
+      show('If this email is registered, a password reset link has been sent. Check your inbox and spam folder.','success');
+    }catch(err){
+      if(err?.code==='auth/user-not-found')show('If this email is registered, a password reset link has been sent. Check your inbox and spam folder.','success');
+      else show(explain(err));
+    }finally{send.disabled=false;back.disabled=false;send.textContent='Send Reset Link';}
+  });
+  back.onclick=()=>{
+    originalParent.insertBefore(notice,originalNext);
+    panel.remove();document.body.classList.remove('otp-step');
+    notice.className='alert';notice.textContent='';
+    reset.focus();
+  };
 });
 // Dashboard uses Firebase client-side session gating. The existing /app/ remains public;
 // real customer document access requires server-side authorization and storage rules.
