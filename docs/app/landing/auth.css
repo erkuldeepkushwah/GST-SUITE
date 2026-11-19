@@ -84,3 +84,26 @@ body{background:#F5F8FC;color:#1B1D1F;font-family:Manrope,Inter,system-ui,sans-s
  .auth-hero.has-reference:before,.auth-hero.has-reference:after{display:none}
 }
 @media(max-width:480px){.auth-hero.has-reference{min-height:240px}}
+
+
+/* Dedicated verification card, shown only after password authentication. */
+body.otp-step{background:#edf4ff}
+body.otp-step .auth-shell{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - 80px);padding:20px;background:#edf4ff}
+body.otp-step .auth-hero{display:none}
+body.otp-step .auth-right{width:100%;padding:0;background:transparent}
+body.otp-step .auth-card{width:100%;max-width:410px;min-height:450px;padding:36px 24px 30px;border-radius:16px;border:1px solid #dce6f5;background:#fff;box-shadow:0 8px 24px #17396b18}
+body.otp-step .auth-card > :not(.otp-panel){display:none!important}
+.otp-panel{display:flex;flex-direction:column;gap:0;text-align:center}
+.otp-mail-icon{width:42px;height:36px;color:#0755f5;align-self:center;margin:0 0 14px}
+.otp-panel h2{font-size:30px!important;color:#101d3b!important;line-height:1.2;letter-spacing:-.035em;margin:0 0 8px!important}
+.otp-panel .subtitle{font-size:13px;color:#64748b;line-height:1.5;margin:0 0 20px;overflow-wrap:anywhere}
+.otp-panel .alert{margin:0 0 24px;text-align:left;font-size:12px;padding:10px 12px;border-radius:7px}
+.otp-panel .alert.success{background:#e8faf1;color:#126139;border:1px solid #a8e8c4}
+.otp-digits{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0 0 22px}
+.otp-digits input{width:100%;min-width:0;height:48px;text-align:center;font-size:22px;color:#101d3b;border:1px solid #b7c9e4;border-radius:7px;background:#fff;outline:none}
+.otp-digits input:focus{border:1.5px solid #0755ff;box-shadow:0 0 0 1px #0755ff}
+.otp-panel .primary{background:#0e50e9;box-shadow:none;border-radius:7px;padding:12px;font-size:15px}
+.otp-panel .otp-resend,.otp-panel .otp-cancel{background:none;border:0;font-size:12px;color:#435573;padding:0;margin:14px auto 0;font-weight:500}
+.otp-panel .otp-resend:disabled{cursor:default;opacity:1}
+.otp-panel .otp-cancel{font-size:11px;color:#64748b;margin-top:16px}
+@media(max-width:480px){body.otp-step .auth-shell{min-height:calc(100dvh - 72px);padding:14px}body.otp-step .auth-card{min-height:420px;padding:32px 20px 26px}.otp-panel h2{font-size:26px!important}.otp-digits{gap:7px}.otp-digits input{height:45px}}
