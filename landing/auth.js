@@ -63,8 +63,9 @@ form.addEventListener('submit', async event => {
       } catch {
         console.warn('Welcome email service unavailable.');
       }
-      if (!(await completeOtp(account.user))) return;
-      show('Account created! Opening your dashboard…', 'success');
+      await signOut(auth);
+      window.location.replace('/login.html?registered=1');
+      return;
     } else {
       const remember = form.elements.remember.checked;
       await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
@@ -107,6 +108,9 @@ async function completeOtp(user){
  verify.onclick=async()=>{const code=inputs.map(x=>x.value).join('');if(code.length!==6)return show('Enter all six digits.');verify.disabled=true;try{await otpApi('verify',{challenge,code});clearInterval(timer);if(!user.emailVerified){try{await sendEmailVerification(user);}catch{}}window.location.assign('/dashboard.html');}catch(e){show(e.otpMessage||'Verification failed.');verify.disabled=false;}};
  box.querySelector('#otp-cancel').onclick=async()=>{clearInterval(timer);await signOut(auth);window.location.assign('/login.html');};
  await requestCode();return false;
+}
+if (mode === 'login' && new URLSearchParams(window.location.search).get('registered') === '1') {
+  show('Account created successfully! Please log in to continue.', 'success');
 }
 const reset = document.querySelector('#reset-password');
 if (reset) reset.addEventListener('click', async event => {
