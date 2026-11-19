@@ -8,7 +8,7 @@ export async function onRequestPost({request,env}){
  const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+encodeURIComponent(env.FIREBASE_WEB_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token})});
  if(!r.ok)return respond({error:'Invalid session'},401);
  const u=(await r.json()).users?.[0];
- if(!u||u.disabled||u.localId!=='iNoxSD4NGrNXsghUXgxhyqyd9N03'||u.email?.toLowerCase()!=='kuldeep@gmail.com')return respond({error:'Admin access requires the authorized Firebase account'},403);
+ if(!u||u.disabled||u.localId!=='7arK2z41nhTMyjwasmXKCWR0uw93'||u.email?.toLowerCase()!=='kuldeep@gmail.com')return respond({error:'Admin access requires the authorized Firebase account'},403);
  const db=env.GST_AUTH_DB;
  const modules=['Customers','Staff & Roles','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Settings'];
  const body=await request.text();const input=body?JSON.parse(body):{};const action=input.action||'dashboard';
