@@ -51,6 +51,7 @@ form.addEventListener('submit', async event => {
       await setPersistence(auth, browserLocalPersistence);
       const account = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(account.user, { displayName: name });
+      try { await identifyRole(account.user); } catch { console.warn('Account directory unavailable; retry on login.'); }
       // Email failures must not undo successful Firebase account creation.
       try {
         const token = await account.user.getIdToken(true);
@@ -84,7 +85,9 @@ form.addEventListener('submit', async event => {
           return;
         }
       }
+      const role = await identifyRole(account.user);
       if (!(await completeOtp(account.user))) return;
+      if (role.role === 'staff') { window.location.replace('/staff.html'); return; }
       show('Signed in successfully. Opening your dashboard…', 'success');
     }
     window.location.assign('/dashboard.html');
@@ -95,6 +98,10 @@ form.addEventListener('submit', async event => {
     button.textContent = mode === 'signup' ? 'Create Account' : 'Login';
   }
 });
+async function identifyRole(user){
+ const r=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'identify'}),cache:'no-store',signal:AbortSignal.timeout(15000)});
+ const j=await r.json();if(!r.ok)throw Object.assign(new Error('Role check failed'),{otpMessage:j.error||'Role check failed'});return j;
+}
 async function otpApi(action, data={}, authenticated=true) {
   const headers={'Content-Type':'application/json'};
   if(authenticated) headers.Authorization='Bearer '+await auth.currentUser.getIdToken();
@@ -118,7 +125,7 @@ async function completeOtp(user){
  const send=box.querySelector('#otp-resend'),verify=box.querySelector('#otp-submit');let challenge='',timer=null;
  async function requestCode(){send.disabled=true;verify.disabled=true;try{const result=await otpApi('send');challenge=result.challenge;box.querySelector('#otp-info').textContent='Enter the 6-digit code sent to '+result.masked+'.';show('Verification code sent','success');verify.disabled=false;inputs.forEach(x=>x.value='');inputs[0].focus();}catch(e){show(e.otpMessage||'Unable to send OTP.');}let left=30;send.textContent='Resend OTP in 00:30';clearInterval(timer);timer=setInterval(()=>{left--;send.textContent='Resend OTP in 00:'+String(left).padStart(2,'0');if(left<=0){clearInterval(timer);send.disabled=false;send.textContent='Resend OTP';}},1000);}
  send.onclick=requestCode;
- verify.onclick=async()=>{const code=inputs.map(x=>x.value).join('');if(code.length!==6)return show('Enter all six digits.');verify.disabled=true;try{await otpApi('verify',{challenge,code});clearInterval(timer);if(!user.emailVerified){try{await sendEmailVerification(user);}catch{}}window.location.assign('/dashboard.html');}catch(e){show(e.otpMessage||'Verification failed.');verify.disabled=false;}};
+ verify.onclick=async()=>{const code=inputs.map(x=>x.value).join('');if(code.length!==6)return show('Enter all six digits.');verify.disabled=true;try{await otpApi('verify',{challenge,code});clearInterval(timer);if(!user.emailVerified){try{await sendEmailVerification(user);}catch{}}const role=await identifyRole(user);window.location.assign(role.role==='staff'?'/staff.html':'/dashboard.html');}catch(e){show(e.otpMessage||'Verification failed.');verify.disabled=false;}};
  box.querySelector('#otp-cancel').onclick=async()=>{clearInterval(timer);await signOut(auth);window.location.assign('/login.html');};
  await requestCode();return false;
 }
