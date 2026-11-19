@@ -21,6 +21,7 @@ const sections = {
   overview: ['Overview', ''],
   services: ['My Services', 'Your GST return, registration and tax service requests will appear here once a customer-services backend is connected.'],
   documents: ['Upload Documents', 'Choose a category and attach your tax or accounting documents.'],
+  dueDates: ['Due Dates', 'Your upcoming filing deadlines will appear here once a filing schedule is connected.'],
   downloads: ['Downloads & Vault', 'Filed returns and document downloads will appear here after customer-specific secure storage is configured.'],
   billing: ['Billing & Invoices', 'Service invoices and payments will appear here after billing integration. No amount is currently due in this preview because billing data is not connected.'],
   support: ['Support Center', 'For assistance, use the official contact page.'],
@@ -45,7 +46,18 @@ function createServicesWorkspace(panel) {
 
 }
 
-let currentUser = null;
+let currentUser = null, accountType='legacy', customerProfile=null;
+const businessSections=new Set(['overview','services','documents','dueDates','billing','support','profile','settings','notifications']);
+function configureCustomerMenu(){
+ if(accountType!=='business')return;
+ const nav=document.getElementById('navigation');
+ for(const btn of nav.querySelectorAll('[data-section]')){
+ if(!businessSections.has(btn.dataset.section)||btn.dataset.section==='notifications'){btn.remove();continue;}
+ if(btn.dataset.section==='billing'||btn.dataset.section==='support'){const label=btn.dataset.section==='billing'?'Invoices':'Support';for(const node of [...btn.childNodes])if(node.nodeType===3)node.remove();btn.append(document.createTextNode(label));}
+ }
+ const due=document.createElement('button');due.type='button';due.className='nav-item';due.dataset.section='dueDates';const icon=document.createElement('span');icon.className='nav-icon';const i=document.createElement('i');i.dataset.lucide='calendar-days';icon.append(i);due.append(icon,document.createTextNode('Due Dates'));nav.insertBefore(due,nav.querySelector('[data-section=billing]'));
+ sections.billing[0]='Invoices';sections.support[0]='Support';refreshIcons();
+}
 function refreshIcons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
 const layout = document.getElementById('dashboard-layout');
 const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -74,7 +86,7 @@ sidebarToggle.addEventListener('click', () => {
 window.addEventListener('resize', () => { if (!isNarrow()) closeMenu(); syncSidebarToggle(); });
 
 function showSection(section) {
-  if (!sections[section]) section = 'overview';
+  if (!sections[section]||(accountType==='business'&&!businessSections.has(section))) section = 'overview';
   document.querySelectorAll('[data-section]').forEach(b => b.classList.toggle('active', b.dataset.section === section));
   closeMenu();
   if (section === 'overview') { content.innerHTML = overview; content.querySelector('#welcome-name').textContent = currentUser?.displayName?.trim() || currentUser?.email?.split('@')[0] || 'Customer'; refreshIcons(); return; }
@@ -86,13 +98,14 @@ function showSection(section) {
   const p = document.createElement('p'); p.textContent = summary;
   panel.append(h,p);
   if (section === 'services') {
-    createServicesWorkspace(panel);
+    if(accountType!=='business')createServicesWorkspace(panel);else{const empty=document.createElement('div');empty.className='empty';empty.textContent='No filing services assigned yet.';panel.append(empty);}
   } else if (section === 'documents') {
     panel.append(createDocumentForm(currentUser));
   } else if (section === 'profile') {
     p.textContent = 'Your Firebase account information';
     const dl = document.createElement('dl'); dl.className = 'profile-grid';
     const entries = [['Full Name', currentUser?.displayName || 'Not provided'], ['Email Address', currentUser?.email || 'Not available'], ['Email Verified', currentUser?.emailVerified ? 'Yes' : 'No']];
+    if(customerProfile){entries.push(['Account Type',accountType==='business'?'Business':'CA / CS / Advocate'],['Mobile Number',customerProfile.mobile]);if(accountType==='business')entries.push(['Business Name',customerProfile.business_name],['GSTIN',customerProfile.gstin]);else entries.push(['Profession',customerProfile.profession],['Firm Name',customerProfile.firm_name||'Not provided']);}
     for (const [key,value] of entries) {
       const dt = document.createElement('dt'); dt.textContent=key;
       const dd = document.createElement('dd'); dd.textContent=value; dl.append(dt,dd);
@@ -133,6 +146,7 @@ onAuthStateChanged(auth, async user => {
     const role=await roleResponse.json();if(!roleResponse.ok)throw Error('Role check failed');
     if(role.role==='staff'||role.role==='admin'){window.location.replace(role.role==='staff'?'/staff.html':'/admin.html');return;}
     if(role.role!=='customer')throw Error('Access denied');
+    accountType=role.accountType||'legacy';customerProfile=role.profile||null;
     const result=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store'});
     const status=await result.json();
     if(!result.ok||status.verified!==true)throw new Error('Login verification required');
@@ -149,7 +163,7 @@ onAuthStateChanged(auth, async user => {
   document.getElementById('menu-email').textContent = user.email || '';
   document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
   app.style.display = 'block'; loading.hidden = true;
-  showSection('overview');
+  configureCustomerMenu();showSection('overview');
 }, () => { window.location.replace('/login.html'); });
 document.getElementById('navigation').addEventListener('click', e => {
   const target = e.target.closest('[data-section]'); if(target) showSection(target.dataset.section);

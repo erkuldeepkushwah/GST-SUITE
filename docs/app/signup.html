@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Create your Fingenuity GST and tax services account">
 <title>Create Account | Fingenuity GST & Tax Services</title>
-<link rel="stylesheet" href="auth.css"><link rel="stylesheet" href="site-chrome.css"></head>
+<link rel="stylesheet" href="auth.css?v=signup2"><link rel="stylesheet" href="site-chrome.css"></head>
 <body data-mode="signup">
 <main class="auth-shell">
 <section class="auth-hero" aria-label="GST and tax services"><img class="auth-reference-image" data-banner="auth" src="/assets/login.jpg" alt="GST and Tax Services portal, laptop dashboard, tax filing checklist and services" decoding="async">
@@ -17,14 +17,26 @@
 <h2>Create Account</h2>
 <p class="subtitle">Create your account to get started with GST & Tax Services.</p>
 <div class="alert" id="notice" role="status" aria-live="polite"></div>
-<form id="auth-form">
-<div class="field"><label for="full-name">Full Name <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">♙</span><input id="full-name" name="name" type="text" autocomplete="name" placeholder="Enter your full name" minlength="2" maxlength="100" required></div></div>
-<div class="field"><label for="email">Email Address <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">✉</span><input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required></div></div>
-<div class="field"><label for="password">Password <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">♧</span><input id="password" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="Create a strong password" required><button type="button" class="toggle-password" data-toggle-password aria-label="Show password">Show</button></div></div>
-
+<form id="auth-form" novalidate>
+<fieldset class="account-types"><legend>Account Type <em>*</em></legend><div class="type-grid">
+<label class="type-card"><input type="radio" name="accountType" value="business" checked><span><strong>Business</strong><small>Filing services ke liye</small></span></label>
+<label class="type-card"><input type="radio" name="accountType" value="professional"><span><strong>CA / CS / Advocate</strong><small>Software plans ke liye</small></span></label>
+</div></fieldset>
+<div class="field"><label for="full-name">Full Name <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">♙</span><input id="full-name" name="name" type="text" autocomplete="name" placeholder="Enter your full name" minlength="2" maxlength="100" required aria-describedby="full-name-error"></div><small class="field-error" id="full-name-error" aria-live="polite"></small></div>
+<div class="field"><label for="mobile">Mobile Number <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">☎</span><input id="mobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" pattern="[6-9][0-9]{9}" placeholder="Enter 10-digit mobile number" required aria-describedby="mobile-error"></div><small class="field-error" id="mobile-error" aria-live="polite"></small></div>
+<div class="field"><label for="email">Email Address <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">✉</span><input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required aria-describedby="email-error"></div><small class="field-error" id="email-error" aria-live="polite"></small></div>
+<div class="field"><label for="password">Password <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">♧</span><input id="password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="Create a strong password" required aria-describedby="password-error"><button type="button" class="toggle-password" data-toggle-password aria-label="Show password">Show</button></div><small class="field-error" id="password-error" aria-live="polite"></small></div>
+<div data-account-fields="business">
+<div class="field"><label for="business-name">Business Name <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">♙</span><input id="business-name" name="businessName" type="text" autocomplete="organization" maxlength="150" placeholder="Enter business name" required aria-describedby="business-name-error"></div><small class="field-error" id="business-name-error" aria-live="polite"></small></div>
+<div class="field"><label for="gstin">GSTIN <em>*</em></label><div class="input-wrap"><span class="leading" aria-hidden="true">▣</span><input id="gstin" name="gstin" type="text" maxlength="15" autocapitalize="characters" autocomplete="off" placeholder="Enter 15-character GSTIN" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" required aria-describedby="gstin-error"></div><small class="field-error" id="gstin-error" aria-live="polite"></small></div>
+</div>
+<div data-account-fields="professional" hidden>
+<div class="field"><label for="profession">Profession <em>*</em></label><div class="input-wrap"><select id="profession" name="profession" required disabled aria-describedby="profession-error"><option value="">Select profession</option><option>CA</option><option>CS</option><option>Advocate</option></select></div><small class="field-error" id="profession-error" aria-live="polite"></small></div>
+<div class="field"><label for="firm-name">Firm Name (optional)</label><div class="input-wrap"><span class="leading" aria-hidden="true">♙</span><input id="firm-name" name="firmName" type="text" autocomplete="organization" maxlength="150" placeholder="Enter firm name" disabled aria-describedby="firm-name-error"></div><small class="field-error" id="firm-name-error" aria-live="polite"></small></div>
+</div>
 <button class="primary" type="submit">Create Account</button>
 </form>
 <p class="switch">Already have an account? <a class="link" href="login.html">Login</a></p>
 
-</div></section></main><script type="module" src="auth.js"></script>
+</div></section></main><script type="module" src="auth.js?v=signup2"></script>
 <script defer src="site-chrome.js"></script></body></html>
