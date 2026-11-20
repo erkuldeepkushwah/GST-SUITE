@@ -54,7 +54,7 @@ const menuConfig={
  firm:[['overview','Dashboard','house'],['assigned','Assigned Clients','users'],['companies','Client Companies','building-2'],['documents','Upload Documents','cloud-upload'],['tools','My Tools','layers-3'],['orders','Order Services','shopping-cart'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
  legacy:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['dueDates','Due Dates','calendar-days'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']]
 };
-Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','Manage your trial, plan requests, usage and reconciliation tools.'],orders:['Order Services','Service assignments and requests for your firm.'],filings:['Filing Status','Track your filing and task records.']});
+Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','GST reconciliation workspace.'],orders:['Order Services','Service assignments and requests for your firm.'],filings:['Filing Status','Track your filing and task records.']});
 const menu=()=>menuConfig[portalRole==='firm'?'firm':accountType==='business'?'business':'legacy'];
 function configureCustomerMenu(){
  const nav=document.getElementById('navigation'),bottom=document.querySelector('.sidebar-bottom');nav.replaceChildren();bottom.replaceChildren();
@@ -148,7 +148,9 @@ function showSection(section,prefill={}) {
     p.remove();void renderBusiness(panel,section,{api:firmApi,user:currentUser,go:showSection,prefill});
   } else if (section === 'services') {
     if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
-  } else if ((portalRole==='firm'&&['tools','orders','filings','billing','support'].includes(section))||(portalRole==='customer'&&['filings','support'].includes(section))) {
+  } else if (portalRole==='firm' && section==='tools') {
+    createServicesWorkspace(panel);
+  } else if ((portalRole==='firm'&&['orders','filings','billing','support'].includes(section))||(portalRole==='customer'&&['filings','support'].includes(section))) {
     void renderWorkspace(panel,section,{api:firmApi,user:currentUser,firm:portalRole==='firm',openTool:createServicesWorkspace,refresh:(target)=>showSection(target||section)});
   } else if (portalRole==='firm' && section==='companies') {
     void renderCompanyDirectory(panel);
