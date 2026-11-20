@@ -18,6 +18,12 @@ export async function workspace({db,b,u,firm,admin}){
  const amount=Number(b.amountPaise);if(!Number.isSafeInteger(amount)||amount<=0||amount>10000000000)return json({error:'Enter valid amount'},400);
  const q=await db.prepare("UPDATE firm_billing SET amount_paise=?,status='Payment pending',updated_at=? WHERE id=? AND status IN ('Awaiting quote','Payment pending')").bind(amount,now,str(b.id)).run();return q.meta.changes?json({saved:true}):json({error:'Invoice unavailable'},404);
  }
+ if(act==='workspaceAdminStatus'){
+ if(!admin)return json({error:'Admin required'},403);
+ const status=str(b.status),id=str(b.id);if(!['Awaiting payment','Documents needed','In progress','Filed','Cancelled'].includes(status))return json({error:'Invalid filing status'},400);
+ if(status==='Filed'&&!await db.prepare("SELECT id FROM firm_order_files WHERE order_id=? AND kind='Final file' LIMIT 1").bind(id).first())return json({error:'Upload the final file before marking Filed'},400);
+ const q=await db.prepare('UPDATE firm_service_orders SET status=?,updated_at=? WHERE id=?').bind(status,now,id).run();return q.meta.changes?json({saved:true}):json({error:'Order unavailable'},404);
+ }
  if(act==='workspaceAdminReply'){
  if(!admin)return json({error:'Admin required'},403);
  const reply=str(b.reply,3000),status=str(b.status);if(!reply||!['Open','In Progress','Resolved'].includes(status))return json({error:'Reply and status required'},400);
@@ -37,7 +43,7 @@ export async function workspace({db,b,u,firm,admin}){
  }
  const client=str(b.clientUid),service=str(b.service);if(client===ADMIN||!services.includes(service))return json({error:'Select a client and service'},400);
  const assigned=await ownClient(db,uid,client);if(!assigned)return json({error:'Client must be assigned to your firm'},403);
- const id=crypto.randomUUID(),invoice=crypto.randomUUID();let key=str(b.requestId,80);if(!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Invalid booking reference'},400);
+ const invoice=crypto.randomUUID();let key=str(b.requestId,80);if(!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Invalid booking reference'},400);
  // The request ID is scoped to its firm and reused on retry.
  const orderId=uid+':'+key;
  await db.batch([db.prepare("INSERT INTO firm_service_orders(id,firm_uid,client_uid,client_name,service,status,created_at,updated_at) VALUES(?,?,?,?,?,'Awaiting payment',?,?) ON CONFLICT(id) DO NOTHING").bind(orderId,uid,client,assigned.title||'Client',service,now,now),
