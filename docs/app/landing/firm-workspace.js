@@ -1,4 +1,8 @@
-import {downloadBillingPdf,downloadFilingPdf,downloadFilingListPdf,downloadBillingListPdf} from './portal-pdf.js?v=due1';
+const pdfModule=()=>import('./portal-pdf.js?v=due1');
+const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
+const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
+const downloadFilingListPdf=async(...args)=>(await pdfModule()).downloadFilingListPdf(...args);
+const downloadBillingListPdf=async(...args)=>(await pdfModule()).downloadBillingListPdf(...args);
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const btn=(label,fn,primary=false)=>{const b=el('button',label,'action'+(primary?' primary':''));b.type='button';b.onclick=fn;return b;};
 const date=v=>new Date(v).toLocaleDateString('en-IN');
