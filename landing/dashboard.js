@@ -1,5 +1,5 @@
-import { renderBusiness } from './business-workspace.js?v=fy1';
-import { renderWorkspace } from './firm-workspace.js?v=fy1';
+import { renderBusiness } from './business-workspace.js?v=due1';
+import { renderWorkspace } from './firm-workspace.js?v=due1';
 import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=remove1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -23,7 +23,7 @@ const sections = {
   overview: ['Overview', ''],
   services: ['My Services', 'Your GST return, registration and tax service requests will appear here once a customer-services backend is connected.'],
   documents: ['Upload Documents', 'Choose a category and attach your tax or accounting documents.'],
-  dueDates: ['Due Dates', 'Your upcoming filing deadlines will appear here once a filing schedule is connected.'],
+  dueDates: ['Due Dates', 'Choose a service and filing period, select a requested completion date or published deadline, and book. The assigned firm will receive the selected date.'],
   downloads: ['Downloads & Vault', 'Filed returns and document downloads will appear here after customer-specific secure storage is configured.'],
   billing: ['Billing & Invoices', 'Service invoices and payments will appear here after billing integration. No amount is currently due in this preview because billing data is not connected.'],
   support: ['Support Center', 'For assistance, use the official contact page.'],
