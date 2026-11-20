@@ -1,9 +1,10 @@
+import {showOrderFiles} from './firm-workspace.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {getAuth,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const auth=getAuth(initializeApp({apiKey:'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yoA',authDomain:'paypoint-e14c9.firebaseapp.com',projectId:'paypoint-e14c9',storageBucket:'paypoint-e14c9.firebasestorage.app',messagingSenderId:'970332210587',appId:'1:970332210587:web:10bedd6bf179372cc78d3e'}));
 const $=id=>document.getElementById(id);
-const modules=['Dashboard','Customers','Firms','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Reports & Analytics','Settings'];
-const icons=['house','users','shield-check','layers-3','list-checks','folder-open','receipt-text','bell','message-circle','chart-column','settings'];
+const modules=['Dashboard','Customers','Firms','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Reports & Analytics','Firm Operations','Settings'];
+const icons=['house','users','shield-check','layers-3','list-checks','folder-open','receipt-text','bell','message-circle','chart-column','briefcase-business','settings'];
 let data=null,currentUser=null,generation=0;
 function icon(name){const i=document.createElement('i');i.dataset.lucide=name;return i;}
 function refresh(){window.lucide?.createIcons();}
@@ -39,6 +40,7 @@ const schemas={
  'Settings':['Setting name','Setting value','Description (record only; not system configuration)']
 };
 function renderModule(panel,name){
+ if(name==='Firm Operations'){void renderFirmOperations(panel);return;}
  if(name==='Customers'){renderFirebaseCustomers(panel);return;}
  if(name==='Firms'){renderFirebaseCustomers(panel,true);return;}
  const status=make('p','','admin-status');status.setAttribute('role','status');panel.append(status);
@@ -105,4 +107,20 @@ function renderFirebaseCustomers(panel,firmOnly=false){
  }
  async function load(reset){refreshBtn.disabled=more.disabled=true;status.textContent='Loading Firebase users…';try{const result=await roleApi({action:'directory',pageToken:reset?null:next});if(!panel.isConnected)return;rows=reset?result.rows:rows.concat(result.rows);next=result.nextPageToken;more.hidden=!next;draw();status.textContent=rows.length+' registered accounts loaded'+(next?' (more available).':'.');}catch(e){status.textContent=e.message;}finally{refreshBtn.disabled=more.disabled=false;}}
  search.oninput=draw;refreshBtn.onclick=()=>load(true);more.onclick=()=>load(false);load(true);
+}
+
+async function renderFirmOperations(panel){
+ const status=make('p','Loading firm operations…','admin-status');status.setAttribute('role','status');panel.append(status);
+ const controls=make('div',undefined,'action-row');const refreshBtn=make('button','Refresh','action');refreshBtn.onclick=()=>showPage('Firm Operations');controls.append(refreshBtn);panel.append(controls);
+ const wrap=make('div');panel.append(wrap);
+ const date=t=>new Date(t).toLocaleDateString('en-IN');
+ const save=async(button,payload)=>{button.disabled=true;try{await roleApi(payload);await load();status.textContent='Saved.';}catch(e){status.textContent=e.message;}finally{button.disabled=false;}};
+ function grid(title,headers,rows){wrap.append(make('h2',title));const w=make('div',undefined,'admin-table-wrap');wrap.append(w);if(!rows.length){w.append(make('p','No records yet.','empty'));return;}const table=make('table',undefined,'admin-table');const header=table.createTHead().insertRow();for(const v of headers)header.append(make('th',v));const body=table.createTBody();for(const row of rows){const tr=body.insertRow();for(const v of row){const td=tr.insertCell();if(v instanceof Node)td.append(v);else td.textContent=String(v??'—');}}w.append(table);}
+ async function load(){try{const {orders,billing,tickets}=await roleApi({action:'workspaceAdmin'});if(!panel.isConnected)return;wrap.replaceChildren();
+ grid('Service Orders',['Firm','Client','Service','Date','Filing status','Files'],orders.map(o=>{const group=make('div');const select=make('select');for(const v of ['Awaiting payment','Documents needed','In progress','Filed','Cancelled'])select.append(make('option',v));select.value=o.status;const update=make('button','Update','action');update.onclick=()=>save(update,{action:'workspaceAdminStatus',id:o.id,status:select.value});group.append(select,update);const files=make('button','Manage files','action');files.onclick=()=>showOrderFiles(panel,o,roleApi,currentUser,true);return[o.firm_email||'Firm',o.client_name,o.service,date(o.created_at),group,files];}));
+ grid('Plan & Service Billing Requests',['Firm','Type','Description','Amount (INR)','Status','Action'],billing.map(x=>{const amount=make('input');amount.type='number';amount.min='0.01';amount.step='0.01';amount.placeholder='Quote amount';amount.setAttribute('aria-label','Quote amount in INR');amount.value=x.amount_paise==null?'':String(x.amount_paise/100);const b=make('button','Save quote','action');b.onclick=()=>save(b,{action:'workspaceAdminQuote',id:x.id,amountPaise:Math.round(Number(amount.value)*100)});return[x.firm_email||'Firm',x.kind,x.title,amount,x.status,b];}));
+ grid('Support Tickets',['Owner','Subject','Message','Reply','Status','Action'],tickets.map(t=>{const reply=make('textarea');reply.value=t.reply||'';reply.placeholder='Write reply';const sel=make('select');for(const v of ['Open','In Progress','Resolved'])sel.append(make('option',v));sel.value=t.status;const b=make('button','Save reply','action');b.onclick=()=>save(b,{action:'workspaceAdminReply',id:t.id,reply:reply.value,status:sel.value});return[t.owner_email||'Account',t.subject,t.message,reply,sel,b];}));
+ status.textContent='All records loaded. Quotes are not payment confirmations.';
+ }catch(e){status.textContent=e.message;}}
+ await load();
 }

@@ -1,3 +1,4 @@
+import { renderWorkspace } from './firm-workspace.js';
 import { createDocumentForm } from './document-upload.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -50,9 +51,9 @@ let currentUser = null, accountType='legacy', customerProfile=null, portalRole='
 const menuConfig={
  business:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['dueDates','Due Dates','calendar-days'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
  firm:[['overview','Dashboard','house'],['assigned','Assigned Clients','users'],['companies','Client Companies','building-2'],['documents','Upload Documents','cloud-upload'],['tools','My Tools','layers-3'],['orders','Order Services','shopping-cart'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
- legacy:[['overview','Overview','house'],['services','My Services','layers-3'],['documents','Upload Documents','cloud-upload'],['downloads','Downloads & Vault','folder-open'],['billing','Billing & Invoices','receipt-text'],['support','Support Center','message-circle'],['notifications','Notifications','bell'],['profile','My Profile','user-round'],['settings','Settings','settings'],['logout','Logout','log-out']]
+ legacy:[['overview','Overview','house'],['services','My Services','layers-3'],['filings','Filing Status','file-check'],['documents','Upload Documents','cloud-upload'],['downloads','Downloads & Vault','folder-open'],['billing','Billing & Invoices','receipt-text'],['support','Support Center','message-circle'],['notifications','Notifications','bell'],['profile','My Profile','user-round'],['settings','Settings','settings'],['logout','Logout','log-out']]
 };
-Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','GST reconciliation workspace.'],orders:['Order Services','Service assignments and requests for your firm.'],filings:['Filing Status','Track your filing and task records.']});
+Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','Manage your trial, plan requests, usage and reconciliation tools.'],orders:['Order Services','Service assignments and requests for your firm.'],filings:['Filing Status','Track your filing and task records.']});
 const menu=()=>menuConfig[portalRole==='firm'?'firm':accountType==='business'?'business':'legacy'];
 function configureCustomerMenu(){
  const nav=document.getElementById('navigation'),bottom=document.querySelector('.sidebar-bottom');nav.replaceChildren();bottom.replaceChildren();
@@ -140,11 +141,11 @@ function showSection(section) {
   panel.append(h,p);
   if (section === 'services') {
     if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
-  } else if (section === 'tools' && portalRole==='firm') {
-    createServicesWorkspace(panel);
+  } else if ((portalRole==='firm'&&['tools','orders','filings','billing','support'].includes(section))||(portalRole==='customer'&&['filings','support'].includes(section))) {
+    void renderWorkspace(panel,section,{api:firmApi,user:currentUser,firm:portalRole==='firm',openTool:createServicesWorkspace,refresh:(target)=>showSection(target||section)});
   } else if (portalRole==='firm' && section==='companies') {
     void renderCompanyDirectory(panel);
-  } else if (portalRole==='firm' && ['assigned','orders','filings','billing','support','notifications'].includes(section)) {
+  } else if (portalRole==='firm' && ['assigned','notifications'].includes(section)) {
     void renderFirmRecords(panel,section);
     if(section==='support'){const link=document.createElement('a');link.href='/contact.html';link.textContent='Contact support';link.className='action';panel.append(link);}
   } else if (section === 'documents') {
