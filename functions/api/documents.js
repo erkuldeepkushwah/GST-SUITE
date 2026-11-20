@@ -1,3 +1,5 @@
+import {identity,policy,otpVerified} from './roles.js';
+import {storageConfigured,savePrivateFile} from '../lib/supabase-storage.js';
 const sheetId = '1cGVFnYTN8giBwUy37Sreyknx8-BaGEX7DkM-ZNi5hjI';
 const folders = new Map([
   ['Sales Invoices', '1QlIwTtrdPT4VF5TjHo2osBREpBkIRlOM'],
@@ -6,7 +8,6 @@ const folders = new Map([
   ['Expense Sheets', '1ODXVf2ZmaD12tizA5b-wTMgQHjknqznX'],
   ['Other Documents', '1Ez-ghoCwpDgHM-u78qbqrPPyMp0p581R'],
 ]);
-const firebaseApiKey = 'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yoA';
 const maxFileSize = 10 * 1024 * 1024;
 const extension = /\.(pdf|jpe?g|png|csv|xlsx?)$/i;
 const encoder = new TextEncoder();
@@ -64,19 +65,16 @@ async function googleUserToken(secret) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const idToken = request.headers.get('Authorization')?.match(/^Bearer (\S+)$/i)?.[1];
-  if (!idToken) return json({ error: 'Sign in before uploading documents.' }, 401);
-  const lookup = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseApiKey}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  }).catch(() => null);
-  if (!lookup || lookup.status >= 500) return json({ error: 'Sign-in verification is temporarily unavailable.' }, 503);
-  const user = lookup.ok ? (await lookup.json()).users?.[0] : null;
-  if (!user?.localId) return json({ error: 'Your session expired. Sign in again.' }, 401);
+  if(request.headers.get('Origin')&&request.headers.get('Origin')!==new URL(request.url).origin)return json({error:'Invalid origin'},403);
+  const user=await identity(request,env).catch(()=>null);
+  if(!user)return json({error:'Sign in before uploading documents.'},401);
+  const db=env.GST_AUTH_DB;
+  try{if((await policy(db,user.localId))?.active===0||!await otpVerified(request,env,user))return json({error:'Access denied'},403);}
+  catch{return json({error:'Verification service unavailable'},503);}
   const userOAuth = env.GST_GOOGLE_OAUTH_JSON;
   const serviceAccount = env.GST_GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!userOAuth && !serviceAccount) {
-    return json({ error: 'Google Drive and Sheets are not configured on the upload server.' }, 503);
+  if (!storageConfigured(env) && !userOAuth && !serviceAccount) {
+    return json({ error: 'Document storage is not configured on the upload server.' }, 503);
   }
   if (Number(request.headers.get('Content-Length')) > 5 * maxFileSize + 65536) {
     return json({ error: 'Choose up to five files, 10 MB each.' }, 413);
@@ -90,6 +88,16 @@ export async function onRequestPost({ request, env }) {
     !(file instanceof File) || !extension.test(file.name) || !file.size || file.size > maxFileSize
   )) return json({ error: 'Choose a valid category and up to five supported files, 10 MB each.' }, 400);
 
+  if(storageConfigured(env)){
+    const saved=[],errors=[];
+    for(const file of files){
+      const id=crypto.randomUUID(),name=file.name.replace(/[\u0000-\u001f]/g,'').slice(0,180);
+      try{await savePrivateFile(env,{id,bucket:'gst-documents',file,name,ownerUid:user.localId,category});saved.push({id,name});}
+      catch{errors.push(file.name);}
+    }
+    return saved.length?json({saved,errors},201):json({saved,errors,error:'Supabase document storage could not save the upload.'},502);
+  }
+  // Preserve the existing Google upload provider until the Supabase server secret is configured.
   const token = await (userOAuth ? googleUserToken(userOAuth) : googleToken(serviceAccount)).catch(() => null);
   if (!token) return json({ error: 'The upload server could not authenticate with Google.' }, 503);
   const authorization = { Authorization: `Bearer ${token}` };
