@@ -55,16 +55,28 @@ export async function workspace({db,b,u,firm,admin}){
  if(act==='workspaceDirectBook'){
  if(admin||firm)return json({error:'Client account required'},403);
  const service=str(b.service),period=str(b.period,40),key=str(b.requestId,80);if(!services.includes(service)||!validFilingPeriod(service,period)||!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Select a valid filing period for this service'},400);
+ const requested=String(b.dueDate||'').trim(),publishedId=String(b.dueId||'').trim();
+ const today=new Date(now+19800000).toISOString().slice(0,10);
+ let dueDate=null,dueDateSource=null;
+ if(publishedId){
+   if(publishedId.length>250)return json({error:'Invalid due date selection'},400);
+   const schedule=await db.prepare('SELECT service,period,due_date FROM portal_due_dates WHERE id=?').bind(publishedId).first();
+   if(!schedule||schedule.service!==service||![period,'FY '+period].includes(schedule.period)||schedule.due_date<today||requested!==schedule.due_date)return json({error:'Published due date changed or does not match the selected service and period. Choose it again.'},409);
+   dueDate=schedule.due_date;dueDateSource='Published schedule';
+ }else if(requested){
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(requested)||!Number.isFinite(Date.parse(requested))||new Date(requested).toISOString().slice(0,10)!==requested||requested<today)return json({error:'Choose a valid requested date, today or later'},400);
+   dueDate=requested;dueDateSource='Requested by business';
+ }
  const p=await db.prepare("SELECT business_name,name FROM customer_profiles WHERE uid=?").bind(uid).first();
  const orderId=uid+':'+key;
- await db.batch([db.prepare("INSERT INTO firm_service_orders(id,firm_uid,client_uid,client_name,service,period,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'Awaiting payment',?,?) ON CONFLICT(id) DO NOTHING").bind(orderId,uid,uid,p?.business_name||p?.name||u.displayName||'Client',service,period,now,now),
+ await db.batch([db.prepare("INSERT INTO firm_service_orders(id,firm_uid,client_uid,client_name,service,period,due_date,due_date_source,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,'Awaiting payment',?,?) ON CONFLICT(id) DO NOTHING").bind(orderId,uid,uid,p?.business_name||p?.name||u.displayName||'Client',service,period,dueDate,dueDateSource,now,now),
  db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,order_id,title,status,created_at,updated_at) SELECT ?,o.firm_uid,'Service',o.id,o.service||' - '||COALESCE(o.period,''),'Awaiting quote',?,? FROM firm_service_orders o WHERE o.id=? AND NOT EXISTS(SELECT 1 FROM firm_billing b WHERE b.order_id=o.id AND b.kind='Service') ON CONFLICT DO NOTHING").bind(crypto.randomUUID(),now,now,orderId),
  db.prepare("INSERT INTO portal_order_events(id,order_id,status,created_at) SELECT id||':book',id,'Awaiting payment',created_at FROM firm_service_orders WHERE id=? ON CONFLICT DO NOTHING").bind(orderId)]);
  return json({saved:true,id:orderId,paymentConfigured:false});
  }
  if(act==='workspaceTimeline'){
  const order=await ownedOrder(db,uid,str(b.orderId),firm,admin);if(!order)return json({error:'Order unavailable'},403);
- return json({rows:await all(db,'SELECT status,created_at FROM portal_order_events WHERE order_id=? ORDER BY created_at ASC LIMIT 500',order.id),status:order.status});
+ return json({rows:await all(db,'SELECT status,created_at FROM portal_order_events WHERE order_id=? ORDER BY created_at ASC LIMIT 500',order.id),status:order.status,due_date:order.due_date,due_date_source:order.due_date_source});
  }
  if(act==='workspaceAdmin'){
  if(!admin)return json({error:'Admin required'},403);
@@ -109,7 +121,7 @@ export async function workspace({db,b,u,firm,admin}){
  }
  if(act==='workspaceData'){
  if(admin)return json({error:'Use administrator workspace'},403);
- const orders=firm?await all(db,"SELECT o.*,CASE WHEN o.firm_uid=o.client_uid THEN 'Business booking' ELSE 'Firm booking' END AS booking_source FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,period,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ const orders=firm?await all(db,"SELECT o.*,CASE WHEN o.firm_uid=o.client_uid THEN 'Business booking' ELSE 'Firm booking' END AS booking_source FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,period,due_date,due_date_source,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
  const tickets=await all(db,"SELECT id,subject,message,status,reply,order_id,created_at FROM portal_support_tickets WHERE owner_uid=? ORDER BY created_at DESC LIMIT 500",uid);
  if(!firm){const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? AND kind='Service' ORDER BY created_at DESC LIMIT 500",uid);const dueDates=await all(db,"SELECT * FROM portal_due_dates WHERE due_date>=? ORDER BY due_date LIMIT 500",new Date(now+19800000).toISOString().slice(0,10));const profile=await db.prepare("SELECT business_name,name,mobile,gstin,account_type FROM customer_profiles WHERE uid=?").bind(uid).first();const profileRequest=await db.prepare("SELECT business_name,mobile,gstin,status,updated_at FROM portal_profile_requests WHERE uid=?").bind(uid).first();return json({orders,tickets,billing,dueDates,services,profile,profileRequest,paymentConfigured:false});}
  const clients=await all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid);
