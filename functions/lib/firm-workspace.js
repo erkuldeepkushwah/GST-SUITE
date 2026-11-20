@@ -130,6 +130,15 @@ export async function workspace({db,b,u,firm,admin}){
  if(!await ownClient(db,uid,client))return json({error:'Client unavailable or no longer assigned to your firm'},404);
  return json({profile,orders});
  }
+ if(act==='workspaceClientDetails'){
+ if(!firm||admin)return json({error:'Firm account required'},403);
+ const client=str(b.clientUid,128);
+ if(!client||!await ownClient(db,uid,client))return json({error:'Client unavailable or not assigned to your firm'},404);
+ const profile=await db.prepare("SELECT COALESCE(NULLIF(c.name,''),NULLIF(a.name,''),w.title) AS name,COALESCE(NULLIF(c.mobile,''),m.mobile) AS mobile,COALESCE(NULLIF(a.email,''),m.email) AS email,c.business_name,c.gstin,w.status AS assignment_status FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=? LEFT JOIN portal_accounts a ON a.uid=? LEFT JOIN mobile_accounts m ON m.uid=? LEFT JOIN account_policy p ON p.uid=? LEFT JOIN staff_roles f ON f.uid=? WHERE w.id='client:'||? AND w.staff_uid=? AND w.section='Assigned Clients' AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL").bind(client,client,client,client,client,client,uid).first();
+ if(!profile)return json({error:'Client unavailable'},404);
+ const orders=await all(db,"SELECT o.id,o.service,o.period,o.due_date,o.due_date_source,o.status,o.created_at,CASE WHEN o.firm_uid=o.client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE o.client_uid=? AND w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",client,uid);
+ return json({profile,orders});
+ }
  if(act==='workspaceData'){
  if(admin)return json({error:'Use administrator workspace'},403);
  const orders=firm?await all(db,"SELECT o.*,CASE WHEN o.firm_uid=o.client_uid THEN 'Business booking' ELSE 'Firm booking' END AS booking_source FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,period,due_date,due_date_source,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
