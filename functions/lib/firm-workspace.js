@@ -1,10 +1,11 @@
+import {validFilingPeriod} from '../../landing/filing-periods.js';
 const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
 const services=['GST Registration','GSTR-1 Filing','GSTR-3B Filing','GST Reconciliation','Income Tax Return','TDS Return','Compliance'];
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const all=async(db,sql,...v)=>(await db.prepare(sql).bind(...v).all()).results;
 const ownClient=async(db,firm,client)=>db.prepare("SELECT w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy p ON p.uid=? LEFT JOIN customer_profiles c ON c.uid=? LEFT JOIN staff_roles f ON f.uid=? WHERE w.id='client:'||? AND w.staff_uid=? AND w.section='Assigned Clients' AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL").bind(client,client,client,client,firm).first();
 const assignedCount=async(db,uid)=>(await db.prepare("SELECT COUNT(*) AS n FROM staff_assignments WHERE staff_uid=? AND section='Assigned Clients'").bind(uid).first()).n;
-const ownedOrder=async(db,uid,id,firm,admin)=>{const order=await db.prepare('SELECT * FROM firm_service_orders WHERE id=?').bind(id).first();if(!order)return null;if(admin||(!firm&&order.client_uid===uid)|| (firm&&order.firm_uid===uid&&await ownClient(db,uid,order.client_uid)))return order;return null;};
+const ownedOrder=async(db,uid,id,firm,admin)=>{const order=await db.prepare('SELECT * FROM firm_service_orders WHERE id=?').bind(id).first();if(!order)return null;if(admin||(!firm&&order.client_uid===uid)|| (firm&&(order.firm_uid===uid||order.firm_uid===order.client_uid)&&await ownClient(db,uid,order.client_uid)))return order;return null;};
 export {ownedOrder};
 export async function workspace({db,b,u,firm,admin}){
  const uid=u.localId,now=Date.now(),act=b.action;
@@ -53,11 +54,11 @@ export async function workspace({db,b,u,firm,admin}){
  }
  if(act==='workspaceDirectBook'){
  if(admin||firm)return json({error:'Client account required'},403);
- const service=str(b.service),period=str(b.period,40),key=str(b.requestId,80);if(!services.includes(service)||!period||!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Select service and period'},400);
+ const service=str(b.service),period=str(b.period,40),key=str(b.requestId,80);if(!services.includes(service)||!validFilingPeriod(service,period)||!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Select a valid filing period for this service'},400);
  const p=await db.prepare("SELECT business_name,name FROM customer_profiles WHERE uid=?").bind(uid).first();
  const orderId=uid+':'+key;
  await db.batch([db.prepare("INSERT INTO firm_service_orders(id,firm_uid,client_uid,client_name,service,period,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'Awaiting payment',?,?) ON CONFLICT(id) DO NOTHING").bind(orderId,uid,uid,p?.business_name||p?.name||u.displayName||'Client',service,period,now,now),
- db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,order_id,title,status,created_at,updated_at) SELECT ?,firm_uid,'Service',id,service||' - '||COALESCE(period,''),'Awaiting quote',?,? FROM firm_service_orders WHERE id=? ON CONFLICT DO NOTHING").bind(crypto.randomUUID(),now,now,orderId),
+ db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,order_id,title,status,created_at,updated_at) SELECT ?,o.firm_uid,'Service',o.id,o.service||' - '||COALESCE(o.period,''),'Awaiting quote',?,? FROM firm_service_orders o WHERE o.id=? AND NOT EXISTS(SELECT 1 FROM firm_billing b WHERE b.order_id=o.id AND b.kind='Service') ON CONFLICT DO NOTHING").bind(crypto.randomUUID(),now,now,orderId),
  db.prepare("INSERT INTO portal_order_events(id,order_id,status,created_at) SELECT id||':book',id,'Awaiting payment',created_at FROM firm_service_orders WHERE id=? ON CONFLICT DO NOTHING").bind(orderId)]);
  return json({saved:true,id:orderId,paymentConfigured:false});
  }
@@ -108,7 +109,7 @@ export async function workspace({db,b,u,firm,admin}){
  }
  if(act==='workspaceData'){
  if(admin)return json({error:'Use administrator workspace'},403);
- const orders=firm?await all(db,"SELECT o.* FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.staff_uid=o.firm_uid AND w.section='Assigned Clients' WHERE o.firm_uid=? ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,period,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ const orders=firm?await all(db,"SELECT o.*,CASE WHEN o.firm_uid=o.client_uid THEN 'Business booking' ELSE 'Firm booking' END AS booking_source FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,period,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
  const tickets=await all(db,"SELECT id,subject,message,status,reply,order_id,created_at FROM portal_support_tickets WHERE owner_uid=? ORDER BY created_at DESC LIMIT 500",uid);
  if(!firm){const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? AND kind='Service' ORDER BY created_at DESC LIMIT 500",uid);const dueDates=await all(db,"SELECT * FROM portal_due_dates WHERE due_date>=? ORDER BY due_date LIMIT 500",new Date(now+19800000).toISOString().slice(0,10));const profile=await db.prepare("SELECT business_name,name,mobile,gstin,account_type FROM customer_profiles WHERE uid=?").bind(uid).first();const profileRequest=await db.prepare("SELECT business_name,mobile,gstin,status,updated_at FROM portal_profile_requests WHERE uid=?").bind(uid).first();return json({orders,tickets,billing,dueDates,services,profile,profileRequest,paymentConfigured:false});}
  const clients=await all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid);
