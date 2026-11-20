@@ -1,5 +1,5 @@
 import {identity,policy,otpVerified} from './roles.js';
-import {storageConfigured,savePrivateFile,listUploadedDocuments,downloadPrivateFile} from '../lib/supabase-storage.js';
+import {storageConfigured,savePrivateFile,listUploadedDocuments,downloadPrivateFile,removePrivateFile} from '../lib/supabase-storage.js';
 const sheetId = '1cGVFnYTN8giBwUy37Sreyknx8-BaGEX7DkM-ZNi5hjI';
 const folders = new Map([
   ['Sales Invoices', '1QlIwTtrdPT4VF5TjHo2osBREpBkIRlOM'],
@@ -91,6 +91,14 @@ export async function onRequestPost({ request, env }) {
           return {id:r.id,name:r.name,category:r.category,size:r.size,created_at:r.created_at,uploadedBy};
         }));
         return json({documents,hasMore:rows.length>50});
+      }
+      if(b.action==='remove'){
+        if(b.admin===true)return json({error:'Only the document owner can remove their own uploads'},403);
+        if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json({error:'Invalid document'},400);
+        const [row]=await listUploadedDocuments(env,{ownerUid:user.localId,id:b.id,limit:1});
+        if(!row||row.owner_uid!==user.localId||row.bucket!=='gst-documents'||row.object_path!==row.id)return json({error:'Document not found'},404);
+        await removePrivateFile(env,'supabase:'+row.bucket+'/'+row.object_path);
+        return json({removed:true,id:row.id});
       }
       if(b.action==='download'){
         if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json({error:'Invalid document'},400);
