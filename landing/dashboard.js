@@ -117,6 +117,29 @@ async function showAssignedClient(panel,record){
  wrap.append(table);detail.append(wrap);
  }catch(e){if(detail.isConnected)loading.textContent=e.message||'Unable to load client details.';}
 }
+async function showAssignedClient(panel,record){
+ const previous=panel.querySelector('.assigned-client-details');previous?.remove();
+ const box=document.createElement('section');box.className='assigned-client-details';box.style.cssText='border:1px solid #dbe5f0;border-radius:12px;padding:16px;margin:18px 0;background:#fff';
+ const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap';
+ const title=document.createElement('h3');title.textContent='Client Details';
+ const close=document.createElement('button');close.type='button';close.className='action';close.textContent='Close';close.onclick=()=>box.remove();header.append(title,close);
+ const message=document.createElement('p');message.setAttribute('role','status');message.textContent='Loading client details…';box.append(header,message);panel.append(box);box.scrollIntoView({behavior:'smooth',block:'nearest'});
+ try{
+ const result=await firmApi({action:'workspaceClientDetails',clientUid:record.id.slice(7)});
+ if(!box.isConnected)return;
+ const p=result.profile;title.textContent=p.business_name||p.name||'Client Details';message.textContent='';
+ const profile=document.createElement('dl');profile.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:12px 0';
+ for(const [label,value] of [['Full Name',p.name],['Mobile Number',p.mobile],['Email Address',p.email],['Business Name',p.business_name],['GSTIN',p.gstin],['Assignment Status',p.assignment_status]]){
+ const cell=document.createElement('div');cell.style.cssText='background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;min-width:0';
+ const dt=document.createElement('dt');dt.textContent=label;dt.style.cssText='font-size:12px;color:#64748b;margin-bottom:6px';const dd=document.createElement('dd');dd.textContent=value||'Not provided';dd.style.cssText='margin:0;font-weight:600;overflow-wrap:anywhere';cell.append(dt,dd);profile.append(cell);}
+ box.append(profile);const h=document.createElement('h3');h.textContent='Booked Services';box.append(h);
+ if(!result.orders.length){const empty=document.createElement('p');empty.textContent='No services booked yet.';box.append(empty);return;}
+ const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';
+ const head=table.createTHead().insertRow();for(const label of ['Service','Filing Period','Due / Requested Date','Date Type','Booked By','Status','Booking Date']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
+ const body=table.createTBody();for(const o of result.orders){const row=body.insertRow();for(const v of [o.service,o.period,o.due_date,o.due_date_source,o.booked_by,o.status,new Date(o.created_at).toLocaleDateString('en-IN')]){const td=row.insertCell();td.textContent=v||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere';}}
+ wrap.append(table);box.append(wrap);
+ }catch(e){if(box.isConnected)message.textContent=e.message||'Unable to load client details.';}
+}
 async function renderFirmRecords(panel,section){
 
  const message=document.createElement('p');message.textContent='Loading records…';panel.append(message);
@@ -124,7 +147,11 @@ async function renderFirmRecords(panel,section){
  const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
  const records=rows.filter(r=>(map[section]||[]).includes(r.section));message.textContent=records.length?records.length+' record(s)':'No records available yet.';
  if(!records.length)return;const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Title','Client / Reference','Status','Instructions','Action']){const cell=document.createElement('th');cell.textContent=label;cell.style.padding='10px';head.append(cell);}
- const body=table.createTBody();for(const r of records){const tr=body.insertRow();for(const [i,value] of [r.title,r.reference,r.status,r.notes].entries()){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3';if(i===0&&section==='assigned'&&String(r.id).startsWith('client:')){const name=document.createElement('button');name.type='button';name.className='action';name.style.cssText='border:0;background:transparent;color:#2563eb;text-align:left;padding:0;font-weight:600;text-decoration:underline';name.textContent=value||'Client';name.onclick=()=>showAssignedClient(panel,r);td.append(name);}else td.textContent=value||'—';}const td=tr.insertCell();if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const sel=document.createElement('select');for(const status of ['Pending','In Progress','Completed'])sel.add(new Option(status,status));sel.value=r.status;const button=document.createElement('button');button.className='action';button.textContent='Update';button.onclick=async()=>{button.disabled=true;try{await firmApi({action:'firmUpdate',id:r.id,status:sel.value});tr.cells[2].textContent=sel.value;message.textContent='Status updated.';}catch(e){message.textContent=e.message;}finally{button.disabled=false;}};td.append(sel,button);}else if(section==='assigned'&&String(r.id).startsWith('client:')){const view=document.createElement('button');view.type='button';view.className='action';view.textContent='View details';view.onclick=()=>showAssignedClient(panel,r);td.append(view);}else td.textContent='View only';}
+ const body=table.createTBody();for(const r of records){const tr=body.insertRow();for(const [i,value] of [r.title,r.reference,r.status,r.notes].entries()){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3';if(i===0&&section==='assigned'&&String(r.id).startsWith('client:')){const name=document.createElement('button');name.type='button';name.className='action';name.style.cssText='border:0;background:transparent;color:#2563eb;text-align:left;padding:0;font-weight:600;text-decoration:underline';name.textContent=value||'Client';name.onclick=()=>showAssignedClient(panel,r);td.append(name);}else td.textContent=value||'—';}const td=tr.insertCell();if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const sel=document.createElement('select');for(const status of ['Pending','In Progress','Completed'])sel.add(new Option(status,status));sel.value=r.status;const button=document.createElement('button');button.className='action';button.textContent='Update';button.onclick=async()=>{button.disabled=true;try{await firmApi({action:'firmUpdate',id:r.id,status:sel.value});tr.cells[2].textContent=sel.value;message.textContent='Status updated.';}catch(e){message.textContent=e.message;}finally{button.disabled=false;}};td.append(sel,button);}else if(section==='assigned'&&String(r.id).startsWith('client:')){const view=document.createElement('button');view.type='button';view.className='action';view.textContent='View details';view.onclick=()=>showAssignedClient(panel,r);td.append(view);}else if(r.section==='Assigned Clients'&&r.id.startsWith('client:')){
+ const open=()=>showAssignedClient(panel,r);
+ const button=document.createElement('button');button.type='button';button.className='action';button.textContent='View Details';button.onclick=open;td.append(button);
+ const name=document.createElement('button');name.type='button';name.textContent=r.title||'Client';name.style.cssText='background:none;border:0;padding:0;color:#2563eb;font:inherit;font-weight:600;text-align:left;cursor:pointer';name.onclick=open;tr.cells[0].replaceChildren(name);
+ }else td.textContent='View only';}
  wrap.append(table);panel.append(wrap);
  }catch(e){message.textContent=e.message;}
 }
