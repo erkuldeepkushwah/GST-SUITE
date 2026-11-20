@@ -109,6 +109,19 @@ export async function onRequestPost({request,env}){
  }
  if(admin||!await isFirm(db,u.localId,email))return json({error:'Firm access required'},403);
  if(!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
+ if(b.action==='firmCompanies'){
+ const pageToken=String(b.pageToken||'');if(pageToken.length>4096)return json({error:'Invalid page token'},400);
+ const d=await firebaseDirectory(env,null,pageToken||null);
+ const ids=JSON.stringify(d.users.map(x=>x.uid));
+ const q=(await db.prepare("SELECT j.value AS uid,p.account_type,p.name,p.business_name,CASE WHEN f.uid IS NOT NULL THEN 1 ELSE 0 END AS legacy_firm,a.active,w.staff_uid AS assigned_uid FROM json_each(?) j LEFT JOIN customer_profiles p ON p.uid=j.value LEFT JOIN staff_roles f ON f.uid=j.value LEFT JOIN account_policy a ON a.uid=j.value LEFT JOIN staff_assignments w ON w.id='client:'||j.value AND w.section='Assigned Clients'").bind(ids).all()).results;
+ const profiles=new Map(q.map(x=>[x.uid,x]));
+ const safeName=(value)=>{const name=String(value||'').trim();return name&&!name.includes('@')&&!/^\+?[\d\s()-]{7,}$/.test(name)?name.slice(0,150):'';};
+ const rows=d.users.filter(x=>x.uid!==ADMIN&&x.uid!==u.localId&&profiles.get(x.uid)?.account_type!=='professional'&&!profiles.get(x.uid)?.legacy_firm).map(x=>{
+ const p=profiles.get(x.uid)||{};const own=p.assigned_uid===u.localId;
+ return {companyName:safeName(p.business_name)||'—',clientName:safeName(p.name)||safeName(x.name)||'Registered client',accountStatus:x.disabled||p.active===0?'Inactive':'Active',assignmentStatus:own?'Assigned to your firm':p.assigned_uid?'Assigned elsewhere':'Unassigned',contact:own?x.email:null};
+ });
+ return json({rows,nextPageToken:d.nextPageToken});
+ }
  if(b.action==='firmData')return json({name:u.displayName||email,email,role:'Firm',rows:(await db.prepare('SELECT id,section,title,reference,status,notes,updated FROM staff_assignments WHERE staff_uid=? ORDER BY updated DESC LIMIT 500').bind(u.localId).all()).results});
  if(b.action==='firmUpdate'){
  const status=String(b.status||'');if(!['Pending','In Progress','Completed'].includes(status))return json({error:'Invalid status'},400);
