@@ -1,6 +1,6 @@
 import { renderBusiness } from './business-workspace.js';
 import { renderWorkspace } from './firm-workspace.js';
-import { createDocumentForm } from './document-upload.js';
+import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=uploads1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
@@ -158,7 +158,9 @@ function showSection(section,prefill={}) {
     void renderFirmRecords(panel,section);
     if(section==='support'){const link=document.createElement('a');link.href='/contact.html';link.textContent='Contact support';link.className='action';panel.append(link);}
   } else if (section === 'documents') {
-    panel.append(createDocumentForm(currentUser));
+    const history=createUploadedDocuments(currentUser);
+    panel.append(createDocumentForm(currentUser,history.refresh),history.element);
+    void history.refresh();
   } else if (section === 'profile') {
     p.textContent = 'Your Firebase account information';
     const dl = document.createElement('dl'); dl.className = 'profile-grid';
