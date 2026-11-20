@@ -59,8 +59,24 @@ export async function onRequestPost({request,env}){
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
  const profile=!admin?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row||profile?.account_type==='professional'?'firm':'customer',name:u.displayName||email,accountType:row?'professional':profile?.account_type||'legacy',profile});
  }
- if(['clientFirms','assignClient','assignClientByContact','unassignClient','accountPolicy','directory'].includes(b.action)){
+ if(['clientFirms','assignClient','assignClientByContact','unassignClient','accountPolicy','directory','adminAccountDetails'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
+ if(b.action==='adminAccountDetails'){
+ const target=String(b.uid||'').trim(),mail=String(b.email||'').trim().toLowerCase();
+ if(!/^[A-Za-z0-9_-]{1,128}$/.test(target)||target===ADMIN||!mail||mail.length>254)return json({error:'Invalid account'},400);
+ const directory=await firebaseDirectory(env,mail,null);const account=directory.users.find(x=>x.uid===target&&x.email===mail);
+ if(!account)return json({error:'Registered account not found'},404);
+ const profile=await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name,created_at FROM customer_profiles WHERE uid=?').bind(target).first();
+ const mobile=await db.prepare('SELECT mobile FROM mobile_accounts WHERE uid=?').bind(target).first();
+ const role=(await isFirm(db,target,mail)||profile?.account_type==='professional')?'Firm':'Customer';
+ const p=await policy(db,target);
+ const rows=async(sql,...params)=>(await db.prepare(sql).bind(...params).all()).results;
+ const assignedFirm=role==='Customer'?await db.prepare("SELECT w.staff_uid AS uid,COALESCE(NULLIF(c.firm_name,''),NULLIF(c.name,''),a.name) AS name,COALESCE(a.email,s.email) AS email, c.mobile FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=w.staff_uid LEFT JOIN portal_accounts a ON a.uid=w.staff_uid LEFT JOIN staff_roles s ON s.uid=w.staff_uid WHERE w.id='client:'||? AND w.section='Assigned Clients'").bind(target).first():null;
+ const clients=role==='Firm'?await rows("SELECT substr(w.id,8) AS uid,COALESCE(NULLIF(c.name,''),NULLIF(a.name,''),w.title) AS name,COALESCE(NULLIF(c.mobile,''),m.mobile) AS mobile,COALESCE(NULLIF(a.email,''),m.email,w.reference) AS email,c.business_name,c.gstin,w.status FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN portal_accounts a ON a.uid=substr(w.id,8) LEFT JOIN mobile_accounts m ON m.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' ORDER BY w.title LIMIT 500",target):[];
+ const orders=role==='Firm'?await rows("SELECT o.id,o.client_name,o.service,o.period,o.due_date,o.due_date_source,o.status,o.created_at,CASE WHEN o.firm_uid=o.client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders o WHERE o.firm_uid=? OR (o.firm_uid=o.client_uid AND EXISTS(SELECT 1 FROM staff_assignments w WHERE w.id='client:'||o.client_uid AND w.staff_uid=? AND w.section='Assigned Clients')) ORDER BY o.created_at DESC LIMIT 500",target,target):await rows("SELECT id,client_name,service,period,due_date,due_date_source,status,created_at,CASE WHEN firm_uid=client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",target);
+ const billing=await rows("SELECT id,kind,title,amount_paise,status,created_at FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",target);
+ return json({profile:{uid:target,role,name:profile?.name||account.name,email:account.email,mobile:profile?.mobile||mobile?.mobile||account.phone,business_name:profile?.business_name||null,gstin:profile?.gstin||null,firm_name:profile?.firm_name||null,profession:profile?.profession||null,created_at:profile?.created_at||Number(account.createdAt)||null,last_login:Number(account.lastLoginAt)||null,active:!account.disabled&&p?.active!==0,verified:account.verified,otp:p?.otp==null?otpDefault(env,mail):!!p.otp},assignedFirm,clients,orders,billing});
+ }
  if(b.action==='clientFirms'){
  const rows=(await db.prepare("SELECT r.uid,r.email,'Firm' AS role FROM ("+firmSql+") r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email").all()).results;
  return json({rows});
