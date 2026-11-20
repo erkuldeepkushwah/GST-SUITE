@@ -127,7 +127,7 @@ export async function workspace({db,b,u,firm,admin}){
  }
  if(act==='workspaceFiles'){
  const order=await ownedOrder(db,uid,str(b.orderId),firm,admin);if(!order)return json({error:'Order unavailable'},403);
- const rows=await all(db,"SELECT id,kind,name,size,created_at FROM firm_order_files WHERE order_id=? ORDER BY created_at DESC LIMIT 500",order.id);return json({rows});
+ const rows=await all(db,"SELECT id,kind,name,size,created_at,uploader_uid FROM firm_order_files WHERE order_id=? ORDER BY created_at DESC LIMIT 500",order.id);const removable=['Awaiting payment','Paid','Documents Required','Documents needed','Documents Received'].includes(order.status);return json({rows:rows.map(({uploader_uid,...row})=>({...row,canRemove:!admin&&removable&&row.kind==='Document'&&uploader_uid===uid}))});
  }
  return json({error:'Invalid workspace action'},400);
 }
