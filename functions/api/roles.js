@@ -1,4 +1,5 @@
 import {workspace} from '../lib/firm-workspace.js';
+import {liveAccountMap, liveFirmRows} from '../lib/live-accounts.js';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
 const sections=['Assigned Clients','My Tasks','Service Management','Document Review','Filing & Updates','Invoices & Payments','Client Support','Notifications'];
@@ -19,7 +20,7 @@ async function otpVerified(request,env,u){
 
 const firmSql="SELECT uid,email FROM staff_roles UNION SELECT a.uid,a.email FROM portal_accounts a JOIN customer_profiles p ON p.uid=a.uid WHERE p.account_type='professional'";
 async function isFirm(db,uid,email){return !!await db.prepare("SELECT uid FROM ("+firmSql+") WHERE uid=? AND email=?").bind(uid,email).first();}
-async function firebaseDirectory(env,email,pageToken){
+async function firebaseDirectory(env,email,pageToken,localIds){
  if(!env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON)throw Error('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON is not configured');
  const sa=JSON.parse(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON);
  if(sa.project_id!=='paypoint-e14c9'||!sa.client_email||!sa.private_key)throw Error('Firebase service account must belong to paypoint-e14c9');
@@ -32,9 +33,15 @@ async function firebaseDirectory(env,email,pageToken){
  if(!t.ok)throw Error('Firebase service account authentication failed');const access=(await t.json()).access_token;
  const base='https://identitytoolkit.googleapis.com/v1/projects/'+encodeURIComponent(sa.project_id);
  const headers={Authorization:'Bearer '+access,'Content-Type':'application/json'};
- const response=email?await fetch(base+'/accounts:lookup',{method:'POST',headers,body:JSON.stringify({email:[email]})}):await fetch(base+'/accounts:batchGet?'+new URLSearchParams({maxResults:'100',...(pageToken?{nextPageToken:pageToken}:{})}),{headers});
- if(!response.ok)throw Error('Firebase directory request failed ('+response.status+'). Check Identity Toolkit API and Firebase Authentication Viewer permission.');
- const result=await response.json();return {users:(result.users||[]).filter(u=>u.localId&&u.email).map(u=>({uid:u.localId,email:u.email.toLowerCase(),name:u.displayName||'',phone:u.phoneNumber||'',verified:!!u.emailVerified,disabled:!!u.disabled,createdAt:u.createdAt||null,lastLoginAt:u.lastLoginAt||null})),nextPageToken:result.nextPageToken||null};
+ const read=async response=>{if(!response.ok)throw Error('Firebase directory request failed ('+response.status+')');return response.json();};
+ const lookup=async body=>read(await fetch(base+'/accounts:lookup',{method:'POST',headers,body:JSON.stringify(body)}));
+ let result;
+ if(localIds){
+  const users=[];
+  for(let i=0;i<localIds.length;i+=100){const part=await lookup({localId:localIds.slice(i,i+100)});users.push(...(part.users||[]));}
+  result={users};
+ }else result=email?await lookup({email:[email]}):await read(await fetch(base+'/accounts:batchGet?'+new URLSearchParams({maxResults:'100',...(pageToken?{nextPageToken:pageToken}:{})}),{headers}));
+ return {users:(result.users||[]).filter(u=>u.localId&&u.email).map(u=>({uid:u.localId,email:u.email.toLowerCase(),name:u.displayName||'',phone:u.phoneNumber||'',verified:!!u.emailVerified,disabled:!!u.disabled,createdAt:u.createdAt||null,lastLoginAt:u.lastLoginAt||null})),nextPageToken:result.nextPageToken||null};
 }
 
 export async function onRequestPost({request,env}){
@@ -43,6 +50,7 @@ export async function onRequestPost({request,env}){
  try{
  const u=await identity(request,env);if(!u)return json({error:'Authentication required'},401);
  const db=env.GST_AUTH_DB;const b=await request.json();const email=u.email.toLowerCase();const admin=u.localId===ADMIN&&email==='kuldeep@gmail.com';
+ const liveAccounts=ids=>liveAccountMap(ids,async keys=>(await firebaseDirectory(env,null,null,keys)).users);
  if(!admin&&(await policy(db,u.localId))?.active===0)return json({error:'Account inactive. Contact administrator.'},403);
  if(b.action==='registerProfile'){
  if(admin||await db.prepare('SELECT uid FROM staff_roles WHERE uid=?').bind(u.localId).first())return json({error:'Customer account required'},403);
@@ -71,20 +79,24 @@ export async function onRequestPost({request,env}){
  const role=(await isFirm(db,target,mail)||profile?.account_type==='professional')?'Firm':'Customer';
  const p=await policy(db,target);
  const rows=async(sql,...params)=>(await db.prepare(sql).bind(...params).all()).results;
- const assignedFirm=role==='Customer'?await db.prepare("SELECT w.staff_uid AS uid,COALESCE(NULLIF(c.firm_name,''),NULLIF(c.name,''),a.name) AS name,COALESCE(a.email,s.email) AS email, c.mobile FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=w.staff_uid LEFT JOIN portal_accounts a ON a.uid=w.staff_uid LEFT JOIN staff_roles s ON s.uid=w.staff_uid WHERE w.id='client:'||? AND w.section='Assigned Clients'").bind(target).first():null;
- const clients=role==='Firm'?await rows("SELECT substr(w.id,8) AS uid,COALESCE(NULLIF(c.name,''),NULLIF(a.name,''),w.title) AS name,COALESCE(NULLIF(c.mobile,''),m.mobile) AS mobile,COALESCE(NULLIF(a.email,''),m.email,w.reference) AS email,c.business_name,c.gstin,w.status FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN portal_accounts a ON a.uid=substr(w.id,8) LEFT JOIN mobile_accounts m ON m.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' ORDER BY w.title LIMIT 500",target):[];
+ let assignedFirm=role==='Customer'?await db.prepare("SELECT w.staff_uid AS uid,COALESCE(NULLIF(c.firm_name,''),NULLIF(c.name,''),a.name) AS name,COALESCE(a.email,s.email) AS email, c.mobile FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=w.staff_uid LEFT JOIN portal_accounts a ON a.uid=w.staff_uid LEFT JOIN staff_roles s ON s.uid=w.staff_uid WHERE w.id='client:'||? AND w.section='Assigned Clients'").bind(target).first():null;
+ let clients=role==='Firm'?await rows("SELECT substr(w.id,8) AS uid,COALESCE(NULLIF(c.name,''),NULLIF(a.name,''),w.title) AS name,COALESCE(NULLIF(c.mobile,''),m.mobile) AS mobile,COALESCE(NULLIF(a.email,''),m.email,w.reference) AS email,c.business_name,c.gstin,w.status FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN portal_accounts a ON a.uid=substr(w.id,8) LEFT JOIN mobile_accounts m ON m.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' ORDER BY w.title LIMIT 500",target):[];
+ const linked=await liveAccounts([...clients.map(x=>x.uid),...(assignedFirm?[assignedFirm.uid]:[])]);
+ if(assignedFirm){const active=linked.get(assignedFirm.uid);if(!active||active.disabled||active.email!==String(assignedFirm.email||'').toLowerCase()||(await policy(db,assignedFirm.uid))?.active===0)assignedFirm=null;}
+ clients=clients.filter(x=>linked.has(x.uid)).map(x=>({...x,email:linked.get(x.uid).email}));
  const orders=role==='Firm'?await rows("SELECT o.id,o.client_name,o.service,o.period,o.due_date,o.due_date_source,o.status,o.created_at,CASE WHEN o.firm_uid=o.client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders o WHERE o.firm_uid=? OR (o.firm_uid=o.client_uid AND EXISTS(SELECT 1 FROM staff_assignments w WHERE w.id='client:'||o.client_uid AND w.staff_uid=? AND w.section='Assigned Clients')) ORDER BY o.created_at DESC LIMIT 500",target,target):await rows("SELECT id,client_name,service,period,due_date,due_date_source,status,created_at,CASE WHEN firm_uid=client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",target);
  const billing=await rows("SELECT id,kind,title,amount_paise,status,created_at FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",target);
  return json({profile:{uid:target,role,name:profile?.name||account.name,email:account.email,mobile:profile?.mobile||mobile?.mobile||account.phone,business_name:profile?.business_name||null,gstin:profile?.gstin||null,firm_name:profile?.firm_name||null,profession:profile?.profession||null,created_at:profile?.created_at||Number(account.createdAt)||null,last_login:Number(account.lastLoginAt)||null,active:!account.disabled&&p?.active!==0,verified:account.verified,otp:p?.otp==null?otpDefault(env,mail):!!p.otp},assignedFirm,clients,orders,billing});
  }
  if(b.action==='clientFirms'){
  const rows=(await db.prepare("SELECT r.uid,r.email,'Firm' AS role FROM ("+firmSql+") r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email").all()).results;
- return json({rows});
+ return json({rows:liveFirmRows(rows,await liveAccounts(rows.map(x=>x.uid)),ADMIN)});
  }
  if(b.action==='assignClient'||b.action==='assignClientByContact'){
  let uid=String(b.uid||''),mail=String(b.email||'').trim().toLowerCase();const firmUid=String(b.firmUid||'');
  if(!firmUid||firmUid===ADMIN)return json({error:'Invalid firm'},400);
- const sr=await db.prepare('SELECT uid,email FROM ('+firmSql+') WHERE uid=?').bind(firmUid).first();
+ const firmRows=(await db.prepare('SELECT uid,email FROM ('+firmSql+') WHERE uid=?').bind(firmUid).all()).results;
+ const sr=liveFirmRows(firmRows,await liveAccounts([firmUid]),ADMIN)[0];
  if(!sr||(await policy(db,firmUid))?.active===0)return json({error:'Select an active firm'},400);
  if(b.action==='assignClientByContact'){
  const contact=String(b.contact||'').trim().toLowerCase();
@@ -93,8 +105,8 @@ export async function onRequestPost({request,env}){
  const mobile=contact.replace(/[\s()-]/g,'').replace(/^\+91/,'');
  if(!/^[6-9]\d{9}$/.test(mobile))return json({error:'Enter a registered email or valid 10-digit mobile number'},400);
  const found=(await db.prepare("SELECT p.uid,a.email FROM customer_profiles p LEFT JOIN portal_accounts a ON a.uid=p.uid WHERE p.mobile=? AND p.account_type='business' UNION SELECT uid,email FROM mobile_accounts WHERE mobile=?").bind(mobile,mobile).all()).results;
- const distinct=[...new Set(found.map(x=>x.uid))];if(distinct.length!==1)return json({error:distinct.length?'Multiple accounts match this number. Use the registered email.':'No registered client found for this mobile number. Use the registered email.'},distinct.length?409:404);
- uid=distinct[0];const account=found.find(x=>x.uid===uid&&x.email);if(!account)return json({error:'Client profile not linked to an email yet. Use the registered email.'},404);mail=account.email.toLowerCase();
+ const foundLive=await liveAccounts(found.map(x=>x.uid));const eligible=found.filter(x=>{const a=foundLive.get(x.uid);return a&&!a.disabled&&a.email===String(x.email||'').toLowerCase();});const distinct=[...new Set(eligible.map(x=>x.uid))];if(distinct.length!==1)return json({error:distinct.length?'Multiple accounts match this number. Use the registered email.':'No registered client found for this mobile number. Use the registered email.'},distinct.length?409:404);
+ uid=distinct[0];const account=eligible.find(x=>x.uid===uid&&x.email);if(!account)return json({error:'Client profile not linked to an email yet. Use the registered email.'},404);mail=account.email.toLowerCase();
  }
  }
  if(!uid||!mail||uid===firmUid||uid===ADMIN||(await policy(db,uid))?.active===0||await isFirm(db,uid,mail))return json({error:'Select an active client, not a firm or admin'},400);
@@ -121,14 +133,14 @@ export async function onRequestPost({request,env}){
  return json({saved:true});
  }
  if(b.action==='directory'){
- try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const map=new Map(roles.map(r=>[r.uid,r]));const clients=new Map((await db.prepare("SELECT w.id,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x.email]));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:clients.get(x.uid)||null,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
+ try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const roleKeys=new Set(roles.map(r=>r.uid+'\n'+String(r.email||'').toLowerCase()));const clients=new Map((await db.prepare("SELECT w.id,r.uid AS firm_uid,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x]));const currentFirms=await liveAccounts(d.users.map(x=>clients.get(x.uid)?.firm_uid));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:(()=>{const a=clients.get(x.uid);const f=a&&currentFirms.get(a.firm_uid);return f&&!f.disabled&&policies.get(f.uid)?.active!==0&&f.email===String(a.email||'').toLowerCase()?f.email:null;})(),active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:roleKeys.has(x.uid+'\n'+x.email)?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
  }
  return json({error:'Invalid admin action'},400);
  }
  if(String(b.action||'').startsWith('workspace')){
  const firm=!admin&&await isFirm(db,u.localId,email);
  if(!admin&&!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
- return await workspace({db,b,u,firm,admin});
+ return await workspace({db,b,u,firm,admin,liveAccounts});
  }
  if(admin||!await isFirm(db,u.localId,email))return json({error:'Firm access required'},403);
  if(!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
@@ -138,14 +150,19 @@ export async function onRequestPost({request,env}){
  const ids=JSON.stringify(d.users.map(x=>x.uid));
  const q=(await db.prepare("SELECT j.value AS uid,p.account_type,p.name,p.business_name,CASE WHEN f.uid IS NOT NULL THEN 1 ELSE 0 END AS legacy_firm,a.active,w.staff_uid AS assigned_uid FROM json_each(?) j LEFT JOIN customer_profiles p ON p.uid=j.value LEFT JOIN staff_roles f ON f.uid=j.value LEFT JOIN account_policy a ON a.uid=j.value LEFT JOIN staff_assignments w ON w.id='client:'||j.value AND w.section='Assigned Clients'").bind(ids).all()).results;
  const profiles=new Map(q.map(x=>[x.uid,x]));
+ const linkedFirms=await liveAccounts(q.map(x=>x.assigned_uid));
  const safeName=(value)=>{const name=String(value||'').trim();return name&&!name.includes('@')&&!/^\+?[\d\s()-]{7,}$/.test(name)?name.slice(0,150):'';};
  const rows=d.users.filter(x=>x.uid!==ADMIN&&x.uid!==u.localId&&profiles.get(x.uid)?.account_type!=='professional'&&!profiles.get(x.uid)?.legacy_firm).map(x=>{
- const p=profiles.get(x.uid)||{};const own=p.assigned_uid===u.localId;
- return {companyName:safeName(p.business_name)||'—',clientName:safeName(p.name)||safeName(x.name)||'Registered client',accountStatus:x.disabled||p.active===0?'Inactive':'Active',assignmentStatus:own?'Assigned to your firm':p.assigned_uid?'Assigned elsewhere':'Unassigned',contact:own?x.email:null};
+ const p=profiles.get(x.uid)||{};const linked=linkedFirms.get(p.assigned_uid);const assigned=linked&&!linked.disabled?p.assigned_uid:null;const own=assigned===u.localId;
+ return {companyName:safeName(p.business_name)||'—',clientName:safeName(p.name)||safeName(x.name)||'Registered client',accountStatus:x.disabled||p.active===0?'Inactive':'Active',assignmentStatus:own?'Assigned to your firm':assigned?'Assigned elsewhere':'Unassigned',contact:own?x.email:null};
  });
  return json({rows,nextPageToken:d.nextPageToken});
  }
- if(b.action==='firmData')return json({name:u.displayName||email,email,role:'Firm',rows:(await db.prepare('SELECT id,section,title,reference,status,notes,updated FROM staff_assignments WHERE staff_uid=? ORDER BY updated DESC LIMIT 500').bind(u.localId).all()).results});
+ if(b.action==='firmData'){
+ const rows=(await db.prepare('SELECT id,section,title,reference,status,notes,updated FROM staff_assignments WHERE staff_uid=? ORDER BY updated DESC LIMIT 500').bind(u.localId).all()).results;
+ const linked=await liveAccounts(rows.filter(x=>x.section==='Assigned Clients'&&x.id.startsWith('client:')).map(x=>x.id.slice(7)));
+ return json({name:u.displayName||email,email,role:'Firm',rows:rows.filter(x=>x.section!=='Assigned Clients'||(x.id.startsWith('client:')&&linked.has(x.id.slice(7))&&!linked.get(x.id.slice(7)).disabled))});
+ }
  if(b.action==='firmUpdate'){
  const status=String(b.status||'');if(!['Pending','In Progress','Completed'].includes(status))return json({error:'Invalid status'},400);
  const q=await db.prepare("UPDATE staff_assignments SET status=?,updated=? WHERE id=? AND staff_uid=? AND section IN ('My Tasks','Document Review','Filing & Updates','Client Support')").bind(status,Date.now(),String(b.id||''),u.localId).run();return q.meta.changes?json({saved:true}):json({error:'Assignment unavailable'},404);

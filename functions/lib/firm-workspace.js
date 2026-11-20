@@ -7,9 +7,10 @@ const ownClient=async(db,firm,client)=>db.prepare("SELECT w.title,w.reference FR
 const assignedCount=async(db,uid)=>(await db.prepare("SELECT COUNT(*) AS n FROM staff_assignments WHERE staff_uid=? AND section='Assigned Clients'").bind(uid).first()).n;
 const ownedOrder=async(db,uid,id,firm,admin)=>{const order=await db.prepare('SELECT * FROM firm_service_orders WHERE id=?').bind(id).first();if(!order)return null;if(admin||(!firm&&order.client_uid===uid)|| (firm&&(order.firm_uid===uid||order.firm_uid===order.client_uid)&&await ownClient(db,uid,order.client_uid)))return order;return null;};
 export {ownedOrder};
-export async function workspace({db,b,u,firm,admin}){
+export async function workspace({db,b,u,firm,admin,liveAccounts}){
  const uid=u.localId,now=Date.now(),act=b.action;
  const str=(v,n=200)=>String(v||'').trim().slice(0,n);
+ const assignedLive=async client=>{const row=await ownClient(db,uid,client);if(!row)return null;const account=(await liveAccounts([client])).get(client);return account&&!account.disabled?row:null;};
  if(act==='workspaceDueSave'){
  if(!admin)return json({error:'Admin required'},403);
  const service=str(b.service),period=str(b.period,40),due=str(b.dueDate,10),notes=str(b.notes,250);
@@ -111,7 +112,7 @@ export async function workspace({db,b,u,firm,admin}){
  const id=crypto.randomUUID();const q=await db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,title,status,created_at,updated_at) SELECT ?,?,'Plan',?,'Awaiting quote',?,? WHERE NOT EXISTS(SELECT 1 FROM firm_billing WHERE firm_uid=? AND kind='Plan' AND status IN ('Awaiting quote','Payment pending'))").bind(id,uid,request+' request',now,now,uid).run();return q.meta.changes?json({saved:true,id}):json({error:'A plan request is already pending. View Invoices.'},409);
  }
  const client=str(b.clientUid),service=str(b.service);if(client===ADMIN||!services.includes(service))return json({error:'Select a client and service'},400);
- const assigned=await ownClient(db,uid,client);if(!assigned)return json({error:'Client must be assigned to your firm'},403);
+ const assigned=await assignedLive(client);if(!assigned)return json({error:'Client must be assigned to your firm'},403);
  const invoice=crypto.randomUUID();let key=str(b.requestId,80);if(!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Invalid booking reference'},400);
  // The request ID is scoped to its firm and reused on retry.
  const orderId=uid+':'+key;
@@ -127,13 +128,13 @@ export async function workspace({db,b,u,firm,admin}){
  const profile=await db.prepare("SELECT COALESCE(NULLIF(c.name,''),NULLIF(a.name,''),w.title) AS name,COALESCE(NULLIF(c.mobile,''),m.mobile) AS mobile,COALESCE(NULLIF(a.email,''),NULLIF(m.email,''),w.reference) AS email,c.business_name,c.gstin,w.status AS assignment_status FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=? LEFT JOIN portal_accounts a ON a.uid=? LEFT JOIN mobile_accounts m ON m.uid=? LEFT JOIN account_policy p ON p.uid=? LEFT JOIN staff_roles f ON f.uid=? WHERE w.id='client:'||? AND w.staff_uid=? AND w.section='Assigned Clients' AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL").bind(client,client,client,client,client,client,uid).first();
  if(!profile)return json({error:'Client unavailable or no longer assigned to your firm'},404);
  const orders=await all(db,"SELECT o.id,o.service,o.period,o.due_date,o.due_date_source,o.status,o.created_at FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE o.client_uid=? AND w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",client,uid);
- if(!await ownClient(db,uid,client))return json({error:'Client unavailable or no longer assigned to your firm'},404);
+ if(!await assignedLive(client))return json({error:'Client unavailable or no longer assigned to your firm'},404);
  return json({profile,orders});
  }
  if(act==='workspaceClientDetails'){
  if(!firm||admin)return json({error:'Firm account required'},403);
  const client=str(b.clientUid,128);
- if(!client||!await ownClient(db,uid,client))return json({error:'Client unavailable or not assigned to your firm'},404);
+ if(!client||!await assignedLive(client))return json({error:'Client unavailable or not assigned to your firm'},404);
  const profile=await db.prepare("SELECT COALESCE(NULLIF(c.name,''),NULLIF(a.name,''),w.title) AS name,COALESCE(NULLIF(c.mobile,''),m.mobile) AS mobile,COALESCE(NULLIF(a.email,''),m.email) AS email,c.business_name,c.gstin,w.status AS assignment_status FROM staff_assignments w LEFT JOIN customer_profiles c ON c.uid=? LEFT JOIN portal_accounts a ON a.uid=? LEFT JOIN mobile_accounts m ON m.uid=? LEFT JOIN account_policy p ON p.uid=? LEFT JOIN staff_roles f ON f.uid=? WHERE w.id='client:'||? AND w.staff_uid=? AND w.section='Assigned Clients' AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL").bind(client,client,client,client,client,client,uid).first();
  if(!profile)return json({error:'Client unavailable'},404);
  const orders=await all(db,"SELECT o.id,o.service,o.period,o.due_date,o.due_date_source,o.status,o.created_at,CASE WHEN o.firm_uid=o.client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.section='Assigned Clients' LEFT JOIN account_policy p ON p.uid=o.client_uid LEFT JOIN customer_profiles c ON c.uid=o.client_uid LEFT JOIN staff_roles f ON f.uid=o.client_uid WHERE o.client_uid=? AND w.staff_uid=? AND (o.firm_uid=w.staff_uid OR o.firm_uid=o.client_uid) AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY o.created_at DESC LIMIT 500",client,uid);
@@ -147,13 +148,16 @@ export async function workspace({db,b,u,firm,admin}){
  const clients=await all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid);
  const trial=await db.prepare("SELECT starts_at,ends_at,client_limit,tool_limit,launches FROM firm_trials WHERE uid=?").bind(uid).first();
  const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",uid);
- return json({orders,tickets,clients,trial,clientCount:await assignedCount(db,uid),services,billing,paymentConfigured:false});
+ const linked=await liveAccounts([...clients.map(x=>x.uid),...orders.map(x=>x.client_uid)]);
+ const active=id=>linked.has(id)&&!linked.get(id).disabled;
+ const currentClients=clients.filter(x=>active(x.uid)).map(x=>({...x,reference:linked.get(x.uid).email}));
+ return json({orders:orders.filter(x=>active(x.client_uid)),tickets,clients:currentClients,trial,clientCount:currentClients.length,services,billing,paymentConfigured:false});
  }
  if(act==='workspaceTicket'){
  if(admin)return json({error:'Customer or firm required'},403);
  const subject=str(b.subject,150),message=str(b.message,3000),orderId=str(b.orderId),client=str(b.clientUid);
  if(!subject||!message)return json({error:'Enter subject and message'},400);
- if(client&&(!firm||!await ownClient(db,uid,client)))return json({error:'Invalid client'},403);
+ if(client&&(!firm||!await assignedLive(client)))return json({error:'Invalid client'},403);
  const order=orderId?await ownedOrder(db,uid,orderId,firm,false):null;
  if(orderId&&(!order||(client&&order.client_uid!==client)))return json({error:'Invalid order'},403);
  const id=crypto.randomUUID();await db.prepare("INSERT INTO portal_support_tickets(id,owner_uid,client_uid,order_id,subject,message,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'Open',?,?)").bind(id,uid,order?.client_uid||client||null,orderId||null,subject,message,now,now).run();return json({saved:true,id});

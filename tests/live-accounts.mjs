@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {liveAccountMap,liveFirmRows} from '../functions/lib/live-accounts.js';
+const existing=[{uid:'new',email:'same@example.test',disabled:false},{uid:'disabled',email:'disabled@example.test',disabled:true},{uid:'admin',email:'admin@example.test',disabled:false},{uid:'unrequested',email:'unrequested@example.test'}];
+const current=await liveAccountMap(['old','new','new','disabled','admin',null],async keys=>{assert.deepEqual(keys,['old','new','disabled','admin']);return existing;});
+assert.equal(current.has('old'),false);
+assert.equal(current.has('unrequested'),false);
+const rows=[{uid:'old',email:'same@example.test'},{uid:'new',email:'old-address@example.test'},{uid:'new',email:'same@example.test'},{uid:'new',email:'SAME@example.test'},{uid:'disabled',email:'disabled@example.test'},{uid:'admin',email:'admin@example.test'}];
+assert.deepEqual(liveFirmRows(rows,current,'admin'),[{uid:'new',email:'same@example.test',role:'Firm'}]);
+await assert.rejects(liveAccountMap(['old'],async()=>{throw Error('Firebase unavailable');}));
+assert.equal((await liveAccountMap([],async()=>{throw Error('unexpected lookup');})).size,0);
+console.log('Deleted UID, repeated email, disabled firm and lookup failure checks passed');
