@@ -92,20 +92,19 @@ form.addEventListener('submit', async event => {
       await saveSignupProfile(account.user,profile);
       await updateProfile(account.user, { displayName: name });
       try { await identifyRole(account.user); } catch { console.warn('Account directory unavailable; retry on login.'); }
-      // Email failures must not undo successful Firebase account creation.
+      // Registration stays successful even when the separate welcome notification fails.
+      let welcome='not-sent';
       try {
         const token = await account.user.getIdToken(true);
-        const response = await fetch('/api/welcome', {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + token },
-          signal: AbortSignal.timeout(8000)
-        });
-        if (!response.ok) console.warn('Welcome email service unavailable.');
-      } catch {
-        console.warn('Welcome email service unavailable.');
-      }
+        button.textContent='Sending welcome email…';
+        const response=await fetch('/api/welcome',{method:'POST',headers:{Authorization:'Bearer '+token},cache:'no-store',signal:AbortSignal.timeout(20000)});
+        const result=await response.json().catch(()=>null);
+        if(response.ok&&result?.accepted===true)welcome='accepted';
+        else if(result?.code==='SENDER_DOMAIN_UNVERIFIED'||result?.code==='EMAIL_CONFIGURATION')welcome='sender-configuration';
+        else console.warn('Welcome email request failed',response.status);
+      }catch{console.warn('Welcome email service unavailable.');}
       await signOut(auth);
-      window.location.replace('/login.html?registered=1');
+      window.location.replace('/login.html?registered=1&welcome='+encodeURIComponent(welcome));
       return;
     } else {
       const remember = form.elements.remember.checked;
@@ -178,7 +177,11 @@ if (mode === 'login' && new URLSearchParams(window.location.search).get('adminDe
   show('Admin access denied. Please sign in with the authorized administrator account.');
 }
 if (mode === 'login' && new URLSearchParams(window.location.search).get('registered') === '1') {
-  show('Account created successfully! Please log in to continue.', 'success');
+  const welcome=new URLSearchParams(window.location.search).get('welcome');
+  if(welcome==='accepted')show('Account created successfully! Welcome email accepted for delivery. Please log in to continue.','success');
+  else if(welcome==='sender-configuration')show('Account created successfully. Welcome email could not be sent because the email sender is not configured for this recipient. You can log in.','success');
+  else if(welcome==='not-sent')show('Account created successfully. Welcome email delivery could not be confirmed. You can log in.','success');
+  else show('Account created successfully! Please log in to continue.','success');
 }
 const reset = document.querySelector('#reset-password');
 if (reset) reset.addEventListener('click', event => {
