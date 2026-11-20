@@ -100,7 +100,7 @@ async function renderCompanyDirectory(panel){
  const body=table.createTBody();for(const r of filtered){const tr=body.insertRow();for(const value of [r.companyName,r.clientName,r.contact||'No access',r.accountStatus,r.assignmentStatus]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}}
  wrap.append(table);
  }
- async function load(){if(busy)return;busy=true;status.textContent='Loading registered clients…';const seen=new Set();try{do{if(!panel.isConnected)return;const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;if(next&&seen.has(next))throw Error('Unable to load additional clients: repeated page token. Reopen this section to retry.');if(next)seen.add(next);draw();}while(next);}catch(e){status.textContent=e.message;}finally{busy=false;}}
+ async function load(){if(busy)return;busy=true;status.textContent='Loading registered clients…';const slow=setTimeout(()=>{if(panel.isConnected&&!rows.length)status.textContent='Still loading verified client accounts…';},5000);const seen=new Set();try{do{if(!panel.isConnected)return;const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;if(next&&seen.has(next))throw Error('Unable to load additional clients: repeated page token. Reopen this section to retry.');if(next)seen.add(next);draw();}while(next);}catch(e){status.textContent=e.message;}finally{clearTimeout(slow);busy=false;}}
  search.oninput=draw;filter.onchange=draw;await load();
 }
 async function showAssignedClient(panel,record){
