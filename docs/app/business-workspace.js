@@ -27,13 +27,13 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  if(section==='overview'){
  const grid=el('div',undefined,'stats');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px';
  const active=d.orders.filter(o=>!['Completed','Cancelled','Awaiting payment'].includes(o.status)).length,pending=d.orders.filter(o=>['Paid','Documents Required','Documents needed'].includes(o.status)).length;
- const values=[['Active Services',active,'filings'],['Upcoming Due Dates',d.dueDates.length,'dueDates'],['Pending Documents',pending,'documents'],['Unpaid Billing',d.billing.filter(b=>b.status!=='Paid').length,'billing']];
+ const values=[['Active Services',active,'filings'],['Pending Documents',pending,'documents'],['Unpaid Billing',d.billing.filter(b=>b.status!=='Paid').length,'billing']];
  for(const [label,count,target] of values){const card=button('',()=>go(target));card.className='stat';card.style.cssText='text-align:left;cursor:pointer;min-height:100px;background:#fff;border:1px solid #e3eaf3;border-radius:12px;padding:16px';card.append(el('div',label,'stat-label'),el('strong',String(count),'stat-number'));grid.append(card);}panel.append(grid);
  const activeAlerts=d.orders.filter(o=>['Documents Required','Documents needed'].includes(o.status));panel.append(el('h3','Latest updates'));for(const o of activeAlerts){const p=el('p',o.service+' — additional documents required');p.append(button('Upload',()=>go('documents',{orderId:o.id})));panel.append(p);}
  table(panel,['Recent service','Period','Due / requested date','Status'],d.orders.slice(0,5).map(o=>[o.service,o.period||'—',o.due_date||'—',o.status]));return;
  }
- if(section==='services'||section==='dueDates'){
- const dueBooking=section==='dueDates';
+ if(section==='services'){
+ const dueBooking=false;
  panel.append(el('p',dueBooking?'Choose your service, filing period and requested completion date. Published deadlines are shown separately and must be verified for applicability.':'Choose a service and filing period. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
  const mapping={GST:['GST Registration','GSTR-1 Filing','GSTR-3B Filing','GST Reconciliation'],'Income Tax':['Income Tax Return'],TDS:['TDS Return'],Compliance:['Compliance']};
  const cat=select(Object.keys(mapping).map(x=>[x,x])),svc=select([]),frequency=select([]),fy=select(financialYears.map(y=>[y,y])),period=select([]);
@@ -60,7 +60,6 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint,field('Due date option',schedule),field(dueBooking?'Select date':'Requested date (optional)',requested),dueHint);
  let key=crypto.randomUUID();const book=button('Book Service',()=>locked(book,msg,async()=>{if(!svc.value||!period.value)throw Error('Choose service and filing period');if(dueBooking&&!requested.value)throw Error('Select a due date');if(requested.value&&!requested.checkValidity())throw Error('Select a valid date');const r=await api({action:'workspaceDirectBook',service:svc.value,period:period.value,dueDate:requested.value,dueId:schedule.value,requestId:key});key=crypto.randomUUID();go('documents',{orderId:r.id});}),true);panel.append(book,el('h3','Booked Services'));
  table(panel,['Service','Filing period','Due / requested date','Date type','Status','Action'],d.orders.map(o=>[o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',o.status,button('View documents',()=>go('documents',{orderId:o.id}))]));
- if(dueBooking){panel.append(el('h3','Published Filing Schedule'));table(panel,['Service','Period','Due date','Notes','Action'],d.dueDates.map(x=>[x.service,x.period,x.due_date,x.notes,button('Select & book',()=>go('dueDates',{service:x.service,period:x.period,dueId:x.id}),true)]));}
  }else if(section==='documents'){
  const available=d.orders.filter(o=>o.status!=='Cancelled'),order=select([['','Select order'],...available.map(o=>[o.id,o.service+' · '+(o.period||'—')+' · '+o.status])]);panel.append(field('Order',order));if(prefill.orderId)order.value=prefill.orderId;const show=()=>{panel.querySelector('.order-file-box')?.remove();const o=available.find(x=>x.id===order.value);if(o)void showOrderFiles(panel,o,api,user);};order.onchange=show;show();if(!available.length)panel.append(button('Book a service',()=>go('services'),true));
  }else if(section==='filings'||section==='notifications'){
