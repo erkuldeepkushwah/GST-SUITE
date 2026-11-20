@@ -97,12 +97,12 @@ export function createUploadedDocuments(user,{admin=false}={}){
  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0';
  const search=document.createElement('input');search.type='search';search.placeholder='Search loaded documents';search.setAttribute('aria-label','Search uploaded documents');search.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;min-width:0;flex:1';
  bar.append(search);
- const wrap=document.createElement('div');wrap.style.overflowX='auto';const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;
- section.append(heading,bar,info,wrap,more);
- let rows=[],offset=0,busy=false,hasMore=false;
+ const wrap=document.createElement('div');wrap.style.overflowX='auto';
+ section.append(heading,bar,info,wrap);
+ let rows=[],offset=0,busy=false,hasMore=false,refreshPending=false;
  async function api(body){const response=await fetch('/api/documents',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({...body,admin}),cache:'no-store'});if(!response.ok){const j=await response.json().catch(()=>null);throw Error(j?.error||'Document request failed');}return response;}
  function draw(){
- const q=search.value.trim().toLowerCase();const filtered=rows.filter(r=>[r.name,r.category,r.uploadedBy].some(x=>String(x||'').toLowerCase().includes(q)));wrap.replaceChildren();info.textContent=filtered.length+' document(s)'+(hasMore?' · More available':'');
+ const q=search.value.trim().toLowerCase();const filtered=rows.filter(r=>[r.name,r.category,r.uploadedBy].some(x=>String(x||'').toLowerCase().includes(q)));wrap.replaceChildren();info.textContent=filtered.length+' document(s)'+(hasMore?' · Loading additional documents…':'');
  if(!filtered.length){const p=document.createElement('p');p.className='empty';p.textContent='No uploaded documents found.';wrap.append(p);return;}
  const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();
  for(const label of ['File Name','Category',...(admin?['Uploaded by']:[]),'Size','Uploaded on','Status','Action']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
@@ -112,12 +112,12 @@ export function createUploadedDocuments(user,{admin=false}={}){
  if(!admin){const remove=document.createElement('button');remove.type='button';remove.className='action';remove.style.cssText='color:#b91c1c;border-color:#fecaca;margin-left:6px';remove.textContent='Remove';remove.onclick=async()=>{
  if(!confirm('Permanently remove "'+row.name+'"? This will delete the uploaded file.'))return;
  remove.disabled=button.disabled=true;
- try{const response=await api({action:'remove',id:row.id});const result=await response.json();if(result.removed!==true)throw Error('Unable to remove document');rows=rows.filter(x=>x.id!==row.id);offset=Math.max(0,offset-1);draw();info.textContent='Document removed.';await load(true);}
+ try{const response=await api({action:'remove',id:row.id});const result=await response.json();if(result.removed!==true)throw Error('Unable to remove document');rows=rows.filter(x=>x.id!==row.id);offset=Math.max(0,offset-1);draw();info.textContent='Document removed.';await load();}
  catch(e){info.textContent=e.message;}finally{remove.disabled=button.disabled=false;}
  };td.append(remove);}
  }
  wrap.append(table);
  }
- async function load(reset=false){if(busy)return;busy=true;more.disabled=true;info.textContent='Loading documents…';try{const start=reset?0:offset;const r=await api({action:'list',offset:start});const d=await r.json();if(reset)rows=[];rows.push(...d.documents);offset=start+d.documents.length;hasMore=d.hasMore;more.hidden=!hasMore;draw();}catch(e){info.textContent=e.message;}finally{busy=false;more.disabled=false;}}
- search.oninput=draw;more.onclick=()=>load(false);return {element:section,refresh:()=>load(true)};
+ async function load(){if(busy){refreshPending=true;return;}busy=true;info.textContent='Loading documents…';try{let start=0;do{if(!section.isConnected)return;const r=await api({action:'list',offset:start});const d=await r.json();if(!section.isConnected)return;if(start===0)rows=[];rows.push(...d.documents);offset=start+d.documents.length;hasMore=Boolean(d.hasMore);if(hasMore&&offset<=start)throw Error('Unable to load additional documents. Reopen this section to retry.');draw();start=offset;}while(hasMore);}catch(e){info.textContent=e.message;}finally{busy=false;if(refreshPending){refreshPending=false;void load();}}}
+ search.oninput=draw;return {element:section,refresh:load};
 }

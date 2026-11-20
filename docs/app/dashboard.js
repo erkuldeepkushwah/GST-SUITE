@@ -74,7 +74,7 @@ async function renderWorkspace(panel,...args){
  try{const module=await import('./firm-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function appendDocumentUploads(panel,headingText){
- try{const module=await import('./document-upload.js?v=dashboardfix2');if(!panel.isConnected)return;
+ try{const module=await import('./document-upload.js?v=autopage1');if(!panel.isConnected)return;
  if(headingText){const heading=document.createElement('h3');heading.textContent=headingText;panel.append(heading);}
  const history=module.createUploadedDocuments(currentUser);
  panel.append(module.createDocumentForm(currentUser,history.refresh),history.element);void history.refresh();
@@ -91,18 +91,17 @@ async function renderCompanyDirectory(panel){
  bar.append(search,filter);panel.append(bar);
  const status=document.createElement('p');status.setAttribute('role','status');panel.append(status);
  const wrap=document.createElement('div');wrap.style.overflowX='auto';panel.append(wrap);
- const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;panel.append(more);
  let rows=[],next=null,busy=false;
  function draw(){
  const query=search.value.trim().toLowerCase();const filtered=rows.filter(r=>(filter.value==='all'||r.assignmentStatus===filter.value)&&[r.companyName,r.clientName,r.contact].some(v=>String(v||'').toLowerCase().includes(query)));
- wrap.replaceChildren();status.textContent=filtered.length+' of '+rows.length+' loaded clients'+(next?' · More available':'');
+ wrap.replaceChildren();status.textContent=filtered.length+' of '+rows.length+' loaded clients'+(next?' · Loading additional clients…':'');
  if(!filtered.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='No matching clients.';wrap.append(empty);return;}
  const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Company Name','Client Name','Contact','Account Status','Assignment Status']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const r of filtered){const tr=body.insertRow();for(const value of [r.companyName,r.clientName,r.contact||'No access',r.accountStatus,r.assignmentStatus]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}}
  wrap.append(table);
  }
- async function load(){if(busy)return;busy=true;more.disabled=true;status.textContent='Loading registered clients…';try{const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;more.hidden=!next;draw();}catch(e){status.textContent=e.message;}finally{busy=false;more.disabled=false;}}
- search.oninput=draw;filter.onchange=draw;more.onclick=load;await load();
+ async function load(){if(busy)return;busy=true;status.textContent='Loading registered clients…';const seen=new Set();try{do{if(!panel.isConnected)return;const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;if(next&&seen.has(next))throw Error('Unable to load additional clients: repeated page token. Reopen this section to retry.');if(next)seen.add(next);draw();}while(next);}catch(e){status.textContent=e.message;}finally{busy=false;}}
+ search.oninput=draw;filter.onchange=draw;await load();
 }
 async function showAssignedClient(panel,record){
  const previous=panel.querySelector('.assigned-client-details');previous?.remove();
