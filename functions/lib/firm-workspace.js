@@ -1,0 +1,71 @@
+const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
+const services=['GST Registration','GSTR-1 Filing','GSTR-3B Filing','GST Reconciliation','Income Tax Return','TDS Return','Compliance'];
+const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
+const all=async(db,sql,...v)=>(await db.prepare(sql).bind(...v).all()).results;
+const ownClient=async(db,firm,client)=>db.prepare("SELECT w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy p ON p.uid=? LEFT JOIN customer_profiles c ON c.uid=? LEFT JOIN staff_roles f ON f.uid=? WHERE w.id='client:'||? AND w.staff_uid=? AND w.section='Assigned Clients' AND COALESCE(p.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL").bind(client,client,client,client,firm).first();
+const assignedCount=async(db,uid)=>(await db.prepare("SELECT COUNT(*) AS n FROM staff_assignments WHERE staff_uid=? AND section='Assigned Clients'").bind(uid).first()).n;
+const ownedOrder=async(db,uid,id,firm,admin)=>{const order=await db.prepare('SELECT * FROM firm_service_orders WHERE id=?').bind(id).first();if(!order)return null;if(admin||(!firm&&order.client_uid===uid)|| (firm&&order.firm_uid===uid&&await ownClient(db,uid,order.client_uid)))return order;return null;};
+export {ownedOrder};
+export async function workspace({db,b,u,firm,admin}){
+ const uid=u.localId,now=Date.now(),act=b.action;
+ const str=(v,n=200)=>String(v||'').trim().slice(0,n);
+ if(act==='workspaceAdmin'){
+ if(!admin)return json({error:'Admin required'},403);
+ const [orders,billing,tickets]=await Promise.all([all(db,"SELECT o.*,a.email AS firm_email FROM firm_service_orders o LEFT JOIN portal_accounts a ON a.uid=o.firm_uid ORDER BY o.created_at DESC LIMIT 500"),all(db,"SELECT b.*,a.email AS firm_email FROM firm_billing b LEFT JOIN portal_accounts a ON a.uid=b.firm_uid ORDER BY b.created_at DESC LIMIT 500"),all(db,"SELECT t.*,a.email AS owner_email FROM portal_support_tickets t LEFT JOIN portal_accounts a ON a.uid=t.owner_uid ORDER BY t.created_at DESC LIMIT 500")]);return json({orders,billing,tickets});
+ }
+ if(act==='workspaceAdminQuote'){
+ if(!admin)return json({error:'Admin required'},403);
+ const amount=Number(b.amountPaise);if(!Number.isSafeInteger(amount)||amount<=0||amount>10000000000)return json({error:'Enter valid amount'},400);
+ const q=await db.prepare("UPDATE firm_billing SET amount_paise=?,status='Payment pending',updated_at=? WHERE id=? AND status IN ('Awaiting quote','Payment pending')").bind(amount,now,str(b.id)).run();return q.meta.changes?json({saved:true}):json({error:'Invoice unavailable'},404);
+ }
+ if(act==='workspaceAdminReply'){
+ if(!admin)return json({error:'Admin required'},403);
+ const reply=str(b.reply,3000),status=str(b.status);if(!reply||!['Open','In Progress','Resolved'].includes(status))return json({error:'Reply and status required'},400);
+ const q=await db.prepare("UPDATE portal_support_tickets SET reply=?,status=?,updated_at=? WHERE id=?").bind(reply,status,now,str(b.id)).run();return q.meta.changes?json({saved:true}):json({error:'Ticket unavailable'},404);
+ }
+ if(act==='workspaceTrial'||act==='workspaceLaunch'||act==='workspacePlanRequest'||act==='workspaceBook'){
+ if(!firm||admin)return json({error:'Firm access required'},403);
+ if(act==='workspaceTrial'){
+ const q=await db.prepare("INSERT INTO firm_trials(uid,starts_at,ends_at,client_limit,tool_limit,launches) VALUES(?,?,?,5,10,0) ON CONFLICT(uid) DO NOTHING").bind(uid,now,now+7*86400000).run();return q.meta.changes?json({saved:true}):json({error:'Free trial already used'},409);
+ }
+ if(act==='workspaceLaunch'){
+ const count=await assignedCount(db,uid);const q=await db.prepare("UPDATE firm_trials SET launches=launches+1 WHERE uid=? AND ends_at>? AND launches<tool_limit AND client_limit>=?").bind(uid,now,count).run();return q.meta.changes?json({allowed:true}):json({error:'Trial expired or limit reached. Request a subscription or upgrade.'},403);
+ }
+ if(act==='workspacePlanRequest'){
+ const request=str(b.request);if(!['Subscribe','Upgrade','Renewal'].includes(request))return json({error:'Invalid plan request'},400);
+ const id=crypto.randomUUID();const q=await db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,title,status,created_at,updated_at) SELECT ?,?,'Plan',?,'Awaiting quote',?,? WHERE NOT EXISTS(SELECT 1 FROM firm_billing WHERE firm_uid=? AND kind='Plan' AND status IN ('Awaiting quote','Payment pending'))").bind(id,uid,request+' request',now,now,uid).run();return q.meta.changes?json({saved:true,id}):json({error:'A plan request is already pending. View Invoices.'},409);
+ }
+ const client=str(b.clientUid),service=str(b.service);if(client===ADMIN||!services.includes(service))return json({error:'Select a client and service'},400);
+ const assigned=await ownClient(db,uid,client);if(!assigned)return json({error:'Client must be assigned to your firm'},403);
+ const id=crypto.randomUUID(),invoice=crypto.randomUUID();let key=str(b.requestId,80);if(!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Invalid booking reference'},400);
+ // The request ID is scoped to its firm and reused on retry.
+ const orderId=uid+':'+key;
+ await db.batch([db.prepare("INSERT INTO firm_service_orders(id,firm_uid,client_uid,client_name,service,status,created_at,updated_at) VALUES(?,?,?,?,?,'Awaiting payment',?,?) ON CONFLICT(id) DO NOTHING").bind(orderId,uid,client,assigned.title||'Client',service,now,now),
+ db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,order_id,title,status,created_at,updated_at) SELECT ?,firm_uid,'Service',id,service,'Awaiting quote',?,? FROM firm_service_orders WHERE id=? ON CONFLICT DO NOTHING").bind(invoice,now,now,orderId)]);
+ return json({saved:true,id:orderId,paymentConfigured:false});
+ }
+ if(act==='workspaceData'){
+ if(admin)return json({error:'Use administrator workspace'},403);
+ const orders=firm?await all(db,"SELECT o.* FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.staff_uid=o.firm_uid AND w.section='Assigned Clients' WHERE o.firm_uid=? ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ const tickets=await all(db,"SELECT id,subject,message,status,reply,order_id,created_at FROM portal_support_tickets WHERE owner_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ if(!firm)return json({orders,tickets});
+ const clients=await all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid);
+ const trial=await db.prepare("SELECT starts_at,ends_at,client_limit,tool_limit,launches FROM firm_trials WHERE uid=?").bind(uid).first();
+ const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ return json({orders,tickets,clients,trial,clientCount:await assignedCount(db,uid),services,billing,paymentConfigured:false});
+ }
+ if(act==='workspaceTicket'){
+ if(admin)return json({error:'Customer or firm required'},403);
+ const subject=str(b.subject,150),message=str(b.message,3000),orderId=str(b.orderId),client=str(b.clientUid);
+ if(!subject||!message)return json({error:'Enter subject and message'},400);
+ if(client&&(!firm||!await ownClient(db,uid,client)))return json({error:'Invalid client'},403);
+ const order=orderId?await ownedOrder(db,uid,orderId,firm,false):null;
+ if(orderId&&(!order||(client&&order.client_uid!==client)))return json({error:'Invalid order'},403);
+ const id=crypto.randomUUID();await db.prepare("INSERT INTO portal_support_tickets(id,owner_uid,client_uid,order_id,subject,message,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'Open',?,?)").bind(id,uid,order?.client_uid||client||null,orderId||null,subject,message,now,now).run();return json({saved:true,id});
+ }
+ if(act==='workspaceFiles'){
+ const order=await ownedOrder(db,uid,str(b.orderId),firm,admin);if(!order)return json({error:'Order unavailable'},403);
+ const rows=await all(db,"SELECT id,kind,name,size,created_at FROM firm_order_files WHERE order_id=? ORDER BY created_at DESC LIMIT 500",order.id);return json({rows});
+ }
+ return json({error:'Invalid workspace action'},400);
+}
