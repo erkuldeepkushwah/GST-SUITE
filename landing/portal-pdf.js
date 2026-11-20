@@ -44,13 +44,13 @@ export async function downloadBillingPdf(record,user,order){
 }
 export async function downloadFilingPdf(order,user,api){
  const t=await api({action:'workspaceTimeline',orderId:order.id});const {doc,y}=await start('FILING STATUS REPORT','Service order and filing progress',user);
- let end=grid(doc,['Order details','Information'],[['Order reference',order.id],['Client / business',order.client_name||account(user)],['Service',order.service],['Filing period',order.period||'-'],['Booked on',date(order.created_at)],['Current filing status',t.status||order.status],['Last updated',date(order.updated_at)]],y,[51,127]);
+ let end=grid(doc,['Order details','Information'],[['Order reference',order.id],['Client / business',order.client_name||account(user)],['Service',order.service],['Filing period',order.period||'-'],['Due / requested date',t.due_date||order.due_date||'-'],['Date type',t.due_date_source||order.due_date_source||'-'],['Booked on',date(order.created_at)],['Current filing status',t.status||order.status],['Last updated',date(order.updated_at)]],y,[51,127]);
  end=grid(doc,['#','Filing status event','Date / time (IST)'],t.rows?.length?t.rows.map((r,i)=>[i+1,r.status,date(r.created_at)]):[['-','No recorded timeline events','-']],end,[13,101,64]);
  note(doc,'Portal status report only. This is not a statutory return, filing acknowledgement or proof of tax payment. Official final documents remain available separately.',end+3);finish(doc,'filing-'+key(order.id));
 }
 export async function downloadFilingListPdf(orders,user){
  const {doc,y}=await start('FILING STATUS REPORT','Service orders | Current selection',user);
- const end=grid(doc,['#','Client / service','Period','Status','Booked on'],orders.length?orders.map((o,i)=>[i+1,safe(o.client_name)+'\n'+safe(o.service),o.period||'-',o.status,date(o.created_at)]):[['-','No records','-','-','-']],y,[10,57,27,39,45]);
+ const end=grid(doc,['#','Client / service','Period','Due / requested date','Status'],orders.length?orders.map((o,i)=>[i+1,safe(o.client_name)+'\n'+safe(o.service),o.period||'-',safe(o.due_date)+'\n'+safe(o.due_date_source),o.status]):[['-','No records','-','-','-']],y,[10,56,35,42,35]);
  note(doc,'Records shown: '+orders.length+'. Portal status report only; official filing acknowledgements remain separate.',end+3);finish(doc,'filing-status-report');
 }
 export async function downloadBillingListPdf(records,user){
