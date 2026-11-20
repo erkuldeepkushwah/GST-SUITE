@@ -9,9 +9,65 @@ export {ownedOrder};
 export async function workspace({db,b,u,firm,admin}){
  const uid=u.localId,now=Date.now(),act=b.action;
  const str=(v,n=200)=>String(v||'').trim().slice(0,n);
+ if(act==='workspaceDueSave'){
+ if(!admin)return json({error:'Admin required'},403);
+ const service=str(b.service),period=str(b.period,40),due=str(b.dueDate,10),notes=str(b.notes,250);
+ if(!services.includes(service)||!period||!/^\d{4}-\d{2}-\d{2}$/.test(due)||!Number.isFinite(Date.parse(due))||new Date(due).toISOString().slice(0,10)!==due)return json({error:'Enter a valid service, period and date'},400);
+ await db.prepare("INSERT INTO portal_due_dates(id,service,period,due_date,notes,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET due_date=excluded.due_date,notes=excluded.notes,updated_at=excluded.updated_at").bind(service+'|'+period,service,period,due,notes,now).run();return json({saved:true});
+ }
+ if(act==='workspaceDueRemove'){
+ if(!admin)return json({error:'Admin required'},403);
+ await db.prepare('DELETE FROM portal_due_dates WHERE id=?').bind(str(b.id)).run();return json({saved:true});
+ }
+ if(act==='workspaceProfileRequest'){
+ if(admin||firm)return json({error:'Business account required'},403);
+ const name=str(b.businessName,150),gstin=str(b.gstin,15).toUpperCase(),mobile=str(b.mobile,10);
+ if(!name||!/^[6-9]\d{9}$/.test(mobile)||!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin))return json({error:'Enter valid business name, mobile number and GSTIN'},400);
+ const p=await db.prepare("SELECT uid FROM customer_profiles WHERE uid=? AND account_type='business'").bind(uid).first();if(!p)return json({error:'Business profile not registered'},403);
+ await db.prepare("INSERT INTO portal_profile_requests(uid,business_name,mobile,gstin,status,updated_at) VALUES(?,?,?,?,'Pending verification',?) ON CONFLICT(uid) DO UPDATE SET business_name=excluded.business_name,mobile=excluded.mobile,gstin=excluded.gstin,status=excluded.status,updated_at=excluded.updated_at").bind(uid,name,mobile,gstin,now).run();return json({saved:true});
+ }
+ if(act==='workspaceProfileReview'){
+ if(!admin)return json({error:'Admin required'},403);
+ const target=str(b.uid),decision=str(b.decision);
+ const p=await db.prepare("SELECT * FROM portal_profile_requests WHERE uid=? AND status='Pending verification'").bind(target).first();
+ if(!p||!['Approved','Rejected'].includes(decision)||Number(b.updatedAt)!==p.updated_at)return json({error:'Request changed or unavailable; refresh'},409);
+ if(decision==='Approved'){
+ const duplicate=await db.prepare("SELECT uid FROM mobile_accounts WHERE mobile=? AND uid<>? UNION SELECT uid FROM customer_profiles WHERE mobile=? AND uid<>?").bind(p.mobile,target,p.mobile,target).first();if(duplicate)return json({error:'Mobile number already belongs to another account'},409);
+ const account=await db.prepare('SELECT email FROM portal_accounts WHERE uid=?').bind(target).first();if(!account)return json({error:'Account must sign in first'},409);
+ await db.batch([db.prepare("UPDATE customer_profiles SET business_name=?,mobile=?,gstin=? WHERE uid=? AND account_type='business' AND EXISTS(SELECT 1 FROM portal_profile_requests WHERE uid=? AND status='Pending verification' AND updated_at=?)").bind(p.business_name,p.mobile,p.gstin,target,target,p.updated_at),
+ db.prepare("DELETE FROM mobile_accounts WHERE uid=? AND EXISTS(SELECT 1 FROM portal_profile_requests WHERE uid=? AND status='Pending verification' AND updated_at=?)").bind(target,target,p.updated_at),
+ db.prepare("INSERT INTO mobile_accounts(mobile,uid,email) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM portal_profile_requests WHERE uid=? AND status='Pending verification' AND updated_at=?)").bind(p.mobile,target,account.email,target,p.updated_at),
+ db.prepare("UPDATE portal_profile_requests SET status=?,updated_at=? WHERE uid=? AND updated_at=?").bind(decision,now,target,p.updated_at)]);
+ }else await db.prepare("UPDATE portal_profile_requests SET status=?,updated_at=? WHERE uid=? AND updated_at=?").bind(decision,now,target,p.updated_at).run();
+ return json({saved:true});
+ }
+ if(act==='workspaceThread'||act==='workspaceThreadReply'){
+ const id=str(b.ticketId),ticket=await db.prepare('SELECT * FROM portal_support_tickets WHERE id=?').bind(id).first();
+ if(!ticket||(!admin&&ticket.owner_uid!==uid))return json({error:'Ticket unavailable'},404);
+ if(act==='workspaceThread'){
+ const [messages,files]=await Promise.all([all(db,"SELECT id,author,body,created_at FROM portal_ticket_messages WHERE ticket_id=? ORDER BY created_at ASC LIMIT 500",id),all(db,"SELECT id,name,size,created_at FROM portal_ticket_files WHERE ticket_id=? ORDER BY created_at ASC LIMIT 500",id)]);
+ return json({messages,files,subject:ticket.subject,initial:ticket.message,reply:ticket.reply,status:ticket.status});
+ }
+ const message=str(b.message,3000);if(!message||ticket.status==='Resolved')return json({error:'Enter a message on an open ticket'},400);
+ await db.batch([db.prepare('INSERT INTO portal_ticket_messages(id,ticket_id,author,body,created_at) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),id,admin?'Admin':'Customer',message,now),db.prepare("UPDATE portal_support_tickets SET updated_at=? WHERE id=?").bind(now,id)]);return json({saved:true});
+ }
+ if(act==='workspaceDirectBook'){
+ if(admin||firm)return json({error:'Client account required'},403);
+ const service=str(b.service),period=str(b.period,40),key=str(b.requestId,80);if(!services.includes(service)||!period||!/^[a-f0-9-]{36}$/i.test(key))return json({error:'Select service and period'},400);
+ const p=await db.prepare("SELECT business_name,name FROM customer_profiles WHERE uid=?").bind(uid).first();
+ const orderId=uid+':'+key;
+ await db.batch([db.prepare("INSERT INTO firm_service_orders(id,firm_uid,client_uid,client_name,service,period,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'Awaiting payment',?,?) ON CONFLICT(id) DO NOTHING").bind(orderId,uid,uid,p?.business_name||p?.name||u.displayName||'Client',service,period,now,now),
+ db.prepare("INSERT INTO firm_billing(id,firm_uid,kind,order_id,title,status,created_at,updated_at) SELECT ?,firm_uid,'Service',id,service||' - '||COALESCE(period,''),'Awaiting quote',?,? FROM firm_service_orders WHERE id=? ON CONFLICT DO NOTHING").bind(crypto.randomUUID(),now,now,orderId),
+ db.prepare("INSERT INTO portal_order_events(id,order_id,status,created_at) SELECT id||':book',id,'Awaiting payment',created_at FROM firm_service_orders WHERE id=? ON CONFLICT DO NOTHING").bind(orderId)]);
+ return json({saved:true,id:orderId,paymentConfigured:false});
+ }
+ if(act==='workspaceTimeline'){
+ const order=await ownedOrder(db,uid,str(b.orderId),firm,admin);if(!order)return json({error:'Order unavailable'},403);
+ return json({rows:await all(db,'SELECT status,created_at FROM portal_order_events WHERE order_id=? ORDER BY created_at ASC LIMIT 500',order.id),status:order.status});
+ }
  if(act==='workspaceAdmin'){
  if(!admin)return json({error:'Admin required'},403);
- const [orders,billing,tickets]=await Promise.all([all(db,"SELECT o.*,a.email AS firm_email FROM firm_service_orders o LEFT JOIN portal_accounts a ON a.uid=o.firm_uid ORDER BY o.created_at DESC LIMIT 500"),all(db,"SELECT b.*,a.email AS firm_email FROM firm_billing b LEFT JOIN portal_accounts a ON a.uid=b.firm_uid ORDER BY b.created_at DESC LIMIT 500"),all(db,"SELECT t.*,a.email AS owner_email FROM portal_support_tickets t LEFT JOIN portal_accounts a ON a.uid=t.owner_uid ORDER BY t.created_at DESC LIMIT 500")]);return json({orders,billing,tickets});
+ const [orders,billing,tickets]=await Promise.all([all(db,"SELECT o.*,a.email AS firm_email FROM firm_service_orders o LEFT JOIN portal_accounts a ON a.uid=o.firm_uid ORDER BY o.created_at DESC LIMIT 500"),all(db,"SELECT b.*,a.email AS firm_email FROM firm_billing b LEFT JOIN portal_accounts a ON a.uid=b.firm_uid ORDER BY b.created_at DESC LIMIT 500"),all(db,"SELECT t.*,a.email AS owner_email FROM portal_support_tickets t LEFT JOIN portal_accounts a ON a.uid=t.owner_uid ORDER BY t.created_at DESC LIMIT 500")]);return json({orders,billing,tickets,dueDates:await all(db,'SELECT * FROM portal_due_dates ORDER BY due_date LIMIT 500'),profileRequests:await all(db,"SELECT r.*,a.email FROM portal_profile_requests r LEFT JOIN portal_accounts a ON a.uid=r.uid WHERE r.status='Pending verification' ORDER BY r.updated_at DESC LIMIT 500"),services});
  }
  if(act==='workspaceAdminQuote'){
  if(!admin)return json({error:'Admin required'},403);
@@ -20,14 +76,14 @@ export async function workspace({db,b,u,firm,admin}){
  }
  if(act==='workspaceAdminStatus'){
  if(!admin)return json({error:'Admin required'},403);
- const status=str(b.status),id=str(b.id);if(!['Awaiting payment','Documents needed','In progress','Filed','Cancelled'].includes(status))return json({error:'Invalid filing status'},400);
- if(status==='Filed'&&!await db.prepare("SELECT id FROM firm_order_files WHERE order_id=? AND kind='Final file' LIMIT 1").bind(id).first())return json({error:'Upload the final file before marking Filed'},400);
- const q=await db.prepare('UPDATE firm_service_orders SET status=?,updated_at=? WHERE id=?').bind(status,now,id).run();return q.meta.changes?json({saved:true}):json({error:'Order unavailable'},404);
+ const status=str(b.status),id=str(b.id);if(!['Awaiting payment','Documents Required','Documents Received','In Progress','Filed','Completed','Cancelled'].includes(status))return json({error:'Invalid filing status'},400);
+ if(['Filed','Completed'].includes(status)&&!await db.prepare("SELECT id FROM firm_order_files WHERE order_id=? AND kind='Final file' LIMIT 1").bind(id).first())return json({error:'Upload the final file before marking Filed'},400);
+ const results=await db.batch([db.prepare('UPDATE firm_service_orders SET status=?,updated_at=? WHERE id=?').bind(status,now,id),db.prepare('INSERT INTO portal_order_events(id,order_id,status,created_at) SELECT ?,id,?,? FROM firm_service_orders WHERE id=?').bind(crypto.randomUUID(),status,now,id)]);return results[0].meta.changes?json({saved:true}):json({error:'Order unavailable'},404);
  }
  if(act==='workspaceAdminReply'){
  if(!admin)return json({error:'Admin required'},403);
  const reply=str(b.reply,3000),status=str(b.status);if(!reply||!['Open','In Progress','Resolved'].includes(status))return json({error:'Reply and status required'},400);
- const q=await db.prepare("UPDATE portal_support_tickets SET reply=?,status=?,updated_at=? WHERE id=?").bind(reply,status,now,str(b.id)).run();return q.meta.changes?json({saved:true}):json({error:'Ticket unavailable'},404);
+ const id=str(b.id);const results=await db.batch([db.prepare("UPDATE portal_support_tickets SET reply=?,status=?,updated_at=? WHERE id=?").bind(reply,status,now,id),db.prepare('INSERT INTO portal_ticket_messages(id,ticket_id,author,body,created_at) SELECT ?,id,?,?,? FROM portal_support_tickets WHERE id=?').bind(crypto.randomUUID(),'Admin',reply,now,id)]);return results[0].meta.changes?json({saved:true}):json({error:'Ticket unavailable'},404);
  }
  if(act==='workspaceTrial'||act==='workspaceLaunch'||act==='workspacePlanRequest'||act==='workspaceBook'){
  if(!firm||admin)return json({error:'Firm access required'},403);
@@ -52,9 +108,9 @@ export async function workspace({db,b,u,firm,admin}){
  }
  if(act==='workspaceData'){
  if(admin)return json({error:'Use administrator workspace'},403);
- const orders=firm?await all(db,"SELECT o.* FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.staff_uid=o.firm_uid AND w.section='Assigned Clients' WHERE o.firm_uid=? ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ const orders=firm?await all(db,"SELECT o.* FROM firm_service_orders o JOIN staff_assignments w ON w.id='client:'||o.client_uid AND w.staff_uid=o.firm_uid AND w.section='Assigned Clients' WHERE o.firm_uid=? ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT id,client_name,service,period,status,created_at,updated_at FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
  const tickets=await all(db,"SELECT id,subject,message,status,reply,order_id,created_at FROM portal_support_tickets WHERE owner_uid=? ORDER BY created_at DESC LIMIT 500",uid);
- if(!firm)return json({orders,tickets});
+ if(!firm){const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? AND kind='Service' ORDER BY created_at DESC LIMIT 500",uid);const dueDates=await all(db,"SELECT * FROM portal_due_dates WHERE due_date>=? ORDER BY due_date LIMIT 500",new Date(now+19800000).toISOString().slice(0,10));const profile=await db.prepare("SELECT business_name,name,mobile,gstin,account_type FROM customer_profiles WHERE uid=?").bind(uid).first();const profileRequest=await db.prepare("SELECT business_name,mobile,gstin,status,updated_at FROM portal_profile_requests WHERE uid=?").bind(uid).first();return json({orders,tickets,billing,dueDates,services,profile,profileRequest,paymentConfigured:false});}
  const clients=await all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid);
  const trial=await db.prepare("SELECT starts_at,ends_at,client_limit,tool_limit,launches FROM firm_trials WHERE uid=?").bind(uid).first();
  const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",uid);
