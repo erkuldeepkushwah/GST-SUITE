@@ -1,6 +1,6 @@
 import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=fy1';
-import {downloadBillingPdf,downloadFilingPdf,downloadFilingListPdf,downloadBillingListPdf} from './portal-pdf.js?v=pdf1';
-import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=fy1';
+import {downloadBillingPdf,downloadFilingPdf,downloadFilingListPdf,downloadBillingListPdf} from './portal-pdf.js?v=due1';
+import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=due1';
 import {EmailAuthProvider,reauthenticateWithCredential,updatePassword,verifyBeforeUpdateEmail} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const el=(tag,txt,cls)=>{const n=document.createElement(tag);if(txt!==undefined)n.textContent=txt;if(cls)n.className=cls;return n;};
 const button=(txt,fn,primary=false)=>{const b=el('button',txt,'action'+(primary?' primary':''));b.type='button';b.onclick=fn;return b;};
@@ -30,13 +30,22 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  const values=[['Active Services',active,'filings'],['Upcoming Due Dates',d.dueDates.length,'dueDates'],['Pending Documents',pending,'documents'],['Unpaid Billing',d.billing.filter(b=>b.status!=='Paid').length,'billing']];
  for(const [label,count,target] of values){const card=button('',()=>go(target));card.className='stat';card.style.cssText='text-align:left;cursor:pointer;min-height:100px;background:#fff;border:1px solid #e3eaf3;border-radius:12px;padding:16px';card.append(el('div',label,'stat-label'),el('strong',String(count),'stat-number'));grid.append(card);}panel.append(grid);
  const activeAlerts=d.orders.filter(o=>['Documents Required','Documents needed'].includes(o.status));panel.append(el('h3','Latest updates'));for(const o of activeAlerts){const p=el('p',o.service+' — additional documents required');p.append(button('Upload',()=>go('documents',{orderId:o.id})));panel.append(p);}
- table(panel,['Recent service','Period','Status'],d.orders.slice(0,5).map(o=>[o.service,o.period||'—',o.status]));return;
+ table(panel,['Recent service','Period','Due / requested date','Status'],d.orders.slice(0,5).map(o=>[o.service,o.period||'—',o.due_date||'—',o.status]));return;
  }
- if(section==='services'){
- panel.append(el('p','Choose a service and filing period. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
+ if(section==='services'||section==='dueDates'){
+ const dueBooking=section==='dueDates';
+ panel.append(el('p',dueBooking?'Choose your service, filing period and requested completion date. Published deadlines are shown separately and must be verified for applicability.':'Choose a service and filing period. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
  const mapping={GST:['GST Registration','GSTR-1 Filing','GSTR-3B Filing','GST Reconciliation'],'Income Tax':['Income Tax Return'],TDS:['TDS Return'],Compliance:['Compliance']};
  const cat=select(Object.keys(mapping).map(x=>[x,x])),svc=select([]),frequency=select([]),fy=select(financialYears.map(y=>[y,y])),period=select([]);
  const fyField=field('Financial year',fy),periodField=field('Filing period',period);
+ const schedule=select([['','Choose my own date']]),requested=input('','', 'date');
+ requested.min=new Date(Date.now()+19800000).toISOString().slice(0,10);requested.required=dueBooking;
+ const dueHint=el('p','Choose a requested completion date, or select a matching published schedule.');dueHint.style.cssText='font-size:13px;color:#64748b';
+ const matching=()=>d.dueDates.filter(x=>x.service===svc.value&&[period.value,'FY '+period.value].includes(x.period));
+ function syncDate(){const item=matching().find(x=>x.id===schedule.value);requested.readOnly=!!item;if(item)requested.value=item.due_date;dueHint.textContent=item?'Published deadline selected. Confirm applicability to your business.':'Requested completion date (not a statutory deadline).';}
+ function syncSchedule(){const prior=schedule.value;schedule.replaceChildren();schedule.add(new Option('Choose my own date',''));for(const x of matching())schedule.add(new Option(x.due_date+' — Published deadline',x.id));if(matching().some(x=>x.id===prior))schedule.value=prior;else if(prior)requested.value='';syncDate();}
+ schedule.onchange=()=>{requested.value='';syncDate();};
+
  const hint=el('p');hint.style.cssText='font-size:13px;color:#64748b;margin:8px 0';
  const current=new Date(),start=current.getMonth()>=3?current.getFullYear():current.getFullYear()-1;const currentFY=start+'-'+String(start+1).slice(-2);if(financialYears.includes(currentFY))fy.value=currentFY;
  function syncPeriods(){const type=frequency.value;period.replaceChildren();for(const [v,l] of periodOptions(type,fy.value))period.add(new Option(l,v));fyField.style.display=periodField.style.display=type==='Not applicable'?'none':'grid';hint.textContent=type==='Quarterly'&&['GSTR-1 Filing','GSTR-3B Filing'].includes(svc.value)?'Quarterly GST filing is subject to QRMP eligibility.':type==='Yearly'?'Financial year runs from 1 April to 31 March.':'';}
@@ -45,19 +54,20 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  if(prefill.service){const found=Object.keys(mapping).find(k=>mapping[k].includes(prefill.service));if(found)cat.value=found;}
  sync();if(prefill.service&&Array.from(svc.options).some(o=>o.value===prefill.service)){svc.value=prefill.service;syncFrequency();}
  if(prefill.period){let matched=false;outer:for(const t of periodTypes(svc.value))for(const y of financialYears){const opts=periodOptions(t,y);const match=opts.find(([v])=>v===prefill.period||('FY '+v)===prefill.period);if(match){frequency.value=t;fy.value=y;syncPeriods();period.value=match[0];matched=true;break outer;}}if(!matched){period.selectedIndex=-1;msg.textContent='Select the correct filing period for this due date.';}}
- cat.onchange=sync;svc.onchange=syncFrequency;frequency.onchange=syncPeriods;fy.onchange=syncPeriods;
- panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint);
- let key=crypto.randomUUID();const book=button('Book Service',()=>locked(book,msg,async()=>{if(!svc.value||!period.value)throw Error('Choose service and filing period');const r=await api({action:'workspaceDirectBook',service:svc.value,period:period.value,requestId:key});key=crypto.randomUUID();go('documents',{orderId:r.id});}),true);panel.append(book,el('h3','Booked Services'));
- table(panel,['Service','Filing period','Status','Action'],d.orders.map(o=>[o.service,o.period||'—',o.status,button('View documents',()=>go('documents',{orderId:o.id}))]));
+ cat.onchange=()=>{sync();syncSchedule();};svc.onchange=()=>{syncFrequency();syncSchedule();};frequency.onchange=fy.onchange=()=>{syncPeriods();syncSchedule();};period.onchange=syncSchedule;syncSchedule();
+ if(prefill.dueId&&matching().some(x=>x.id===prefill.dueId)){schedule.value=prefill.dueId;syncDate();}
+ if(dueBooking){panel.append(el('h3','Schedule a Service'));}
+ panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint,field('Due date option',schedule),field(dueBooking?'Select date':'Requested date (optional)',requested),dueHint);
+ let key=crypto.randomUUID();const book=button('Book Service',()=>locked(book,msg,async()=>{if(!svc.value||!period.value)throw Error('Choose service and filing period');if(dueBooking&&!requested.value)throw Error('Select a due date');if(requested.value&&!requested.checkValidity())throw Error('Select a valid date');const r=await api({action:'workspaceDirectBook',service:svc.value,period:period.value,dueDate:requested.value,dueId:schedule.value,requestId:key});key=crypto.randomUUID();go('documents',{orderId:r.id});}),true);panel.append(book,el('h3','Booked Services'));
+ table(panel,['Service','Filing period','Due / requested date','Date type','Status','Action'],d.orders.map(o=>[o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',o.status,button('View documents',()=>go('documents',{orderId:o.id}))]));
+ if(dueBooking){panel.append(el('h3','Published Filing Schedule'));table(panel,['Service','Period','Due date','Notes','Action'],d.dueDates.map(x=>[x.service,x.period,x.due_date,x.notes,button('Select & book',()=>go('dueDates',{service:x.service,period:x.period,dueId:x.id}),true)]));}
  }else if(section==='documents'){
  const available=d.orders.filter(o=>o.status!=='Cancelled'),order=select([['','Select order'],...available.map(o=>[o.id,o.service+' · '+(o.period||'—')+' · '+o.status])]);panel.append(field('Order',order));if(prefill.orderId)order.value=prefill.orderId;const show=()=>{panel.querySelector('.order-file-box')?.remove();const o=available.find(x=>x.id===order.value);if(o)void showOrderFiles(panel,o,api,user);};order.onchange=show;show();if(!available.length)panel.append(button('Book a service',()=>go('services'),true));
  }else if(section==='filings'||section==='notifications'){
  const rows=section==='notifications'?d.orders.filter(o=>['Documents Required','Documents needed'].includes(o.status)):d.orders;
  if(section==='filings'){const allPdf=button('Download Report PDF',()=>locked(allPdf,msg,()=>downloadFilingListPdf(rows,user)));panel.append(allPdf);}
- table(panel,['Service','Period','Filing status','Action'],rows.map(o=>{const a=el('div');a.append(button('Timeline',()=>locked(a.firstChild,msg,async()=>{const t=await api({action:'workspaceTimeline',orderId:o.id});panel.querySelector('.filing-timeline')?.remove();const box=el('div',undefined,'filing-timeline');box.append(el('h3',o.service+' — Timeline'),el('p','Current status: '+t.status));table(box,['Event','Date / time'],t.rows.map(x=>[x.status,date(x.created_at)]));box.append(button('Documents / final return',()=>showOrderFiles(panel,o,api,user)));panel.append(box);})),button('Documents / return',()=>go('documents',{orderId:o.id})));const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadFilingPdf(o,user,api)));a.append(pdf);return[o.service,o.period||'—',o.status,a];}));
- }else if(section==='dueDates'){
- panel.append(el('p','Schedule published by the admin. Confirm applicability to your business; deadlines may vary or be extended.'));
- table(panel,['Service','Period','Due date','Notes','Action'],d.dueDates.map(x=>[x.service,x.period,x.due_date,x.notes,button('Book now',()=>go('services',{service:x.service,period:x.period}),true)]));
+ table(panel,['Service','Period','Due / requested date','Date type','Filing status','Action'],rows.map(o=>{const a=el('div');a.append(button('Timeline',()=>locked(a.firstChild,msg,async()=>{const t=await api({action:'workspaceTimeline',orderId:o.id});panel.querySelector('.filing-timeline')?.remove();const box=el('div',undefined,'filing-timeline');box.append(el('h3',o.service+' — Timeline'),el('p','Current status: '+t.status));table(box,['Event','Date / time'],t.rows.map(x=>[x.status,date(x.created_at)]));box.append(button('Documents / final return',()=>showOrderFiles(panel,o,api,user)));panel.append(box);})),button('Documents / return',()=>go('documents',{orderId:o.id})));const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadFilingPdf(o,user,api)));a.append(pdf);return[o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',o.status,a];}));
+
  }else if(section==='billing'){
  panel.append(el('p','Payment requests and billing summaries. GST tax invoices and online payment require gateway and invoicing configuration.'));
  const statement=button('Download Statement PDF',()=>locked(statement,msg,()=>downloadBillingListPdf(d.billing,user)));panel.append(statement);
