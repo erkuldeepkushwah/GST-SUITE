@@ -41,7 +41,7 @@ export async function renderWorkspace(panel,section,{api,user,firm,openTool,refr
  }else if(section==='filings'){
  const filter=select([['','All clients'],...new Map(d.orders.map(o=>[o.client_uid||o.client_name,o.client_name]))]);if(firm)panel.append(field('Filter by client',filter));
  const result=el('div');panel.append(result);function draw(){result.replaceChildren();table(result,['Client','Service','Filing status','Booked','Documents'],d.orders.filter(o=>!filter.value||(o.client_uid||o.client_name)===filter.value).map(o=>[o.client_name,o.service,o.status,date(o.created_at),btn('Documents / Final file',()=>showOrderFiles(panel,o,api,user))]));}
- filter.onchange=draw;draw();panel.append(btn('Refresh',()=>refresh()));
+ filter.onchange=draw;draw();
  }else if(section==='billing'){
  const f=select([['','All invoices'],['Plan','Plan'],['Service','Service']]);panel.append(field('Invoice type',f));const wrap=el('div');panel.append(wrap);
  function draw(){wrap.replaceChildren();table(wrap,['Type','Description','Amount','Payment status','Action'],d.billing.filter(x=>!f.value||x.kind===f.value).map(x=>{const actions=el('div');actions.append(btn('Download summary',()=>downloadText('billing-'+x.id+'.txt',['Fingenuity Associates','Billing reference: '+x.id,'Type: '+x.kind,'Description: '+x.title,'Amount: '+money(x.amount_paise),'Status: '+x.status,'Date: '+date(x.created_at),'Payment request summary — not a tax invoice or paid receipt.'].join('\n'))),btn('Pay now',()=>{msg.textContent=x.amount_paise==null?'Wait for the admin quote.':'Online checkout is not configured. Contact support for payment instructions.';}));return [x.kind,x.title,money(x.amount_paise),x.status,actions];}));}f.onchange=draw;draw();
