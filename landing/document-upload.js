@@ -96,7 +96,7 @@ export function createUploadedDocuments(user,{admin=false}={}){
  const info=document.createElement('p');info.setAttribute('role','status');
  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0';
  const search=document.createElement('input');search.type='search';search.placeholder='Search loaded documents';search.setAttribute('aria-label','Search uploaded documents');search.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;min-width:0;flex:1';
- const refresh=document.createElement('button');refresh.type='button';refresh.className='action';refresh.textContent='Refresh';bar.append(search,refresh);
+ bar.append(search);
  const wrap=document.createElement('div');wrap.style.overflowX='auto';const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;
  section.append(heading,bar,info,wrap,more);
  let rows=[],offset=0,busy=false,hasMore=false;
@@ -111,6 +111,6 @@ export function createUploadedDocuments(user,{admin=false}={}){
  const td=tr.insertCell(),button=document.createElement('button');button.type='button';button.className='action';button.textContent='Download';button.onclick=async()=>{button.disabled=true;try{const r=await api({action:'download',id:row.id});const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=row.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){info.textContent=e.message;}finally{button.disabled=false;}};td.append(button);}
  wrap.append(table);
  }
- async function load(reset=false){if(busy)return;busy=true;refresh.disabled=more.disabled=true;info.textContent='Loading documents…';try{const start=reset?0:offset;const r=await api({action:'list',offset:start});const d=await r.json();if(reset)rows=[];rows.push(...d.documents);offset=start+d.documents.length;hasMore=d.hasMore;more.hidden=!hasMore;draw();}catch(e){info.textContent=e.message;}finally{busy=false;refresh.disabled=more.disabled=false;}}
- search.oninput=draw;refresh.onclick=()=>load(true);more.onclick=()=>load(false);return {element:section,refresh:()=>load(true)};
+ async function load(reset=false){if(busy)return;busy=true;more.disabled=true;info.textContent='Loading documents…';try{const start=reset?0:offset;const r=await api({action:'list',offset:start});const d=await r.json();if(reset)rows=[];rows.push(...d.documents);offset=start+d.documents.length;hasMore=d.hasMore;more.hidden=!hasMore;draw();}catch(e){info.textContent=e.message;}finally{busy=false;more.disabled=false;}}
+ search.oninput=draw;more.onclick=()=>load(false);return {element:section,refresh:()=>load(true)};
 }
