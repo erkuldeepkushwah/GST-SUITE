@@ -38,3 +38,11 @@ export async function downloadPrivateFile(env,ref){
  const {bucket,path}=parse(ref);
  return fetch(BASE+'/storage/v1/object/authenticated/'+bucket+'/'+path,{headers:headers(env)});
 }
+
+export async function listUploadedDocuments(env,{ownerUid=null,id=null,offset=0,limit=50}={}){
+ const params=new URLSearchParams({select:'id,owner_uid,bucket,object_path,name,category,size,mime_type,created_at',bucket:'eq.gst-documents',context_id:'is.null',order:'created_at.desc,id.desc',limit:String(limit),offset:String(offset)});
+ if(ownerUid!==null){if(!/^[A-Za-z0-9_-]{1,128}$/.test(ownerUid))throw Error('Invalid account');params.set('owner_uid','eq.'+ownerUid);}
+ if(id!==null){if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid document id');params.set('id','eq.'+id);}
+ const response=await checked(await fetch(BASE+'/rest/v1/gst_uploaded_documents?'+params,{headers:headers(env)}));
+ return await response.json();
+}
