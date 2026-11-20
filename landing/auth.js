@@ -177,9 +177,6 @@ async function completeOtp(user){
 if (mode === 'login' && new URLSearchParams(window.location.search).get('adminDenied') === '1') {
   show('Admin access denied. Please sign in with the authorized administrator account.');
 }
-if (mode === 'login' && new URLSearchParams(window.location.search).get('dashboardAuth') === '1') {
-  show('Dashboard login verification could not complete. Sign in again using your registered email. If the issue continues, contact support.');
-}
 if (mode === 'login' && new URLSearchParams(window.location.search).get('registered') === '1') {
   show('Account created successfully! Please log in to continue.', 'success');
 }
