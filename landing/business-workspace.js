@@ -1,5 +1,9 @@
 import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=fy1';
-import {downloadBillingPdf,downloadFilingPdf,downloadFilingListPdf,downloadBillingListPdf} from './portal-pdf.js?v=due1';
+const pdfModule=()=>import('./portal-pdf.js?v=due1');
+const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
+const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
+const downloadFilingListPdf=async(...args)=>(await pdfModule()).downloadFilingListPdf(...args);
+const downloadBillingListPdf=async(...args)=>(await pdfModule()).downloadBillingListPdf(...args);
 import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=due1';
 import {EmailAuthProvider,reauthenticateWithCredential,updatePassword,verifyBeforeUpdateEmail} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const el=(tag,txt,cls)=>{const n=document.createElement(tag);if(txt!==undefined)n.textContent=txt;if(cls)n.className=cls;return n;};
