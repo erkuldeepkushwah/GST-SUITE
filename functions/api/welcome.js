@@ -1,3 +1,4 @@
+import {emailConfigured, sendPortalEmail} from '../lib/portal-email.js';
 // Cloudflare Pages Function: send a welcome email for a newly created Firebase account.
 // Secrets must be configured in Cloudflare, never in browser code.
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
@@ -7,7 +8,7 @@ export async function onRequestPost({ request, env }) {
   if(request.headers.get('Origin')&&request.headers.get('Origin')!==new URL(request.url).origin)return json({error:'Invalid origin'},403);
   const token = request.headers.get('Authorization')?.match(/^Bearer (\S+)$/i)?.[1];
   if (!token) return json({ error: 'Authentication required' }, 401);
-  if (!env.GST_AUTH_DB || !env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL || !env.FIREBASE_WEB_API_KEY) {
+  if (!env.GST_AUTH_DB || !emailConfigured(env) || !env.FIREBASE_WEB_API_KEY) {
     return json({ error: 'Email service not configured' }, 503);
   }
   try {
@@ -40,24 +41,11 @@ export async function onRequestPost({ request, env }) {
     const escape=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
     const html='<div style="background:#f4f7fb;padding:24px 12px;font-family:Arial,sans-serif;color:#17243b;line-height:1.6"><div style="max-width:600px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden"><div style="background:#0b1736;color:white;padding:24px 28px"><img src="https://gst-suite.pages.dev/logo.png" alt="Fingenuity Associates" style="display:block;max-width:180px;max-height:60px;background:white;padding:8px;border-radius:6px;margin-bottom:12px"><div style="font-size:21px;font-weight:bold">Welcome to Fingenuity Associates</div><div style="font-size:13px;color:#cbd5e1">'+type+' Account Onboarding</div></div><div style="padding:28px"><p>Dear <strong>'+escape(name)+'</strong>,</p><p>Your '+type.toLowerCase()+' account has been created successfully. Welcome to our GST &amp; Tax Services portal.</p><table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px;background:#f8fafc">'+fields.map(([k,v])=>'<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#475569">'+escape(k)+'</td><td style="padding:10px;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere"><strong>'+escape(v)+'</strong></td></tr>').join('')+'</table><p><strong>Get started</strong></p><ul>'+features.map(x=>'<li>'+escape(x)+'</li>').join('')+'</ul><p>'+escape(loginHint)+'</p><p style="margin:24px 0"><a href="'+loginUrl+'" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:7px;text-decoration:none;font-weight:bold">Login to Your Dashboard</a></p><p>Regards,<br><strong>Team Fingenuity Associates</strong></p></div><div style="background:#f8fafc;padding:16px 28px;font-size:12px;color:#475569">Support: <a href="mailto:gstpractitioner.rakesh@gmail.com">gstpractitioner.rakesh@gmail.com</a><br>Indore, Madhya Pradesh, India</div></div></div>';
-    const sent = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + env.RESEND_API_KEY,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': 'welcome-' + user.localId + '-' + created
-      },
-      body: JSON.stringify({ from: env.RESEND_FROM_EMAIL, to: [user.email], subject, text, html })
-    });
-    const delivery=await sent.json().catch(()=>null);
-    if(!sent.ok){
-      const reason=String(delivery?.message||'');
-      const configuration=sent.status===403&&(/resend\.dev|domain|testing|verif/i.test(reason)||/resend\.dev/i.test(env.RESEND_FROM_EMAIL));
-      const errorCode=configuration?'SENDER_DOMAIN_UNVERIFIED':sent.status===429?'EMAIL_RATE_LIMIT':sent.status===401||sent.status===403?'EMAIL_CONFIGURATION':'EMAIL_PROVIDER_ERROR';
-      console.warn('Welcome email rejected',{status:sent.status,code:errorCode});
-      return json({error:configuration?'Welcome email requires a verified sending domain.':'Welcome email could not be sent.',code:errorCode},502);
+    const delivery=await sendPortalEmail(env,{to:user.email,subject,text,html,id:'welcome-'+user.localId+'-'+created});
+    if(!delivery.ok){
+      console.warn('Welcome email rejected',{code:delivery.code});
+      return json({error:delivery.code==='SENDER_DOMAIN_UNVERIFIED'?'Welcome email requires a verified sending domain.':'Welcome email could not be sent.',code:delivery.code},502);
     }
-    if(!delivery?.id)return json({error:'Email provider confirmation unavailable',code:'EMAIL_PROVIDER_ERROR'},502);
     return json({accepted:true});
   } catch {
     return json({ error: 'Email service temporarily unavailable' }, 502);

@@ -1,3 +1,4 @@
+import {sendPortalEmail} from '../lib/portal-email.js';
 // Email OTP pilot. D1 enforces one-time codes, expiry and attempt limits.
 const reply=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store',...headers}});
 const normalize=v=>String(v||'').replace(/^\+91/,'').replace(/\s/g,'');
@@ -69,7 +70,7 @@ export async function onRequestPost({request,env}){
  const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const text=['Hi '+firstName+',','','Welcome to Fingenuity Associates!','','Please use the following OTP to complete your login process.','','OTP: '+code,'','This OTP is valid for 5 minutes. Please do not share it with anyone.','','Regards,','Team Fingenuity Associates'].join('\n');
  const html='<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#17243b;max-width:600px;margin:auto;padding:24px"><p>Hi '+esc(firstName)+',</p><p>Welcome to <strong>Fingenuity Associates!</strong></p><p>Please use the following OTP to complete your login process.</p><p><strong>OTP: '+esc(code)+'</strong></p><p>This OTP is valid for 5 minutes. Please do not share it with anyone.</p><p>Regards,<br><strong>Team Fingenuity Associates</strong></p></div>';
- const sent=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':'gst-otp-'+id},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[u.email],subject:'OTP Verification',text,html})});
+ const sent=await sendPortalEmail(env,{to:u.email,subject:'OTP Verification',text,html,id:'gst-otp-'+id});
  if(!sent.ok){await db.prepare('UPDATE otp_challenges SET consumed=1 WHERE id=?').bind(id).run();return reply({error:'OTP email could not be sent'},502);}
  return reply({required:true,challenge:id,masked:u.email.slice(0,2)+'***@'+u.email.split('@')[1]});
  }
