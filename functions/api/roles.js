@@ -55,6 +55,7 @@ export async function onRequestPost({request,env}){
  }
  if(b.action==='identify'){
  await db.prepare('INSERT INTO portal_accounts(uid,email,name,verified,seen_at) VALUES(?,?,?,?,?) ON CONFLICT(uid) DO UPDATE SET email=excluded.email,name=excluded.name,verified=excluded.verified,seen_at=excluded.seen_at').bind(u.localId,email,String(u.displayName||email).slice(0,150),u.emailVerified?1:0,Date.now()).run();
+ if(!admin&&u.emailVerified)await db.prepare('UPDATE mobile_accounts SET email=? WHERE uid=? AND email<>?').bind(email,u.localId,email).run();
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
  const profile=!admin?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row||profile?.account_type==='professional'?'firm':'customer',name:u.displayName||email,accountType:row?'professional':profile?.account_type||'legacy',profile});
  }
