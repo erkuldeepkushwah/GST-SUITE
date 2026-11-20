@@ -1,3 +1,4 @@
+import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=fy1';
 import {downloadBillingPdf,downloadFilingPdf,downloadFilingListPdf,downloadBillingListPdf} from './portal-pdf.js?v=pdf1';
 import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=pdf1';
 import {EmailAuthProvider,reauthenticateWithCredential,updatePassword,verifyBeforeUpdateEmail} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -32,13 +33,22 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  table(panel,['Recent service','Period','Status'],d.orders.slice(0,5).map(o=>[o.service,o.period||'—',o.status]));return;
  }
  if(section==='services'){
- panel.append(el('p','Choose your filing service and period. An order and a billing request will be created; payment is not collected until checkout is configured.'));
+ panel.append(el('p','Choose a service and filing period. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
  const mapping={GST:['GST Registration','GSTR-1 Filing','GSTR-3B Filing','GST Reconciliation'],'Income Tax':['Income Tax Return'],TDS:['TDS Return'],Compliance:['Compliance']};
- const cat=select(Object.keys(mapping).map(x=>[x,x])),svc=select([]),period=input('e.g. March 2027 / FY 2026-27',prefill.period||'');period.maxLength=40;
- function sync(){svc.replaceChildren();for(const v of mapping[cat.value])if(d.services.includes(v))svc.add(new Option(v,v));}
- if(prefill.service){const found=Object.keys(mapping).find(k=>mapping[k].includes(prefill.service));if(found)cat.value=found;}sync();if(prefill.service)svc.value=prefill.service;cat.onchange=sync;
- panel.append(field('Category',cat),field('Service',svc),field('Filing period',period));
- let key=crypto.randomUUID();const book=button('Book & Request Payment',()=>locked(book,msg,async()=>{if(!period.value.trim())throw Error('Enter filing period');const r=await api({action:'workspaceDirectBook',service:svc.value,period:period.value,requestId:key});key=crypto.randomUUID();go('documents',{orderId:r.id});}),true);panel.append(book);
+ const cat=select(Object.keys(mapping).map(x=>[x,x])),svc=select([]),frequency=select([]),fy=select(financialYears.map(y=>[y,y])),period=select([]);
+ const fyField=field('Financial year',fy),periodField=field('Filing period',period);
+ const hint=el('p');hint.style.cssText='font-size:13px;color:#64748b;margin:8px 0';
+ const current=new Date(),start=current.getMonth()>=3?current.getFullYear():current.getFullYear()-1;const currentFY=start+'-'+String(start+1).slice(-2);if(financialYears.includes(currentFY))fy.value=currentFY;
+ function syncPeriods(){const type=frequency.value;period.replaceChildren();for(const [v,l] of periodOptions(type,fy.value))period.add(new Option(l,v));fyField.hidden=type==='Not applicable';periodField.hidden=type==='Not applicable';hint.textContent=type==='Quarterly'&&['GSTR-1 Filing','GSTR-3B Filing'].includes(svc.value)?'Quarterly GST filing is subject to QRMP eligibility.':type==='Yearly'?'Financial year runs from 1 April to 31 March.':'';}
+ function syncFrequency(){frequency.replaceChildren();for(const v of periodTypes(svc.value))frequency.add(new Option(v,v));syncPeriods();}
+ function sync(){svc.replaceChildren();for(const v of mapping[cat.value])if(d.services.includes(v))svc.add(new Option(v,v));syncFrequency();}
+ if(prefill.service){const found=Object.keys(mapping).find(k=>mapping[k].includes(prefill.service));if(found)cat.value=found;}
+ sync();if(prefill.service&&Array.from(svc.options).some(o=>o.value===prefill.service)){svc.value=prefill.service;syncFrequency();}
+ if(prefill.period){outer:for(const t of periodTypes(svc.value))for(const y of financialYears){const opts=periodOptions(t,y);const match=opts.find(([v])=>v===prefill.period||('FY '+v)===prefill.period);if(match){frequency.value=t;fy.value=y;syncPeriods();period.value=match[0];break outer;}}}
+ cat.onchange=sync;svc.onchange=syncFrequency;frequency.onchange=syncPeriods;fy.onchange=syncPeriods;
+ panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint);
+ let key=crypto.randomUUID();const book=button('Book Service',()=>locked(book,msg,async()=>{if(!svc.value||!period.value)throw Error('Choose service and filing period');const r=await api({action:'workspaceDirectBook',service:svc.value,period:period.value,requestId:key});key=crypto.randomUUID();go('documents',{orderId:r.id});}),true);panel.append(book,el('h3','Booked Services'));
+ table(panel,['Service','Filing period','Status','Action'],d.orders.map(o=>[o.service,o.period||'—',o.status,button('View documents',()=>go('documents',{orderId:o.id}))]));
  }else if(section==='documents'){
  const available=d.orders.filter(o=>o.status!=='Cancelled'),order=select([['','Select order'],...available.map(o=>[o.id,o.service+' · '+(o.period||'—')+' · '+o.status])]);panel.append(field('Order',order));if(prefill.orderId)order.value=prefill.orderId;const show=()=>{panel.querySelector('.order-file-box')?.remove();const o=available.find(x=>x.id===order.value);if(o)void showOrderFiles(panel,o,api,user);};order.onchange=show;show();if(!available.length)panel.append(button('Book a service',()=>go('services'),true));
  }else if(section==='filings'||section==='notifications'){
