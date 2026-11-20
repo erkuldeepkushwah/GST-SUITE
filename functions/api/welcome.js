@@ -22,21 +22,22 @@ export async function onRequestPost({ request, env }) {
     if (!Number.isFinite(created) || age < -60000 || age > 10 * 60 * 1000) {
       return json({ error: 'Welcome email is available only immediately after signup' }, 403);
     }
-    const name = String(user.displayName || 'Customer').slice(0, 100);
-    const otpRequired = env.GST_OTP_MODE === 'required' || (env.GST_OTP_MODE === 'test' && user.email.toLowerCase() === String(env.GST_OTP_TEST_EMAIL || '').toLowerCase());
-    const loginId = user.email;
-    const loginHint = 'Login using your registered email address and password' + (otpRequired ? ', then verify the OTP sent to your registered email.' : '.');
-    const loginUrl = 'https://gst-suite.pages.dev/login';
-    const text = [
-      'Dear ' + name + ',', '',
-      'Welcome to Fingenuity Associates! Your GST & Tax Services account is now active.', '',
-      'Login ID: ' + loginId,
-      'Password: Your registration password', '',
-      loginHint, '', 'Login Here: ' + loginUrl, '',
-      'Regards,', 'Team Fingenuity Associates'
-    ].join('\n');
-    const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    const html = '<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#17243b;max-width:600px;margin:auto;padding:24px"><p>Dear '+escape(name)+',</p><p>Welcome to <strong>Fingenuity Associates!</strong> Your GST &amp; Tax Services account is now active.</p><p><strong>Login ID:</strong> '+escape(loginId)+'<br><strong>Password:</strong> Your registration password</p><p>'+escape(loginHint)+'</p><p><strong>Login Here:</strong> <a href="'+loginUrl+'" style="color:#0159d3">'+loginUrl+'</a></p><p>Regards,<br><strong>Team Fingenuity Associates</strong></p></div>';
+    const profile=await env.GST_AUTH_DB.prepare('SELECT account_type,name,business_name,firm_name,profession FROM customer_profiles WHERE uid=?').bind(user.localId).first();
+    if(!profile||!['business','professional'].includes(profile.account_type))return json({error:'Complete your registration profile first'},409);
+    const clean=(v,max=150)=>String(v||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,max);
+    const business=profile.account_type==='business';
+    const username=clean(profile.name,100)||clean(user.displayName,100)||'Customer';
+    const name=(business?clean(profile.business_name):clean(profile.firm_name))||username;
+    const type=business?'Business':'Firm';
+    const subject='Welcome to Fingenuity Associates | '+type+' Account';
+    const loginId=user.email;
+    const loginUrl='https://gst-suite.pages.dev/login.html';
+    const loginHint='Sign in using your registered email and the password you created during registration. Complete email verification or OTP if prompted.';
+    const features=business?['Book GST, Income Tax, TDS and compliance services.','Upload documents and track filing status.','View due dates, billing records and support tickets.']:['Manage assigned clients and companies.','Access My Tools and reconciliation modules.','Book services, upload documents and track client filings.'];
+    const text=['Dear '+name+',','','Welcome to Fingenuity Associates! Your '+type.toLowerCase()+' account has been created successfully.','','Account type: '+type,'Account name: '+name,'Registered user: '+username,'Login ID: '+loginId,'Customer ID: '+user.localId,'','Your portal includes:',...features.map(x=>'- '+x),'',loginHint,'','Login: '+loginUrl,'','Need assistance? gstpractitioner.rakesh@gmail.com','','Regards,','Team Fingenuity Associates'].join('\n');
+    const escape=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const fields=[['Account type',type],['Account name',name],['Registered user',username],['Login ID',loginId],['Customer ID',user.localId]];
+    const html='<div style="background:#f4f7fb;padding:24px 12px;font-family:Arial,sans-serif;color:#17243b;line-height:1.6"><div style="max-width:600px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden"><div style="background:#0b1736;color:white;padding:24px 28px"><img src="https://gst-suite.pages.dev/logo.png" alt="Fingenuity Associates" style="display:block;max-width:180px;max-height:60px;background:white;padding:8px;border-radius:6px;margin-bottom:12px"><div style="font-size:21px;font-weight:bold">Welcome to Fingenuity Associates</div><div style="font-size:13px;color:#cbd5e1">'+type+' Account Onboarding</div></div><div style="padding:28px"><p>Dear <strong>'+escape(name)+'</strong>,</p><p>Your '+type.toLowerCase()+' account has been created successfully. Welcome to our GST &amp; Tax Services portal.</p><table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px;background:#f8fafc">'+fields.map(([k,v])=>'<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#475569">'+escape(k)+'</td><td style="padding:10px;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere"><strong>'+escape(v)+'</strong></td></tr>').join('')+'</table><p><strong>Get started</strong></p><ul>'+features.map(x=>'<li>'+escape(x)+'</li>').join('')+'</ul><p>'+escape(loginHint)+'</p><p style="margin:24px 0"><a href="'+loginUrl+'" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:7px;text-decoration:none;font-weight:bold">Login to Your Dashboard</a></p><p>Regards,<br><strong>Team Fingenuity Associates</strong></p></div><div style="background:#f8fafc;padding:16px 28px;font-size:12px;color:#475569">Support: <a href="mailto:gstpractitioner.rakesh@gmail.com">gstpractitioner.rakesh@gmail.com</a><br>Indore, Madhya Pradesh, India</div></div></div>';
     const sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -44,7 +45,7 @@ export async function onRequestPost({ request, env }) {
         'Content-Type': 'application/json',
         'Idempotency-Key': 'welcome-' + user.localId + '-' + created
       },
-      body: JSON.stringify({ from: env.RESEND_FROM_EMAIL, to: [user.email], subject: 'Welcome to Fingenuity Associates', text, html })
+      body: JSON.stringify({ from: env.RESEND_FROM_EMAIL, to: [user.email], subject, text, html })
     });
     if (!sent.ok) return json({ error: 'Welcome email could not be sent' }, 502);
     return json({ accepted: true });
