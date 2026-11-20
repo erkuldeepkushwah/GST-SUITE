@@ -43,6 +43,9 @@ for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','bu
   if (existsSync(join(SRC,file))) execFileSync(process.execPath,['--check',join(SRC,file)],{stdio:'inherit'});
 }
 
+// Verify secure portal contracts with synthetic fixtures before publishing.
+execFileSync(process.execPath,['tests/portal-regression.mjs'],{stdio:'inherit'});
+
 // 1. keep a browsable copy at /landing/
 mkdirSync(join(DIST, 'landing'), { recursive: true });
 for (const file of files) {
