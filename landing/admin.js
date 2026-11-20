@@ -1,4 +1,4 @@
-import {createUploadedDocuments} from './document-upload.js?v=uploads1';
+import {createUploadedDocuments} from './document-upload.js?v=no-refresh1';
 import {showTicketThread} from './business-workspace.js';
 import {showOrderFiles} from './firm-workspace.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
@@ -74,7 +74,7 @@ function renderModule(panel,name){
 async function roleApi(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Role request failed');return j;}
 function renderFirebaseCustomers(panel,firmOnly=false){
  const status=make('p','Loading Firebase users…','admin-status');status.setAttribute('role','status');
- const bar=make('div',undefined,'action-row');const search=make('input',undefined,'admin-search');search.type='search';search.placeholder='Search loaded users by name, email or UID';search.setAttribute('aria-label','Search customers');const refreshBtn=make('button','Refresh','action');const more=make('button','Load more','action');more.hidden=true;bar.append(search,refreshBtn,more);panel.append(make('p','Registered Firebase accounts and firm assignments.'),bar,status);
+ const bar=make('div',undefined,'action-row');const search=make('input',undefined,'admin-search');search.type='search';search.placeholder='Search loaded users by name, email or UID';search.setAttribute('aria-label','Search customers');const more=make('button','Load more','action');more.hidden=true;bar.append(search,more);panel.append(make('p','Registered Firebase accounts and firm assignments.'),bar,status);
  const wrap=make('div',undefined,'admin-table-wrap');panel.append(wrap);let rows=[],next=null;
  function draw(){wrap.replaceChildren();const q=search.value.trim().toLowerCase();const filtered=rows.filter(r=>(firmOnly?r.role==='Firm':r.role==='Customer')&&[r.name,r.email,r.uid,r.role].some(v=>String(v||'').toLowerCase().includes(q)));if(!filtered.length){wrap.append(make('p','No matching registered accounts.','empty'));return;}const table=make('table',undefined,'admin-table');const head=make('thead'),hr=make('tr');['Name','Email','Phone','Role','Status','Login OTP','Email verified','Assigned Firm','Action'].forEach(v=>hr.append(make('th',v)));head.append(hr);table.append(head);const body=make('tbody');for(const r of filtered){const tr=make('tr');[r.name||'—',r.email,r.phone||'—',r.role,r.disabled?'Firebase disabled':r.active?'Active':'Inactive',r.otp?'Enabled':'Disabled',r.verified?'Yes':'No',r.assignedFirm||'Not assigned'].forEach(v=>tr.append(make('td',v)));const td=make('td');const actions=[];const addAction=button=>actions.push(button);if(!r.disabled){for(const [field,value,label] of [['active',!r.active,r.active?'Deactivate':'Activate'],['otp',!r.otp,r.otp?'Disable OTP':'Enable OTP']]){const control=make('button',label,'action');control.type='button';control.onclick=async()=>{if(!confirm(label+' for '+r.email+'?'))return;control.disabled=true;try{await roleApi({action:'accountPolicy',uid:r.uid,email:r.email,field,value});r[field]=value;draw();status.textContent='Account settings saved.';}catch(e){status.textContent=e.message;control.disabled=false;}};addAction(control);}
  if(r.role==='Firm'&&r.active){const link=make('button','Assign Client','action primary');link.type='button';link.onclick=()=>assignToFirm(r);addAction(link);}
@@ -108,13 +108,13 @@ function renderFirebaseCustomers(panel,firmOnly=false){
   try{const {rows:firms}=await roleApi({action:'clientFirms'});if(!form.isConnected)return;for(const x of firms){const o=make('option',x.email+' — '+x.role);o.value=x.uid;select.append(o);if(x.email===client.assignedFirm)select.value=x.uid;}save.disabled=!firms.length;if(!firms.length)status.textContent='No active firms available.';}catch(e){status.textContent=e.message;}
   form.onsubmit=async e=>{e.preventDefault();if(save.disabled)return;save.disabled=true;try{const result=await roleApi({action:'assignClient',uid:client.uid,email:client.email,firmUid:select.value});client.assignedFirm=result.firmEmail;form.remove();draw();status.textContent='Client assigned successfully.';}catch(e){status.textContent=e.message;save.disabled=false;}};
  }
- async function load(reset){refreshBtn.disabled=more.disabled=true;status.textContent='Loading Firebase users…';try{const result=await roleApi({action:'directory',pageToken:reset?null:next});if(!panel.isConnected)return;rows=reset?result.rows:rows.concat(result.rows);next=result.nextPageToken;more.hidden=!next;draw();status.textContent=rows.length+' registered accounts loaded'+(next?' (more available).':'.');}catch(e){status.textContent=e.message;}finally{refreshBtn.disabled=more.disabled=false;}}
- search.oninput=draw;refreshBtn.onclick=()=>load(true);more.onclick=()=>load(false);load(true);
+ async function load(reset){more.disabled=true;status.textContent='Loading Firebase users…';try{const result=await roleApi({action:'directory',pageToken:reset?null:next});if(!panel.isConnected)return;rows=reset?result.rows:rows.concat(result.rows);next=result.nextPageToken;more.hidden=!next;draw();status.textContent=rows.length+' registered accounts loaded'+(next?' (more available).':'.');}catch(e){status.textContent=e.message;}finally{more.disabled=false;}}
+ search.oninput=draw;more.onclick=()=>load(false);load(true);
 }
 
 async function renderFirmOperations(panel){
  const status=make('p','Loading firm operations…','admin-status');status.setAttribute('role','status');panel.append(status);
- const controls=make('div',undefined,'action-row');const refreshBtn=make('button','Refresh','action');refreshBtn.onclick=()=>showPage('Firm Operations');controls.append(refreshBtn);panel.append(controls);
+
  const wrap=make('div');panel.append(wrap);
  const date=t=>new Date(t).toLocaleDateString('en-IN');
  const save=async(button,payload)=>{button.disabled=true;try{await roleApi(payload);await load();status.textContent='Saved.';}catch(e){status.textContent=e.message;}finally{button.disabled=false;}};
