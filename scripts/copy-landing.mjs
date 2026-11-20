@@ -13,6 +13,7 @@
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { buildSync } from 'esbuild';
 
 const DIST = 'dist';
 const SRC = 'landing';
@@ -51,6 +52,12 @@ for (const file of files) {
 for (const file of files) {
   const target = file === 'index.html' ? 'home.html' : file;
   cpSync(join(SRC, file), join(DIST, target));
+}
+
+// Bundle the portal PDF renderer using the project's locked dependencies.
+if (existsSync(join(SRC,'portal-pdf.js'))) {
+  buildSync({ entryPoints:[join(SRC,'portal-pdf.js')],bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true,outfile:join(DIST,'portal-pdf.js') });
+  cpSync(join(DIST,'portal-pdf.js'),join(DIST,'landing','portal-pdf.js'));
 }
 
 // Copy module artwork from the repository's shared assets folder.
