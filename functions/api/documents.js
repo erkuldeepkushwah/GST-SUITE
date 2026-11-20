@@ -1,5 +1,5 @@
 import {identity,policy,otpVerified} from './roles.js';
-import {storageConfigured,savePrivateFile} from '../lib/supabase-storage.js';
+import {storageConfigured,savePrivateFile,listUploadedDocuments,downloadPrivateFile} from '../lib/supabase-storage.js';
 const sheetId = '1cGVFnYTN8giBwUy37Sreyknx8-BaGEX7DkM-ZNi5hjI';
 const folders = new Map([
   ['Sales Invoices', '1QlIwTtrdPT4VF5TjHo2osBREpBkIRlOM'],
@@ -71,6 +71,39 @@ export async function onRequestPost({ request, env }) {
   const db=env.GST_AUTH_DB;
   try{if((await policy(db,user.localId))?.active===0||!await otpVerified(request,env,user))return json({error:'Access denied'},403);}
   catch{return json({error:'Verification service unavailable'},503);}
+  if(request.headers.get('Content-Type')?.includes('application/json')){
+    try{
+      const b=await request.json();
+      const admin=user.localId==='7arK2z41nhTMyjwasmXKCWR0uw93'&&String(user.email||'').toLowerCase()==='kuldeep@gmail.com';
+      if(b.admin===true&&!admin)return json({error:'Admin access required'},403);
+      const scope={ownerUid:b.admin===true&&admin?null:user.localId};
+      if(!storageConfigured(env))return json({error:'Document storage is not configured'},503);
+      if(b.action==='list'){
+        const offset=Number(b.offset||0);
+        if(!Number.isSafeInteger(offset)||offset<0||offset>100000)return json({error:'Invalid page'},400);
+        const rows=await listUploadedDocuments(env,{...scope,offset,limit:51});
+        const documents=await Promise.all(rows.slice(0,50).map(async r=>{
+          let uploadedBy='';
+          if(admin&&b.admin===true){
+            const p=await db.prepare('SELECT a.email,a.name,p.business_name,p.firm_name FROM portal_accounts a LEFT JOIN customer_profiles p ON p.uid=a.uid WHERE a.uid=?').bind(r.owner_uid).first();
+            uploadedBy=p?.firm_name||p?.business_name||p?.email||p?.name||r.owner_uid;
+          }
+          return {id:r.id,name:r.name,category:r.category,size:r.size,created_at:r.created_at,uploadedBy};
+        }));
+        return json({documents,hasMore:rows.length>50});
+      }
+      if(b.action==='download'){
+        if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json({error:'Invalid document'},400);
+        const [row]=await listUploadedDocuments(env,{...scope,id:b.id,limit:1});
+        if(!row)return json({error:'Document not found'},404);
+        const response=await downloadPrivateFile(env,'supabase:'+row.bucket+'/'+row.object_path);
+        if(!response.ok)return json({error:'Unable to download document'},502);
+        const safeName=String(row.name||'document').replace(/[^a-zA-Z0-9._ -]/g,'_').slice(0,180);
+        return new Response(response.body,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="'+safeName+'"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+      }
+      return json({error:'Unknown action'},400);
+    }catch(e){return json({error:/Supabase server credential/.test(e.message||'')?e.message:'Unable to access uploaded documents'},502);}
+  }
   const userOAuth = env.GST_GOOGLE_OAUTH_JSON;
   const serviceAccount = env.GST_GOOGLE_SERVICE_ACCOUNT_JSON;
   if (!storageConfigured(env) && !userOAuth && !serviceAccount) {
