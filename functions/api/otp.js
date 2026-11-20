@@ -21,11 +21,17 @@ export async function onRequestPost({request,env}){
  if(action==='resolve'){
  // Do not expose a registered email to anonymous callers. Verify password at Firebase first.
  const mobile=normalize(body.mobile);if(!/^[6-9]\d{9}$/.test(mobile)||typeof body.password!=='string'||body.password.length>4096)return reply({error:'Invalid credentials'},401);
- const row=await db.prepare('SELECT email FROM mobile_accounts WHERE mobile=?').bind(mobile).first();
- if(!row)return reply({error:'Invalid credentials'},401);
- const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(env.FIREBASE_WEB_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:row.email,password:body.password,returnSecureToken:true})});
+ const matches=(await db.prepare("SELECT uid,email FROM mobile_accounts WHERE mobile=? UNION SELECT c.uid,a.email FROM customer_profiles c JOIN portal_accounts a ON a.uid=c.uid WHERE c.mobile=?").bind(mobile,mobile).all()).results;
+ const distinct=[...new Set(matches.map(x=>x.uid))];
+ if(distinct.length!==1)return reply({error:'Unable to sign in with this mobile number. Use your registered email and password.'},401);
+ const candidate=matches.find(x=>x.uid===distinct[0]&&x.email);
+ if(!candidate)return reply({error:'Invalid credentials'},401);
+ const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(env.FIREBASE_WEB_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:candidate.email,password:body.password,returnSecureToken:true})});
  if(!r.ok)return reply({error:'Invalid credentials'},401);
- return reply({email:row.email});
+ const verified=await r.json();
+ if(verified.localId!==candidate.uid)return reply({error:'Invalid credentials'},401);
+ const p=await db.prepare('SELECT active FROM account_policy WHERE uid=?').bind(candidate.uid).first();if(p?.active===0)return reply({error:'Invalid credentials'},401);
+ return reply({email:verified.email||candidate.email});
  }
  const u=await userFor(request,env);if(!u)return reply({error:'Authentication required'},401);
  if(action==='logout'){
