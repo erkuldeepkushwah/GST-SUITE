@@ -1,6 +1,6 @@
 import { renderBusiness } from './business-workspace.js';
 import { renderWorkspace } from './firm-workspace.js?v=no-refresh1';
-import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=no-refresh1';
+import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=remove1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
@@ -146,6 +146,12 @@ function showSection(section,prefill={}) {
   panel.append(h,p);
   if(portalRole==='customer'&&['services','documents','filings','dueDates','billing','support','profile','notifications'].includes(section)) {
     p.remove();void renderBusiness(panel,section,{api:firmApi,user:currentUser,go:showSection,prefill});
+    if(section==='documents'){
+      const heading=document.createElement('h3');heading.textContent='General Document Upload';
+      const history=createUploadedDocuments(currentUser);
+      panel.append(heading,createDocumentForm(currentUser,history.refresh),history.element);
+      void history.refresh();
+    }
   } else if (section === 'services') {
     if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
   } else if (portalRole==='firm' && section==='tools') {
