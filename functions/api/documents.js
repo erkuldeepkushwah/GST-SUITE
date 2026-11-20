@@ -89,13 +89,13 @@ export async function onRequestPost({ request, env }) {
   )) return json({ error: 'Choose a valid category and up to five supported files, 10 MB each.' }, 400);
 
   if(storageConfigured(env)){
-    const saved=[],errors=[];
+    const saved=[],errors=[];let storageError='';
     for(const file of files){
       const id=crypto.randomUUID(),name=file.name.replace(/[\u0000-\u001f]/g,'').slice(0,180);
       try{await savePrivateFile(env,{id,bucket:'gst-documents',file,name,ownerUid:user.localId,category});saved.push({id,name});}
-      catch{errors.push(file.name);}
+      catch(e){errors.push(file.name);if(/Supabase server credential/.test(e.message||''))storageError=e.message;}
     }
-    return saved.length?json({saved,errors},201):json({saved,errors,error:'Supabase document storage could not save the upload.'},502);
+    return saved.length?json({saved,errors},201):json({saved,errors,error:storageError||'Supabase document storage could not save the upload.'},502);
   }
   // Preserve the existing Google upload provider until the Supabase server secret is configured.
   const token = await (userOAuth ? googleUserToken(userOAuth) : googleToken(serviceAccount)).catch(() => null);
