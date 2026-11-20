@@ -13,6 +13,21 @@ export async function onRequestPost({request,env}){
  const token=async()=>env.GST_GOOGLE_OAUTH_JSON?googleUserToken(env.GST_GOOGLE_OAUTH_JSON):googleToken(env.GST_GOOGLE_SERVICE_ACCOUNT_JSON);
  if(request.headers.get('Content-Type')?.includes('application/json')){
  const b=await request.json();const rec=await db.prepare(b.ticket===true?'SELECT * FROM portal_ticket_files WHERE id=?':'SELECT * FROM firm_order_files WHERE id=?').bind(String(b.id||'')).first();if(!rec||!(b.ticket===true?await ticketAccess(rec.ticket_id):await ownedOrder(db,uid,rec.order_id,firm,admin)))return json({error:'File unavailable'},404);
+ if(b.action==='remove'){
+ if(admin||b.ticket===true||rec.kind!=='Document'||rec.uploader_uid!==uid)return json({error:'Only your own supporting documents can be removed'},403);
+ const order=await ownedOrder(db,uid,rec.order_id,firm,false);
+ if(!order||!['Awaiting payment','Paid','Documents Required','Documents needed','Documents Received'].includes(order.status))return json({error:'Documents cannot be removed after filing begins'},409);
+ const now=Date.now();
+ // Remove the portal link, retaining the underlying legacy Drive object for tax-record retention.
+ const guard="EXISTS(SELECT 1 FROM firm_order_files WHERE id=? AND order_id=? AND uploader_uid=? AND kind='Document')";
+ const last="NOT EXISTS(SELECT 1 FROM firm_order_files WHERE order_id=? AND kind='Document' AND id<>?)";
+ const q=await db.batch([
+ db.prepare("INSERT INTO portal_order_events(id,order_id,status,created_at) SELECT ?,id,'Documents Required',? FROM firm_service_orders WHERE id=? AND status='Documents Received' AND "+guard+" AND "+last).bind(crypto.randomUUID(),now,order.id,rec.id,order.id,uid,order.id,rec.id),
+ db.prepare("UPDATE firm_service_orders SET status='Documents Required',updated_at=? WHERE id=? AND status='Documents Received' AND "+guard+" AND "+last).bind(now,order.id,rec.id,order.id,uid,order.id,rec.id),
+ db.prepare("DELETE FROM firm_order_files WHERE id=? AND order_id=? AND uploader_uid=? AND kind='Document' AND EXISTS(SELECT 1 FROM firm_service_orders WHERE id=? AND status IN ('Awaiting payment','Paid','Documents Required','Documents needed','Documents Received'))").bind(rec.id,order.id,uid,order.id)
+ ]);
+ return q[2].meta.changes?json({removed:true}):json({error:'Document or filing status changed'},409);
+ }
  const t=await token();const response=await fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(rec.drive_id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+t}});
  if(!response.ok)return json({error:'Storage download unavailable'},502);
  return new Response(response.body,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(rec.name),'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
