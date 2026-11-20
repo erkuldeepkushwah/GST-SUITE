@@ -43,11 +43,13 @@ export async function renderWorkspace(panel,section,{api,user,firm,openTool,refr
  panel.append(el('p','Book services for your assigned clients. The firm is responsible for payment. The admin will provide a quote; online payment is not yet configured.'));
  const c=select([['','Choose assigned client'],...d.clients.map(x=>[x.uid,x.title+' · '+x.reference])]);const svc=select([['','Choose service'],...d.services.map(x=>[x,x])]);panel.append(field('Client',c),field('Service',svc));
  let key=crypto.randomUUID();const book=btn('Book & Request Payment',async()=>{if(!c.value||!svc.value){msg.textContent='Select client and service.';return;}book.disabled=true;c.disabled=svc.disabled=true;try{await api({action:'workspaceBook',clientUid:c.value,service:svc.value,requestId:key});key=crypto.randomUUID();refresh('filings');}catch(e){msg.textContent=e.message;}finally{book.disabled=false;c.disabled=svc.disabled=false;}},true);panel.append(book);
+ panel.append(el('h3','Booked Services'));
+ table(panel,['Client / Business','Service','Filing period','Booked by','Status','Action'],d.orders.map(o=>[o.client_name,o.service,o.period||'—',o.booking_source||'Firm booking',o.status,btn('View documents',()=>showOrderFiles(panel,o,api,user))]));
  }else if(section==='filings'){
  const filter=select([['','All clients'],...new Map(d.orders.map(o=>[o.client_uid||o.client_name,o.client_name]))]);if(firm)panel.append(field('Filter by client',filter));
  const selected=()=>d.orders.filter(o=>!filter.value||(o.client_uid||o.client_name)===filter.value);
  panel.append(pdf('Download Report PDF',()=>downloadFilingListPdf(selected(),user)));
- const result=el('div');panel.append(result);function draw(){result.replaceChildren();table(result,['Client','Service','Filing status','Booked','Action'],selected().map(o=>{const actions=el('div');actions.append(btn('Documents / Final file',()=>showOrderFiles(panel,o,api,user)),pdf('Download PDF',()=>downloadFilingPdf(o,user,api)));return [o.client_name,o.service,o.status,date(o.created_at),actions];}));}
+ const result=el('div');panel.append(result);function draw(){result.replaceChildren();table(result,['Client','Service','Filing period','Booked by','Filing status','Booked','Action'],selected().map(o=>{const actions=el('div');actions.append(btn('Documents / Final file',()=>showOrderFiles(panel,o,api,user)),pdf('Download PDF',()=>downloadFilingPdf(o,user,api)));return [o.client_name,o.service,o.period||'—',o.booking_source||'Firm booking',o.status,date(o.created_at),actions];}));}
  filter.onchange=draw;draw();
  }else if(section==='billing'){
  const f=select([['','All invoices'],['Plan','Plan'],['Service','Service']]);panel.append(field('Invoice type',f));const wrap=el('div');panel.append(wrap);
