@@ -4,8 +4,12 @@ const BUCKETS=new Set(['gst-documents','gst-final-returns','gst-support-attachme
 const TYPES={pdf:'application/pdf',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',csv:'text/csv',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png'};
 export const storageConfigured=env=>Boolean(env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY);
 function headers(env,extra={}){
- const key=env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY;
+ const key=String(env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
  if(!key)throw Error('Supabase Storage is not configured');
+ if(!key.startsWith('sb_secret_')){
+  let role;try{const payload=key.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');role=JSON.parse(atob(payload.padEnd(Math.ceil(payload.length/4)*4,'='))).role;}catch{}
+  if(role!=='service_role')throw Error('Supabase server credential must be a Secret API key, not a Publishable or anon key.');
+ }
  return {apikey:key,...(key.startsWith('sb_secret_')?{}:{Authorization:'Bearer '+key}),...extra};
 }
 function parse(ref){
@@ -14,7 +18,7 @@ function parse(ref){
  return {bucket:m[1],path:m[2]};
 }
 export const isSupabaseFile=ref=>typeof ref==='string'&&ref.startsWith('supabase:');
-async function checked(response){if(!response.ok)throw Error('Supabase request failed ('+response.status+')');return response;}
+async function checked(response){if(!response.ok){const body=await response.text().catch(()=> '');if(/row.level security|permission denied/i.test(body)||response.status===401||response.status===403)throw Error('Supabase server credential lacks storage permission. Check the Secret API key in Cloudflare.');throw Error('Supabase request failed ('+response.status+')');}return response;}
 export async function removePrivateFile(env,ref){
  const {bucket,path}=parse(ref);
  await checked(await fetch(BASE+'/storage/v1/object/'+bucket,{method:'DELETE',headers:headers(env,{'Content-Type':'application/json'}),body:JSON.stringify({prefixes:[path]})}));
