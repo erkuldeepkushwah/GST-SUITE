@@ -69,6 +69,7 @@ async function firmApi(payload){
  const result=await response.json();if(!response.ok)throw Error(result.error||'Unable to load firm records');return result;
 }
 async function renderFirmRecords(panel,section){
+ const refreshButton=document.createElement('button');refreshButton.type='button';refreshButton.className='action';refreshButton.textContent='Refresh';refreshButton.addEventListener('click',()=>showSection(section));panel.append(refreshButton);
  const message=document.createElement('p');message.textContent='Loading records…';panel.append(message);
  try{const {rows}=await firmApi({action:'firmData'});if(!panel.isConnected)return;
  const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],orders:['Service Management','My Tasks'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
