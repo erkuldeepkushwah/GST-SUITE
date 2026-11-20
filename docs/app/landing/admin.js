@@ -1,3 +1,4 @@
+import {createUploadedDocuments} from './document-upload.js?v=uploads1';
 import {showTicketThread} from './business-workspace.js';
 import {showOrderFiles} from './firm-workspace.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
@@ -41,6 +42,7 @@ const schemas={
  'Settings':['Setting name','Setting value','Description (record only; not system configuration)']
 };
 function renderModule(panel,name){
+ if(name==='Documents & Vault'){const history=createUploadedDocuments(currentUser,{admin:true});panel.append(history.element);void history.refresh();return;}
  if(name==='Firm Operations'){void renderFirmOperations(panel);return;}
  if(name==='Customers'){renderFirebaseCustomers(panel);return;}
  if(name==='Firms'){renderFirebaseCustomers(panel,true);return;}
