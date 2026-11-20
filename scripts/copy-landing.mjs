@@ -14,6 +14,7 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildSync } from 'esbuild';
+import { execFileSync } from 'node:child_process';
 
 const DIST = 'dist';
 const SRC = 'landing';
@@ -34,6 +35,12 @@ const files = readdirSync(SRC).filter(
 if (!files.length) {
   console.warn('[landing] nothing to publish in ./landing');
   process.exit(0);
+}
+
+// Parse portal entry points as real ES modules (package.json has type=module).
+// Reject duplicate top-level declarations and invalid imports before deployment.
+for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','business-workspace.js','firm-workspace.js','document-upload.js','filing-periods.js']) {
+  if (existsSync(join(SRC,file))) execFileSync(process.execPath,['--check',join(SRC,file)],{stdio:'inherit'});
 }
 
 // 1. keep a browsable copy at /landing/
