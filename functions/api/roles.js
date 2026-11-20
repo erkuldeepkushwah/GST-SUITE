@@ -57,23 +57,39 @@ export async function onRequestPost({request,env}){
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
  const profile=!admin?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row||profile?.account_type==='professional'?'firm':'customer',name:u.displayName||email,accountType:row?'professional':profile?.account_type||'legacy',profile});
  }
- if(['clientFirms','assignClient','unassignClient','accountPolicy','directory'].includes(b.action)){
+ if(['clientFirms','assignClient','assignClientByContact','unassignClient','accountPolicy','directory'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
  if(b.action==='clientFirms'){
  const rows=(await db.prepare("SELECT r.uid,r.email,'Firm' AS role FROM ("+firmSql+") r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email").all()).results;
  return json({rows});
  }
- if(b.action==='assignClient'){
- const uid=String(b.uid||''),firmUid=String(b.firmUid||''),mail=String(b.email||'').trim().toLowerCase();
- if(!uid||!firmUid||uid===firmUid||uid===ADMIN||firmUid===ADMIN)return json({error:'Invalid assignment'},400);
+ if(b.action==='assignClient'||b.action==='assignClientByContact'){
+ let uid=String(b.uid||''),mail=String(b.email||'').trim().toLowerCase();const firmUid=String(b.firmUid||'');
+ if(!firmUid||firmUid===ADMIN)return json({error:'Invalid firm'},400);
  const sr=await db.prepare('SELECT uid,email FROM ('+firmSql+') WHERE uid=?').bind(firmUid).first();
- if(!sr||(await policy(db,firmUid))?.active===0||(await policy(db,uid))?.active===0||await isFirm(db,uid,mail))return json({error:'Select an active client and firm'},400);
+ if(!sr||(await policy(db,firmUid))?.active===0)return json({error:'Select an active firm'},400);
+ if(b.action==='assignClientByContact'){
+ const contact=String(b.contact||'').trim().toLowerCase();
+ if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)&&contact.length<=254){mail=contact;const d=await firebaseDirectory(env,mail,null);const matches=d.users.filter(x=>x.email===mail&&!x.disabled);if(matches.length!==1)return json({error:'Active registered client not found'},404);uid=matches[0].uid;}
+ else{
+ const mobile=contact.replace(/[\s()-]/g,'').replace(/^\+91/,'');
+ if(!/^[6-9]\d{9}$/.test(mobile))return json({error:'Enter a registered email or valid 10-digit mobile number'},400);
+ const found=(await db.prepare("SELECT p.uid,a.email FROM customer_profiles p LEFT JOIN portal_accounts a ON a.uid=p.uid WHERE p.mobile=? AND p.account_type='business' UNION SELECT uid,email FROM mobile_accounts WHERE mobile=?").bind(mobile,mobile).all()).results;
+ const distinct=[...new Set(found.map(x=>x.uid))];if(distinct.length!==1)return json({error:distinct.length?'Multiple accounts match this number. Use the registered email.':'No registered client found for this mobile number. Use the registered email.'},distinct.length?409:404);
+ uid=distinct[0];const account=found.find(x=>x.uid===uid&&x.email);if(!account)return json({error:'Client profile not linked to an email yet. Use the registered email.'},404);mail=account.email.toLowerCase();
+ }
+ }
+ if(!uid||!mail||uid===firmUid||uid===ADMIN||(await policy(db,uid))?.active===0||await isFirm(db,uid,mail))return json({error:'Select an active client, not a firm or admin'},400);
  const [c,d]=await Promise.all([firebaseDirectory(env,mail,null),firebaseDirectory(env,sr.email,null)]);
  const client=c.users.find(x=>x.uid===uid&&x.email===mail&&!x.disabled);
  if(!client||!d.users.some(x=>x.uid===firmUid&&x.email===sr.email&&!x.disabled))return json({error:'Active Firebase account not found'},400);
  const id='client:'+uid;
+ if(b.action==='assignClientByContact'){
+ const previous=await db.prepare("SELECT staff_uid FROM staff_assignments WHERE id=? AND section='Assigned Clients'").bind(id).first();
+ if(previous&&previous.staff_uid!==firmUid&&b.confirmReassign!==true)return json({error:'Client is already assigned to another firm. Confirm reassignment.',requiresReassign:true,clientEmail:mail},409);
+ }
  await db.prepare("INSERT INTO staff_assignments(id,staff_uid,section,title,reference,status,notes,updated) VALUES(?,?,'Assigned Clients',?,?,'Assigned','',?) ON CONFLICT(id) DO UPDATE SET staff_uid=excluded.staff_uid,title=excluded.title,reference=excluded.reference,updated=excluded.updated").bind(id,firmUid,client.name||client.email,client.email,Date.now()).run();
- return json({saved:true,firmEmail:sr.email});
+ return json({saved:true,firmEmail:sr.email,clientEmail:client.email,clientName:client.name||client.email});
  }
  if(b.action==='unassignClient'){
  const uid=String(b.uid||'');if(!uid||uid===ADMIN)return json({error:'Invalid client'},400);
