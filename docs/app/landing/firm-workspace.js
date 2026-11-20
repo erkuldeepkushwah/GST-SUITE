@@ -1,3 +1,4 @@
+import {downloadBillingPdf,downloadFilingPdf,downloadFilingListPdf,downloadBillingListPdf} from './portal-pdf.js?v=pdf1';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const btn=(label,fn,primary=false)=>{const b=el('button',label,'action'+(primary?' primary':''));b.type='button';b.onclick=fn;return b;};
 const date=v=>new Date(v).toLocaleDateString('en-IN');
@@ -26,6 +27,7 @@ export async function showOrderFiles(panel,order,api,user,admin=false){
 }
 export async function renderWorkspace(panel,section,{api,user,firm,openTool,refresh}){
  const msg=el('p','Loading…');msg.setAttribute('role','status');panel.append(msg);
+ const pdf=(label,fn)=>{const b=btn(label,async()=>{b.disabled=true;try{await fn();msg.textContent='PDF downloaded.';}catch(e){msg.textContent=e.message||'PDF download failed';}finally{b.disabled=false;}});return b;};
  const run=async(button,action,after)=>{button.disabled=true;try{await api(action);if(after)after();else refresh();}catch(e){msg.textContent=e.message;}finally{button.disabled=false;}};
  try{const d=await api({action:'workspaceData'});if(!panel.isConnected)return;msg.textContent='';
  if(section==='tools'){
@@ -43,11 +45,15 @@ export async function renderWorkspace(panel,section,{api,user,firm,openTool,refr
  let key=crypto.randomUUID();const book=btn('Book & Request Payment',async()=>{if(!c.value||!svc.value){msg.textContent='Select client and service.';return;}book.disabled=true;c.disabled=svc.disabled=true;try{await api({action:'workspaceBook',clientUid:c.value,service:svc.value,requestId:key});key=crypto.randomUUID();refresh('filings');}catch(e){msg.textContent=e.message;}finally{book.disabled=false;c.disabled=svc.disabled=false;}},true);panel.append(book);
  }else if(section==='filings'){
  const filter=select([['','All clients'],...new Map(d.orders.map(o=>[o.client_uid||o.client_name,o.client_name]))]);if(firm)panel.append(field('Filter by client',filter));
- const result=el('div');panel.append(result);function draw(){result.replaceChildren();table(result,['Client','Service','Filing status','Booked','Documents'],d.orders.filter(o=>!filter.value||(o.client_uid||o.client_name)===filter.value).map(o=>[o.client_name,o.service,o.status,date(o.created_at),btn('Documents / Final file',()=>showOrderFiles(panel,o,api,user))]));}
+ const selected=()=>d.orders.filter(o=>!filter.value||(o.client_uid||o.client_name)===filter.value);
+ panel.append(pdf('Download Report PDF',()=>downloadFilingListPdf(selected(),user)));
+ const result=el('div');panel.append(result);function draw(){result.replaceChildren();table(result,['Client','Service','Filing status','Booked','Action'],selected().map(o=>{const actions=el('div');actions.append(btn('Documents / Final file',()=>showOrderFiles(panel,o,api,user)),pdf('Download PDF',()=>downloadFilingPdf(o,user,api)));return [o.client_name,o.service,o.status,date(o.created_at),actions];}));}
  filter.onchange=draw;draw();
  }else if(section==='billing'){
  const f=select([['','All invoices'],['Plan','Plan'],['Service','Service']]);panel.append(field('Invoice type',f));const wrap=el('div');panel.append(wrap);
- function draw(){wrap.replaceChildren();table(wrap,['Type','Description','Amount','Payment status','Action'],d.billing.filter(x=>!f.value||x.kind===f.value).map(x=>{const actions=el('div');actions.append(btn('Download summary',()=>downloadText('billing-'+x.id+'.txt',['Fingenuity Associates','Billing reference: '+x.id,'Type: '+x.kind,'Description: '+x.title,'Amount: '+money(x.amount_paise),'Status: '+x.status,'Date: '+date(x.created_at),'Payment request summary — not a tax invoice or paid receipt.'].join('\n'))),btn('Pay now',()=>{msg.textContent=x.amount_paise==null?'Wait for the admin quote.':'Online checkout is not configured. Contact support for payment instructions.';}));return [x.kind,x.title,money(x.amount_paise),x.status,actions];}));}f.onchange=draw;draw();
+ const selected=()=>d.billing.filter(x=>!f.value||x.kind===f.value);
+ panel.insertBefore(pdf('Download Statement PDF',()=>downloadBillingListPdf(selected(),user)),wrap);
+ function draw(){wrap.replaceChildren();table(wrap,['Type','Description','Amount','Payment status','Action'],selected().map(x=>{const actions=el('div');actions.append(pdf('Download PDF',()=>downloadBillingPdf(x,user,d.orders.find(o=>o.id===x.order_id))));if(x.status!=='Paid')actions.append(btn('Pay now',()=>{msg.textContent=x.amount_paise==null?'Wait for the admin quote.':'Online checkout is not configured. Contact support for payment instructions.';}));return [x.kind,x.title,money(x.amount_paise),x.status,actions];}));}f.onchange=draw;draw();
  }else if(section==='support'){
  const subject=input('Ticket subject'),message=input('Describe your issue',true);message.rows=5;panel.append(field('Subject',subject),field('Message',message));
  const c=select([['','General support'],...(d.clients||[]).map(x=>[x.uid,x.title])]);const o=select([['','No linked order'],...d.orders.map(x=>[x.id,x.client_name+' — '+x.service])]);if(firm)panel.append(field('Link client (optional)',c));panel.append(field('Link order (optional)',o));const create=btn('Create Ticket',()=>{if(!subject.value.trim()||!message.value.trim()){msg.textContent='Enter subject and message.';return;}return run(create,{action:'workspaceTicket',subject:subject.value,message:message.value,clientUid:c.value,orderId:o.value});},true);panel.append(create,el('h3','My tickets'));table(panel,['Subject','Message','Status','Admin reply','Created'],d.tickets.map(x=>[x.subject,x.message,x.status,x.reply||'Awaiting reply',date(x.created_at)]));
