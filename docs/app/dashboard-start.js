@@ -13,7 +13,7 @@
   box.append(title,text,retry,login);loading.replaceChildren(box);
  }
  window.__gstDashboardWatchdog=setTimeout(()=>fail('Secure login is taking too long. Check your internet connection and try again.'),35000);
- import('./dashboard.js?v=fastdirectory1').catch(error=>{
+ import('./dashboard.js?v=modulefix3').catch(error=>{
   console.error('Dashboard startup failed',error);
   fail('The dashboard could not load its sign-in modules. Try again or return to Login.');
  });

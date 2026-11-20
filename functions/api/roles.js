@@ -19,28 +19,20 @@ async function otpVerified(request,env,u){
 
 const firmSql="SELECT uid,email FROM staff_roles UNION SELECT a.uid,a.email FROM portal_accounts a JOIN customer_profiles p ON p.uid=a.uid WHERE p.account_type='professional'";
 async function isFirm(db,uid,email){return !!await db.prepare("SELECT uid FROM ("+firmSql+") WHERE uid=? AND email=?").bind(uid,email).first();}
-// Cache only the short-lived server OAuth credential, never user identity or directory data.
-let directoryCredential=null;
 async function firebaseDirectory(env,email,pageToken){
  if(!env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON)throw Error('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON is not configured');
  const sa=JSON.parse(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON);
  if(sa.project_id!=='paypoint-e14c9'||!sa.client_email||!sa.private_key)throw Error('Firebase service account must belong to paypoint-e14c9');
- let access=directoryCredential?.config===env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON&&directoryCredential.expiresAt>Date.now()?directoryCredential.access:null;
- if(!access){
  const enc=new TextEncoder(),b64=bytes=>btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
  const now=Math.floor(Date.now()/1000),url='https://oauth2.googleapis.com/token';
  const unsigned=b64(enc.encode(JSON.stringify({alg:'RS256',typ:'JWT'})))+'.'+b64(enc.encode(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/identitytoolkit',aud:url,iat:now,exp:now+300})));
  const key=await crypto.subtle.importKey('pkcs8',Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----|\s/g,'')),c=>c.charCodeAt(0)),{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
  const assertion=unsigned+'.'+b64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,enc.encode(unsigned))));
  const t=await fetch(url,{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion})});
- if(!t.ok)throw Error('Firebase service account authentication failed');const token=await t.json();access=token.access_token;
- if(typeof access!=='string'||!access)throw Error('Firebase service account authentication failed');
- const expiresIn=Number(token.expires_in);if(Number.isFinite(expiresIn)&&expiresIn>60)directoryCredential={config:env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON,access,expiresAt:Math.min(Date.now()+300000,now*1000+(expiresIn-60)*1000)};
- }
+ if(!t.ok)throw Error('Firebase service account authentication failed');const access=(await t.json()).access_token;
  const base='https://identitytoolkit.googleapis.com/v1/projects/'+encodeURIComponent(sa.project_id);
  const headers={Authorization:'Bearer '+access,'Content-Type':'application/json'};
- const response=email?await fetch(base+'/accounts:lookup',{method:'POST',headers,body:JSON.stringify({email:[email]})}):await fetch(base+'/accounts:batchGet?'+new URLSearchParams({maxResults:'1000',...(pageToken?{nextPageToken:pageToken}:{})}),{headers});
- if(response.status===401||response.status===403){if(directoryCredential?.access===access)directoryCredential=null;}
+ const response=email?await fetch(base+'/accounts:lookup',{method:'POST',headers,body:JSON.stringify({email:[email]})}):await fetch(base+'/accounts:batchGet?'+new URLSearchParams({maxResults:'100',...(pageToken?{nextPageToken:pageToken}:{})}),{headers});
  if(!response.ok)throw Error('Firebase directory request failed ('+response.status+'). Check Identity Toolkit API and Firebase Authentication Viewer permission.');
  const result=await response.json();return {users:(result.users||[]).filter(u=>u.localId&&u.email).map(u=>({uid:u.localId,email:u.email.toLowerCase(),name:u.displayName||'',phone:u.phoneNumber||'',verified:!!u.emailVerified,disabled:!!u.disabled,createdAt:u.createdAt||null,lastLoginAt:u.lastLoginAt||null})),nextPageToken:result.nextPageToken||null};
 }
@@ -129,7 +121,7 @@ export async function onRequestPost({request,env}){
  return json({saved:true});
  }
  if(b.action==='directory'){
- try{const [d,rolesResult,clientsResult,policyResult]=await Promise.all([firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null),db.prepare(firmSql).all(),db.prepare("SELECT w.id,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all(),db.prepare('SELECT * FROM account_policy').all()]);const map=new Map(rolesResult.results.map(r=>[r.uid,r]));const clients=new Map(clientsResult.results.map(x=>[x.id.slice(7),x.email]));const policies=new Map(policyResult.results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:clients.get(x.uid)||null,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
+ try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const map=new Map(roles.map(r=>[r.uid,r]));const clients=new Map((await db.prepare("SELECT w.id,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x.email]));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:clients.get(x.uid)||null,active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:map.get(x.uid)?.email===x.email?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
  }
  return json({error:'Invalid admin action'},400);
  }
