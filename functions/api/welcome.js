@@ -4,9 +4,10 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
 });
 export async function onRequestPost({ request, env }) {
+  if(request.headers.get('Origin')&&request.headers.get('Origin')!==new URL(request.url).origin)return json({error:'Invalid origin'},403);
   const token = request.headers.get('Authorization')?.match(/^Bearer (\S+)$/i)?.[1];
   if (!token) return json({ error: 'Authentication required' }, 401);
-  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL || !env.FIREBASE_WEB_API_KEY) {
+  if (!env.GST_AUTH_DB || !env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL || !env.FIREBASE_WEB_API_KEY) {
     return json({ error: 'Email service not configured' }, 503);
   }
   try {
@@ -33,7 +34,7 @@ export async function onRequestPost({ request, env }) {
     const loginId=user.email;
     const loginUrl='https://gst-suite.pages.dev/login.html';
     const loginHint='Sign in using your registered email and the password you created during registration. Complete email verification or OTP if prompted.';
-    const features=business?['Book GST, Income Tax, TDS and compliance services.','Upload documents and track filing status.','View due dates, billing records and support tickets.']:['Manage assigned clients and companies.','Access My Tools and reconciliation modules.','Book services, upload documents and track client filings.'];
+    const features=business?['Book GST, Income Tax, TDS and compliance services.','Upload documents and track filing status.','View billing records and support tickets.']:['Manage assigned clients and companies.','Access My Tools and reconciliation modules.','Book services, upload documents and track client filings.'];
     const text=['Dear '+name+',','','Welcome to Fingenuity Associates! Your '+type.toLowerCase()+' account has been created successfully.','','Account type: '+type,'Account name: '+name,'Registered user: '+username,'Login ID: '+loginId,'Customer ID: '+user.localId,'','Your portal includes:',...features.map(x=>'- '+x),'',loginHint,'','Login: '+loginUrl,'','Need assistance? gstpractitioner.rakesh@gmail.com','','Regards,','Team Fingenuity Associates'].join('\n');
     const escape=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const fields=[['Account type',type],['Account name',name],['Registered user',username],['Login ID',loginId],['Customer ID',user.localId]];
@@ -47,8 +48,16 @@ export async function onRequestPost({ request, env }) {
       },
       body: JSON.stringify({ from: env.RESEND_FROM_EMAIL, to: [user.email], subject, text, html })
     });
-    if (!sent.ok) return json({ error: 'Welcome email could not be sent' }, 502);
-    return json({ accepted: true });
+    const delivery=await sent.json().catch(()=>null);
+    if(!sent.ok){
+      const reason=String(delivery?.message||'');
+      const configuration=sent.status===403&&(/resend\.dev|domain|testing|verif/i.test(reason)||/resend\.dev/i.test(env.RESEND_FROM_EMAIL));
+      const errorCode=configuration?'SENDER_DOMAIN_UNVERIFIED':sent.status===429?'EMAIL_RATE_LIMIT':sent.status===401||sent.status===403?'EMAIL_CONFIGURATION':'EMAIL_PROVIDER_ERROR';
+      console.warn('Welcome email rejected',{status:sent.status,code:errorCode});
+      return json({error:configuration?'Welcome email requires a verified sending domain.':'Welcome email could not be sent.',code:errorCode},502);
+    }
+    if(!delivery?.id)return json({error:'Email provider confirmation unavailable',code:'EMAIL_PROVIDER_ERROR'},502);
+    return json({accepted:true});
   } catch {
     return json({ error: 'Email service temporarily unavailable' }, 502);
   }
