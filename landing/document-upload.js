@@ -108,7 +108,14 @@ export function createUploadedDocuments(user,{admin=false}={}){
  for(const label of ['File Name','Category',...(admin?['Uploaded by']:[]),'Size','Uploaded on','Status','Action']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const row of filtered){const tr=body.insertRow();const size=Number(row.size);const displaySize=size>=1048576?(size/1048576).toFixed(2)+' MB':(size/1024).toFixed(1)+' KB';
  for(const v of [row.name,row.category,...(admin?[row.uploadedBy]:[]),displaySize,new Date(row.created_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),'Uploaded']){const td=tr.insertCell();td.textContent=v||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}
- const td=tr.insertCell(),button=document.createElement('button');button.type='button';button.className='action';button.textContent='Download';button.onclick=async()=>{button.disabled=true;try{const r=await api({action:'download',id:row.id});const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=row.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){info.textContent=e.message;}finally{button.disabled=false;}};td.append(button);}
+ const td=tr.insertCell(),button=document.createElement('button');button.type='button';button.className='action';button.textContent='Download';button.onclick=async()=>{button.disabled=true;try{const r=await api({action:'download',id:row.id});const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=row.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){info.textContent=e.message;}finally{button.disabled=false;}};td.append(button);
+ if(!admin){const remove=document.createElement('button');remove.type='button';remove.className='action';remove.style.cssText='color:#b91c1c;border-color:#fecaca;margin-left:6px';remove.textContent='Remove';remove.onclick=async()=>{
+ if(!confirm('Permanently remove "'+row.name+'"? This will delete the uploaded file.'))return;
+ remove.disabled=button.disabled=true;
+ try{const response=await api({action:'remove',id:row.id});const result=await response.json();if(result.removed!==true)throw Error('Unable to remove document');rows=rows.filter(x=>x.id!==row.id);offset=Math.max(0,offset-1);draw();info.textContent='Document removed.';await load(true);}
+ catch(e){info.textContent=e.message;}finally{remove.disabled=button.disabled=false;}
+ };td.append(remove);}
+ }
  wrap.append(table);
  }
  async function load(reset=false){if(busy)return;busy=true;more.disabled=true;info.textContent='Loading documents…';try{const start=reset?0:offset;const r=await api({action:'list',offset:start});const d=await r.json();if(reset)rows=[];rows.push(...d.documents);offset=start+d.documents.length;hasMore=d.hasMore;more.hidden=!hasMore;draw();}catch(e){info.textContent=e.message;}finally{busy=false;more.disabled=false;}}
