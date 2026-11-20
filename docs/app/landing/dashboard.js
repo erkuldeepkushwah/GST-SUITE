@@ -50,10 +50,10 @@ function createServicesWorkspace(panel) {
 let currentUser = null, accountType='legacy', customerProfile=null, portalRole='customer';
 const menuConfig={
  business:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
- firm:[['overview','Dashboard','house'],['assigned','Assigned Clients','users'],['companies','Client Companies','building-2'],['documents','Upload Documents','cloud-upload'],['tools','My Tools','layers-3'],['orders','Order Services','shopping-cart'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
+ firm:[['overview','Dashboard','house'],['assigned','Assigned Clients','users'],['companies','Client Companies','building-2'],['documents','Upload Documents','cloud-upload'],['tools','My Tools','layers-3'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
  legacy:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']]
 };
-Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','GST reconciliation workspace.'],orders:['Order Services','Service assignments and requests for your firm.'],filings:['Filing Status','Track your filing and task records.']});
+Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','GST reconciliation workspace.'],filings:['Filing Status','Track your filing and task records.']});
 const menu=()=>menuConfig[portalRole==='firm'?'firm':accountType==='business'?'business':'legacy'];
 function configureCustomerMenu(){
  const nav=document.getElementById('navigation'),bottom=document.querySelector('.sidebar-bottom');nav.replaceChildren();bottom.replaceChildren();
@@ -93,7 +93,7 @@ async function renderFirmRecords(panel,section){
 
  const message=document.createElement('p');message.textContent='Loading records…';panel.append(message);
  try{const {rows}=await firmApi({action:'firmData'});if(!panel.isConnected)return;
- const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],orders:['Service Management','My Tasks'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
+ const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
  const records=rows.filter(r=>(map[section]||[]).includes(r.section));message.textContent=records.length?records.length+' record(s)':'No records available yet.';
  if(!records.length)return;const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Title','Client / Reference','Status','Instructions','Action']){const cell=document.createElement('th');cell.textContent=label;cell.style.padding='10px';head.append(cell);}
  const body=table.createTBody();for(const r of records){const tr=body.insertRow();for(const value of [r.title,r.reference,r.status,r.notes]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3';}const td=tr.insertCell();if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const sel=document.createElement('select');for(const status of ['Pending','In Progress','Completed'])sel.add(new Option(status,status));sel.value=r.status;const button=document.createElement('button');button.className='action';button.textContent='Update';button.onclick=async()=>{button.disabled=true;try{await firmApi({action:'firmUpdate',id:r.id,status:sel.value});tr.cells[2].textContent=sel.value;message.textContent='Status updated.';}catch(e){message.textContent=e.message;}finally{button.disabled=false;}};td.append(sel,button);}else td.textContent='View only';}
@@ -155,7 +155,7 @@ function showSection(section,prefill={}) {
     if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
   } else if (portalRole==='firm' && section==='tools') {
     createServicesWorkspace(panel);
-  } else if ((portalRole==='firm'&&['orders','filings','billing','support'].includes(section))||(portalRole==='customer'&&['filings','support'].includes(section))) {
+  } else if ((portalRole==='firm'&&['filings','billing','support'].includes(section))||(portalRole==='customer'&&['filings','support'].includes(section))) {
     void renderWorkspace(panel,section,{api:firmApi,user:currentUser,firm:portalRole==='firm',openTool:createServicesWorkspace,refresh:(target)=>showSection(target||section)});
   } else if (portalRole==='firm' && section==='companies') {
     void renderCompanyDirectory(panel);
