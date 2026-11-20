@@ -1,4 +1,4 @@
-import {showOrderFiles,orderFileFetch} from './firm-workspace.js';
+import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=remove1';
 import {EmailAuthProvider,reauthenticateWithCredential,updatePassword,verifyBeforeUpdateEmail} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const el=(tag,txt,cls)=>{const n=document.createElement(tag);if(txt!==undefined)n.textContent=txt;if(cls)n.className=cls;return n;};
 const button=(txt,fn,primary=false)=>{const b=el('button',txt,'action'+(primary?' primary':''));b.type='button';b.onclick=fn;return b;};

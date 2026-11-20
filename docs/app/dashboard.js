@@ -1,6 +1,6 @@
-import { renderBusiness } from './business-workspace.js';
-import { renderWorkspace } from './firm-workspace.js';
-import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=uploads1';
+import { renderBusiness } from './business-workspace.js?v=remove1';
+import { renderWorkspace } from './firm-workspace.js?v=remove1';
+import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=remove1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
@@ -74,7 +74,7 @@ async function renderCompanyDirectory(panel){
  const bar=document.createElement('div');bar.className='action-row';bar.style.cssText='display:flex;flex-wrap:wrap;gap:10px;align-items:center';
  const search=document.createElement('input');search.type='search';search.placeholder='Search clients or companies';search.setAttribute('aria-label','Search companies');search.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;min-width:0;flex:1';
  const filter=document.createElement('select');filter.setAttribute('aria-label','Assignment status');filter.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px';for(const [value,label] of [['all','All Clients'],['Assigned to your firm','Assigned to My Firm'],['Unassigned','Unassigned'],['Assigned elsewhere','Assigned Elsewhere']])filter.add(new Option(label,value));
- const refresh=document.createElement('button');refresh.type='button';refresh.className='action';refresh.textContent='Refresh';refresh.onclick=()=>showSection('companies');bar.append(search,filter,refresh);panel.append(bar);
+ bar.append(search,filter);panel.append(bar);
  const status=document.createElement('p');status.setAttribute('role','status');panel.append(status);
  const wrap=document.createElement('div');wrap.style.overflowX='auto';panel.append(wrap);
  const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;panel.append(more);
@@ -87,11 +87,11 @@ async function renderCompanyDirectory(panel){
  const body=table.createTBody();for(const r of filtered){const tr=body.insertRow();for(const value of [r.companyName,r.clientName,r.contact||'No access',r.accountStatus,r.assignmentStatus]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}}
  wrap.append(table);
  }
- async function load(){if(busy)return;busy=true;more.disabled=true;refresh.disabled=true;status.textContent='Loading registered clients…';try{const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;more.hidden=!next;draw();}catch(e){status.textContent=e.message;}finally{busy=false;more.disabled=false;refresh.disabled=false;}}
+ async function load(){if(busy)return;busy=true;more.disabled=true;status.textContent='Loading registered clients…';try{const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;more.hidden=!next;draw();}catch(e){status.textContent=e.message;}finally{busy=false;more.disabled=false;}}
  search.oninput=draw;filter.onchange=draw;more.onclick=load;await load();
 }
 async function renderFirmRecords(panel,section){
- const refreshButton=document.createElement('button');refreshButton.type='button';refreshButton.className='action';refreshButton.textContent='Refresh';refreshButton.addEventListener('click',()=>showSection(section));panel.append(refreshButton);
+
  const message=document.createElement('p');message.textContent='Loading records…';panel.append(message);
  try{const {rows}=await firmApi({action:'firmData'});if(!panel.isConnected)return;
  const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],orders:['Service Management','My Tasks'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
@@ -146,6 +146,12 @@ function showSection(section,prefill={}) {
   panel.append(h,p);
   if(portalRole==='customer'&&['services','documents','filings','dueDates','billing','support','profile','notifications'].includes(section)) {
     p.remove();void renderBusiness(panel,section,{api:firmApi,user:currentUser,go:showSection,prefill});
+    if(section==='documents'){
+      const heading=document.createElement('h3');heading.textContent='General Document Upload';
+      const history=createUploadedDocuments(currentUser);
+      panel.append(heading,createDocumentForm(currentUser,history.refresh),history.element);
+      void history.refresh();
+    }
   } else if (section === 'services') {
     if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
   } else if (portalRole==='firm' && section==='tools') {
