@@ -136,3 +136,5 @@ export async function onRequestPost({ request, env }) {
   return saved.length ? json({ saved, errors }, 201)
     : json({ saved, errors, error: 'Google could not save the upload. Check the configured Google account’s folder and Sheet access.' }, 502);
 }
+
+export {googleToken,googleUserToken};
