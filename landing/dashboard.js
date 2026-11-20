@@ -1,6 +1,3 @@
-import { renderBusiness } from './business-workspace.js?v=nodue1';
-import { renderWorkspace } from './firm-workspace.js?v=due1';
-import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=remove1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
@@ -64,6 +61,24 @@ function configureCustomerMenu(){
  document.querySelector('.profile-copy small').textContent=portalRole==='firm'?'Firm':'Client';
  const settings=document.querySelector('#profile-menu [data-section=settings]');if(settings)settings.hidden=!menu().some(x=>x[0]==='settings');
  refreshIcons();
+}
+function displaySectionError(panel,error){
+ if(!panel.isConnected)return;
+ const message=document.createElement('p');message.setAttribute('role','alert');message.textContent='Unable to load this section. Please try again.';panel.append(message);
+ console.error('Dashboard section failed',error);
+}
+async function renderBusiness(panel,...args){
+ try{const module=await import('./business-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+}
+async function renderWorkspace(panel,...args){
+ try{const module=await import('./firm-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
+}
+async function appendDocumentUploads(panel,headingText){
+ try{const module=await import('./document-upload.js?v=dashboardfix2');if(!panel.isConnected)return;
+ if(headingText){const heading=document.createElement('h3');heading.textContent=headingText;panel.append(heading);}
+ const history=module.createUploadedDocuments(currentUser);
+ panel.append(module.createDocumentForm(currentUser,history.refresh),history.element);void history.refresh();
+ }catch(e){displaySectionError(panel,e);}
 }
 async function firmApi(payload){
  const response=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await currentUser.getIdToken()},body:JSON.stringify(payload),cache:'no-store',signal:AbortSignal.timeout(15000)});
@@ -201,10 +216,7 @@ function showSection(section,prefill={}) {
   if(portalRole==='customer'&&['services','documents','filings','billing','support','profile','notifications'].includes(section)) {
     p.remove();void renderBusiness(panel,section,{api:firmApi,user:currentUser,go:showSection,prefill});
     if(section==='documents'){
-      const heading=document.createElement('h3');heading.textContent='General Document Upload';
-      const history=createUploadedDocuments(currentUser);
-      panel.append(heading,createDocumentForm(currentUser,history.refresh),history.element);
-      void history.refresh();
+      void appendDocumentUploads(panel,'General Document Upload');
     }
   } else if (section === 'services') {
     if(accountType!=='business')createServicesWorkspace(panel);else{const list=document.createElement('p');list.textContent='GST · Income Tax · TDS · Compliance';panel.append(list);}
@@ -218,9 +230,7 @@ function showSection(section,prefill={}) {
     void renderFirmRecords(panel,section);
     if(section==='support'){const link=document.createElement('a');link.href='/contact.html';link.textContent='Contact support';link.className='action';panel.append(link);}
   } else if (section === 'documents') {
-    const history=createUploadedDocuments(currentUser);
-    panel.append(createDocumentForm(currentUser,history.refresh),history.element);
-    void history.refresh();
+    void appendDocumentUploads(panel);
   } else if (section === 'profile') {
     p.textContent = 'Your Firebase account information';
     const dl = document.createElement('dl'); dl.className = 'profile-grid';
@@ -259,32 +269,53 @@ async function checkOtpSession(){
 }
 setInterval(()=>{if(!document.hidden)void checkOtpSession();},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkOtpSession();});
+let authGeneration=0;
+function showLoginFailure(message){
+ currentUser=null;app.style.display='none';loading.hidden=false;
+ loading.replaceChildren();
+ const box=document.createElement('div');box.style.cssText='max-width:480px;padding:24px;text-align:center';
+ const title=document.createElement('h2');title.textContent='Unable to open dashboard';
+ const p=document.createElement('p');p.textContent=message;
+ const retry=document.createElement('button');retry.type='button';retry.className='action';retry.textContent='Try again';retry.onclick=()=>location.reload();
+ const login=document.createElement('a');login.href='/login.html';login.className='action primary';login.textContent='Back to Login';login.style.marginLeft='10px';
+ box.append(title,p,retry,login);loading.append(box);
+ clearTimeout(window.__gstDashboardWatchdog);
+}
 onAuthStateChanged(auth, async user => {
+  const generation=++authGeneration;
   if (!user) { window.location.replace('/login.html'); return; }
   try {
-    const roleResponse=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'identify'}),cache:'no-store'});
-    const role=await roleResponse.json();if(!roleResponse.ok)throw Error('Role check failed');
+    const token=await user.getIdToken();
+    const headers={'Content-Type':'application/json',Authorization:'Bearer '+token};
+    const roleResponse=await fetch('/api/roles',{method:'POST',headers,body:JSON.stringify({action:'identify'}),cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(15000)});
+    const role=await roleResponse.json().catch(()=>({}));
+    if(!roleResponse.ok)throw Object.assign(Error(role.error||'Account verification failed. Please sign in again.'),{authorization:roleResponse.status===401||roleResponse.status===403});
+    if(generation!==authGeneration)return;
     if(role.role==='admin'){window.location.replace('/admin.html');return;}
-    if(!['customer','firm'].includes(role.role))throw Error('Access denied');portalRole=role.role;
-    accountType=role.accountType||'legacy';customerProfile=role.profile||null;
-    const result=await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({action:'status'}),cache:'no-store'});
-    const status=await result.json();
-    if(!result.ok||status.verified!==true)throw new Error('Login verification required');
-     scheduleOtpExpiry(user,status);
-  } catch {
-    await signOut(auth);
-    window.location.replace('/login.html');
-    return;
+    if(!['customer','firm'].includes(role.role))throw Object.assign(Error('Access denied'),{authorization:true});
+    const result=await fetch('/api/otp',{method:'POST',headers,body:JSON.stringify({action:'status'}),cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(15000)});
+    const status=await result.json().catch(()=>({}));
+    if(!result.ok)throw Object.assign(Error(status.error||'Login verification service is unavailable.'),{authorization:result.status===401||result.status===403});
+    if(status.verified!==true)throw Object.assign(Error('Login verification required. Please sign in again.'),{authorization:true});
+    if(generation!==authGeneration)return;
+    portalRole=role.role;accountType=role.accountType||'legacy';customerProfile=role.profile||null;
+    currentUser=user;
+    const name=user.displayName?.trim()||user.email?.split('@')[0]||'Customer';
+    document.getElementById('top-name').textContent=name;
+    document.getElementById('menu-name').textContent=name;
+    document.getElementById('menu-email').textContent=user.email||'';
+    document.getElementById('avatar').textContent=name.charAt(0).toUpperCase();
+    configureCustomerMenu();showSection('overview');
+    app.style.display='block';loading.hidden=true;
+    clearTimeout(window.__gstDashboardWatchdog);
+    scheduleOtpExpiry(user,status);
+  }catch(e){
+    if(generation!==authGeneration)return;
+    console.error('Dashboard authentication or initialization failed',e);
+    if(e.authorization){try{await signOut(auth);}catch{}window.location.replace('/login.html');return;}
+    showLoginFailure(e.name==='TimeoutError'||e.name==='AbortError'?'Verification timed out. Check your connection and try again.':'The dashboard could not finish loading. Please try again or sign in again.');
   }
-  currentUser = user;
-  const name = user.displayName?.trim() || user.email?.split('@')[0] || 'Customer';
-  document.getElementById('top-name').textContent = name;
-  document.getElementById('menu-name').textContent = name;
-  document.getElementById('menu-email').textContent = user.email || '';
-  document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
-  app.style.display = 'block'; loading.hidden = true;
-  configureCustomerMenu();showSection('overview');
-}, () => { window.location.replace('/login.html'); });
+},()=>showLoginFailure('Authentication could not be initialized. Please try again.'));
 document.getElementById('navigation').addEventListener('click', e => {
   const target = e.target.closest('[data-section]'); if(target) showSection(target.dataset.section);
 });
