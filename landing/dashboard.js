@@ -1,5 +1,5 @@
-import { renderBusiness } from './business-workspace.js';
-import { renderWorkspace } from './firm-workspace.js?v=no-refresh1';
+import { renderBusiness } from './business-workspace.js?v=remove1';
+import { renderWorkspace } from './firm-workspace.js?v=remove1';
 import { createDocumentForm, createUploadedDocuments } from './document-upload.js?v=remove1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
