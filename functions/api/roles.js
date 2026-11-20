@@ -1,3 +1,4 @@
+import {workspace} from '../lib/firm-workspace.js';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
 const sections=['Assigned Clients','My Tasks','Service Management','Document Review','Filing & Updates','Invoices & Payments','Client Support','Notifications'];
@@ -107,6 +108,11 @@ export async function onRequestPost({request,env}){
  }
  return json({error:'Invalid admin action'},400);
  }
+ if(String(b.action||'').startsWith('workspace')){
+ const firm=!admin&&await isFirm(db,u.localId,email);
+ if(!admin&&!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
+ return await workspace({db,b,u,firm,admin});
+ }
  if(admin||!await isFirm(db,u.localId,email))return json({error:'Firm access required'},403);
  if(!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
  if(b.action==='firmCompanies'){
@@ -130,3 +136,4 @@ export async function onRequestPost({request,env}){
  return json({error:'Invalid action'},400);
  }catch{return json({error:'Role service unavailable'},503);}
 }
+export {identity,policy,otpVerified,isFirm};
