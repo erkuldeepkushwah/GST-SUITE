@@ -105,34 +105,6 @@ async function renderCompanyDirectory(panel){
  search.oninput=draw;filter.onchange=draw;more.onclick=load;await load();
 }
 async function showAssignedClient(panel,record){
- const clientUid=String(record.id||'').startsWith('client:')?record.id.slice(7):'';
- if(!clientUid)return;
- panel.querySelector('.assigned-client-detail')?.remove();
- const detail=document.createElement('section');detail.className='assigned-client-detail';detail.style.cssText='margin:20px 0;padding:20px;border:1px solid #dbe5f1;border-radius:12px;background:#fff';
- const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap';
- const heading=document.createElement('h3');heading.textContent='Client Details';heading.tabIndex=-1;
- const close=document.createElement('button');close.type='button';close.className='action';close.textContent='Close details';close.onclick=()=>detail.remove();
- header.append(heading,close);detail.append(header);
- const loading=document.createElement('p');loading.setAttribute('role','status');loading.textContent='Loading client details…';detail.append(loading);
- panel.append(detail);heading.focus({preventScroll:true});detail.scrollIntoView({block:'nearest',behavior:'smooth'});
- try{
- const {profile,orders}=await firmApi({action:'workspaceAssignedClient',clientUid});if(!detail.isConnected)return;
- loading.remove();heading.textContent=profile.business_name||profile.name||'Client Details';
- const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0';
- for(const [label,value] of [['Client Name',profile.name],['Mobile Number',profile.mobile],['Email Address',profile.email],['Business Name',profile.business_name],['GSTIN',profile.gstin],['Assignment Status',profile.assignment_status]]){
- const item=document.createElement('div');item.style.cssText='background:#f8fafc;border:1px solid #e8edf4;border-radius:8px;padding:12px;min-width:0';
- const k=document.createElement('div');k.style.cssText='font-size:12px;color:#64748b;margin-bottom:6px';k.textContent=label;
- const v=document.createElement('strong');v.style.cssText='overflow-wrap:anywhere;font-size:14px';v.textContent=value||'Not provided';item.append(k,v);grid.append(item);
- }detail.append(grid);
- const servicesTitle=document.createElement('h3');servicesTitle.textContent='Booked Services ('+orders.length+')';detail.append(servicesTitle);
- if(!orders.length){const empty=document.createElement('p');empty.textContent='No booked services yet.';detail.append(empty);return;}
- const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';
- const head=table.createTHead().insertRow();for(const label of ['Service','Filing Period','Due / Requested Date','Date Type','Status','Booked On']){const th=document.createElement('th');th.textContent=label;th.style.cssText='background:#f4f8ff;padding:12px;white-space:nowrap';head.append(th);}
- const body=table.createTBody();for(const order of orders){const row=body.insertRow();for(const value of [order.service,order.period,order.due_date,order.due_date_source,order.status,order.created_at?new Date(order.created_at).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}):'—']){const td=row.insertCell();td.textContent=value||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}}
- wrap.append(table);detail.append(wrap);
- }catch(e){if(detail.isConnected)loading.textContent=e.message||'Unable to load client details.';}
-}
-async function showAssignedClient(panel,record){
  const previous=panel.querySelector('.assigned-client-details');previous?.remove();
  const box=document.createElement('section');box.className='assigned-client-details';box.style.cssText='border:1px solid #dbe5f0;border-radius:12px;padding:16px;margin:18px 0;background:#fff';
  const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap';
