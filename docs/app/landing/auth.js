@@ -120,6 +120,9 @@ form.addEventListener('submit', async event => {
       const account=await signInWithEmailAndPassword(auth, email, password);
       if (account.user.email?.toLowerCase() === 'kuldeep@gmail.com') {
         try {
+          const role = await identifyRole(account.user);
+          if (role.role !== 'admin') throw Error('Admin access denied.');
+          if (!(await completeOtp(account.user))) return;
           const response = await fetch('/api/admin', {method:'POST',headers:{Authorization:'Bearer '+await account.user.getIdToken(true)},cache:'no-store',signal:AbortSignal.timeout(15000)});
           const admin = await response.json();
           if (!response.ok || admin.authorized !== true) throw new Error(admin.error || 'Admin access denied.');
@@ -151,7 +154,7 @@ async function identifyRole(user){
 async function otpApi(action, data={}, authenticated=true) {
   const headers={'Content-Type':'application/json'};
   if(authenticated) headers.Authorization='Bearer '+await auth.currentUser.getIdToken();
-  const r=await fetch('/api/otp',{method:'POST',headers,body:JSON.stringify({action,...data}),signal:AbortSignal.timeout(15000)});
+  const r=await fetch('/api/otp',{method:'POST',headers,body:JSON.stringify({action,...data}),signal:AbortSignal.timeout(action==='send'?30000:15000)});
   const result=await r.json();
   if(!r.ok) throw Object.assign(new Error('OTP request failed'),{otpMessage:result.error||'Unable to complete verification'});
   return result;
