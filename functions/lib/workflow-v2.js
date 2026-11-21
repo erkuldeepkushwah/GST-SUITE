@@ -190,10 +190,13 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
   if(!payment)return json({error:'Pending payment not found'},404);
   const decision=plain(b.decision,20),receipt=plain(b.receiptNote,300);
   if(!['Verified','Rejected'].includes(decision)||receipt.length<5)return json({error:'Verification decision and evidence note required'},400);
+   if(decision==='Verified'&&order.payment_verified_at)return json({error:'Payment has already been verified for this booking'},409);
+   if(decision==='Verified'&&['CANCELLED','COMPLETED'].includes(order.status))return json({error:'Cannot verify payment for a closed booking'},409);
   const quote=await one(db,'SELECT version,amount_paise FROM workflow_quote_versions WHERE order_id=? ORDER BY version DESC LIMIT 1',id);
   if(!quote||quote.version!==payment.quote_version||quote.amount_paise!==payment.amount_paise)return json({error:'Payment is tied to an outdated quote'},409);
-  await db.prepare('UPDATE workflow_payments SET status=?,verified_by=?,verified_at=?,receipt_note=? WHERE id=? AND status=\'Submitted\'')
+  const verification=await db.prepare('UPDATE workflow_payments SET status=?,verified_by=?,verified_at=?,receipt_note=? WHERE id=? AND status=\'Submitted\'')
     .bind(decision,uid,now,receipt,payment.id).run();
+  if(!verification.meta.changes)return json({error:'Payment was already reviewed; refresh booking'},409);
   if(decision==='Verified'){
    const docs=await many(db,"SELECT f.id,COALESCE(r.status,'Pending') AS status FROM firm_order_files f LEFT JOIN workflow_document_reviews r ON r.file_id=f.id WHERE f.order_id=? AND f.kind='Document'",id);
    const verifiedDocs=docs.length>0&&docs.every(x=>x.status==='Verified');

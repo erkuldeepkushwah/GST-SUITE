@@ -41,10 +41,13 @@ export async function onRequestPost({request,env}){
  const form=await request.formData(),orderId=String(form.get('orderId')||''),ticketId=String(form.get('ticketId')||''),file=form.get('file'),kind=String(form.get('kind')||'Document');
  const uploadOrder=ticketId?null:await ownedOrder(db,uid,orderId,firm,admin);
  if(ticketId?!await ticketAccess(ticketId):!uploadOrder)return json({error:'Record unavailable'},403);
- if(!['Document','Final file'].includes(kind)||kind==='Final file'&&!admin&&!(firm&&uploadOrder.firm_uid===uid&&uploadOrder.firm_uid!==uploadOrder.client_uid))return json({error:'Final return requires assigned firm or admin'},403);
+ if(ticketId&&kind!=='Document')return json({error:'Ticket attachments must be supporting documents'},400);
+ if(!['Document','Final file'].includes(kind)||kind==='Final file'&&!admin&&!(firm&&uploadOrder?.firm_uid===uid&&uploadOrder?.firm_uid!==uploadOrder?.client_uid))return json({error:'Final return requires assigned firm or admin'},403);
+ if(!ticketId&&kind==='Final file'&&['COMPLETED','CANCELLED'].includes(uploadOrder.status))return json({error:'Final file upload closed after booking completion or cancellation'},409);
  if(!ticketId&&kind==='Final file'&&!admin&&!['IN_PROGRESS','FILED_PENDING_REVIEW'].includes(uploadOrder.status))return json({error:'Start filing before uploading final return'},409);
  if(!ticketId&&kind==='Document'&&['IN_PROGRESS','FILED_PENDING_REVIEW','COMPLETED','CANCELLED'].includes(uploadOrder.status))return json({error:'Supporting uploads closed at this stage'},409);
  if(!(file instanceof File)||!file.size||file.size>10*1024*1024||!/\.(pdf|jpe?g|png|csv|xlsx?)$/i.test(file.name))return json({error:'Attach a supported file up to 10 MB'},400);
+ if(kind==='Final file'&&(!/\.pdf$/i.test(file.name)||(file.type&&file.type!=='application/pdf')))return json({error:'Final return must be a PDF document'},400);
  const id=crypto.randomUUID(),name=file.name.replace(/[\u0000-\u001f]/g,'').slice(0,180),boundary=crypto.randomUUID(),t=await token();
  // Reuse existing secured Other Documents folder. Files are never made public by this endpoint.
  const metadata=JSON.stringify({name:'order-'+id+'-'+name,parents:['1Ez-ghoCwpDgHM-u78qbqrPPyMp0p581R']});

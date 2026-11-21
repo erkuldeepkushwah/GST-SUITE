@@ -18,6 +18,7 @@ const db={
      if(sql.includes('SELECT * FROM firm_service_orders WHERE id'))return active;
      if(sql.includes('SELECT a.uid,a.email FROM portal_accounts'))return {uid:params[0],email:'old@example.test'};
      if(sql.includes('workflow_quote_versions'))return null;
+     if(sql.includes('SELECT * FROM workflow_payments WHERE'))return {id:params[0],order_id:params[1],status:'Submitted'};
      throw Error('Unexpected query: '+sql.slice(0,110));
     },
     async all(){return {results:[]};},
@@ -57,6 +58,25 @@ assert.equal(response.status,409,'Admin cannot approve without submitted filing'
 active={...active,firm_uid:active.client_uid};
 response=await workflow({db,u:firmUser,firm:true,admin:false,b:{action:'workflowStartFiling',orderId:'test-order'}});
 assert.equal(response.status,404,'Unassigned firm cannot access client booking');
+active={id:'test-order',firm_uid:'test-firm',client_uid:'test-client',status:'AWAITING_DOCUMENTS',payment_verified_at:Date.now(),updated_at:Date.now()};
+response=await workflow({db,u:admin,firm:false,admin:true,b:{action:'workflowPaymentVerify',orderId:'test-order',paymentId:'second-payment',decision:'Verified',receiptNote:'Bank settlement confirmed'}});
+assert.equal(response.status,409,'Duplicate verified payment must be blocked');
+const conflictOrder={id:'test-order',client_uid:'test-client',firm_uid:'test-firm',status:'AWAITING_PAYMENT',payment_verified_at:null,updated_at:Date.now()};
+const conflictDb={prepare(sql){return {bind(...params){return {
+ async first(){
+  if(sql.includes('SELECT * FROM firm_service_orders'))return conflictOrder;
+  if(sql.includes('SELECT * FROM workflow_payments'))return {id:'payment-1',order_id:'test-order',status:'Submitted',quote_version:1,amount_paise:10000};
+  if(sql.includes('SELECT version,amount_paise FROM workflow_quote_versions'))return {version:1,amount_paise:10000};
+  throw Error('Unexpected payment lock query: '+sql.slice(0,90));
+ },
+ async run(){return {meta:{changes:0}};}
+};}};}};
+const locked=await workflow({db:conflictDb,u:admin,firm:false,admin:true,b:{
+ action:'workflowPaymentVerify',orderId:'test-order',paymentId:'payment-1',
+ decision:'Verified',receiptNote:'Confirmed in bank statement'
+}});
+assert.equal(locked.status,409,'Concurrent payment review must not report success if another reviewer changed its status');
+
 console.log('[workflow-v2] booking validation, role isolation, payment gate, final approval and filter checks passed');
 
 import {liveWorkflowFirmOptions} from '../functions/lib/live-accounts.js';

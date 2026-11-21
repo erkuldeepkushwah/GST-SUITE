@@ -48,6 +48,8 @@ execFileSync(process.execPath,['tests/portal-regression.mjs'],{stdio:'inherit'})
 execFileSync(process.execPath,['tests/workflow-v2.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['tests/contact-enquiries.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['tests/portal-fast-cache.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/portal-ui-regression.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/workspace-fast-regression.mjs'],{stdio:'inherit'});
 
 // 1. keep a browsable copy at /landing/
 mkdirSync(join(DIST, 'landing'), { recursive: true });

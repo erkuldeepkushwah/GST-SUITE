@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {allowedOrderUploadKinds} from '../landing/firm-workspace.js';
+const order={id:'test',firm_uid:'assigned-firm',client_uid:'client',status:'IN_PROGRESS'};
+const available=(id,admin=false,o=order)=>allowedOrderUploadKinds(o,id,admin).map(x=>x[0]);
+assert.deepEqual(available('client'),[],'Client cannot upload supporting files after filing begins');
+assert.deepEqual(available('other-firm'),[],'Unassigned firm cannot upload during filing');
+assert.deepEqual(available('assigned-firm'),['Final file'],'Assigned firm can submit final PDF after filing starts');
+assert.deepEqual(available('assigned-firm',false,{...order,status:'FILED_PENDING_REVIEW'}),['Final file'],'Firm may update PDF pending review');
+assert.deepEqual(available('assigned-firm',false,{...order,status:'SUBMITTED'}),['Document'],'Firm cannot submit final file before filing');
+assert.deepEqual(available('assigned-firm',false,{...order,status:'COMPLETED'}),[],'No uploads after completion');
+assert.deepEqual(available('admin',true),['Final file'],'Admin can upload final PDF during filing');
+assert.deepEqual(available('admin',true,{...order,status:'COMPLETED'}),[],'Completed booking files are immutable');
+console.log('[portal UI] final PDF picker enforces assigned firm and filing stage');

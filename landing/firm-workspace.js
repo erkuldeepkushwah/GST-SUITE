@@ -19,12 +19,23 @@ function table(target,headers,rows){
 }
 function downloadText(name,text){const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 export async function orderFileFetch(user,body){const changesFiles=body instanceof FormData||body?.action==='remove';const headers={Authorization:'Bearer '+await user.getIdToken()};if(!(body instanceof FormData)){headers['Content-Type']='application/json';body=JSON.stringify(body);}const r=await fetch('/api/order-files',{method:'POST',headers,body,cache:'no-store'});if(!r.ok){const j=await r.json().catch(()=>null);throw Error(j?.error||'File request failed');}if(changesFiles)clearPortalApiCache();return r;}
+// Match the upload picker to the server-side assigned-firm permissions.
+export function allowedOrderUploadKinds(order,userUid,admin=false){
+ const assigned=Boolean(!admin&&userUid&&order?.firm_uid===userUid&&order?.firm_uid!==order?.client_uid);
+ const closed=['COMPLETED','CANCELLED'].includes(order?.status);
+ const documentAllowed=!['IN_PROGRESS','FILED_PENDING_REVIEW','COMPLETED','CANCELLED'].includes(order?.status);
+ const finalAllowed=!closed&&(admin||(assigned&&['IN_PROGRESS','FILED_PENDING_REVIEW'].includes(order?.status)));
+ return [...(documentAllowed?[['Document','Supporting document']]:[]),...(finalAllowed?[['Final file','Final return PDF']]:[])];
+}
 export async function showOrderFiles(panel,order,api,user,admin=false){
  panel.querySelector('.order-file-box')?.remove();const box=el('div',undefined,'order-file-box');box.style.cssText='padding:16px;border:1px solid #dbe5f0;border-radius:10px;margin-top:16px';panel.append(box);box.append(el('h3',order.service+' — '+order.client_name));const msg=el('p','Loading files…');box.append(msg);
  const file=el('input');file.type='file';file.accept='.pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls';
- const kind=select(admin?[['Document','Supporting document'],['Final file','Final file']]:[['Document','Supporting document']]);
+ const kind=select(allowedOrderUploadKinds(order,user?.uid,admin));
+ kind.onchange=()=>{file.accept=kind.value==='Final file'?'.pdf':'.pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls';file.value='';};
  const list=el('div');const upload=btn('Upload',async()=>{if(!file.files.length){msg.textContent='Choose a file first.';return;}upload.disabled=true;try{const fd=new FormData();fd.append('orderId',order.id);fd.append('kind',kind.value);fd.append('file',file.files[0]);await orderFileFetch(user,fd);file.value='';await load();msg.textContent='File uploaded.';}catch(e){msg.textContent=e.message;}finally{upload.disabled=false;}},true);
- box.append(field('File type',kind),field('Attach file (up to 10 MB)',file),upload,list,btn('Close',()=>box.remove()));
+ if(kind.options.length)box.append(field('File type',kind),field('Attach file (up to 10 MB)',file),upload);
+ else box.append(el('p','Uploads are closed for this filing stage. Existing files can still be viewed.'));
+ box.append(list,btn('Close',()=>box.remove()));
  async function load(){const {rows}=await api({action:'workspaceFiles',orderId:order.id});list.replaceChildren();table(list,['File','Type','Date','Action'],rows.map(f=>{
  const actions=el('div');const download=btn('Download',async()=>{try{const r=await orderFileFetch(user,{id:f.id});const url=URL.createObjectURL(await r.blob());const a=el('a');a.href=url;a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){msg.textContent=e.message;}});actions.append(download);
  if(f.canRemove&&!admin){const remove=btn('Remove',async()=>{if(!confirm('Remove this supporting document from the order?'))return;remove.disabled=download.disabled=true;try{await orderFileFetch(user,{action:'remove',id:f.id});await load();msg.textContent='Document removed from order.';}catch(e){msg.textContent=e.message;}finally{remove.disabled=download.disabled=false;}});remove.style.color='#b91c1c';actions.append(remove);}
