@@ -95,7 +95,7 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
  if(action==='workflowAdminOrders'){
   if(!admin)return json({error:'Admin only'},403);
   const [orders,candidates]=await Promise.all([
-    many(db,"SELECT o.*,c.email AS client_email,f.email AS assigned_email,(SELECT MAX(version) FROM workflow_quote_versions q WHERE q.order_id=o.id) AS quote_version,(SELECT q.amount_paise FROM workflow_quote_versions q WHERE q.order_id=o.id ORDER BY q.version DESC LIMIT 1) AS quote_amount_paise,(SELECT p.status FROM workflow_payments p WHERE p.order_id=o.id ORDER BY p.submitted_at DESC LIMIT 1) AS latest_payment_status FROM firm_service_orders o LEFT JOIN portal_accounts c ON c.uid=o.client_uid LEFT JOIN portal_accounts f ON f.uid=o.firm_uid ORDER BY o.created_at DESC LIMIT 300"),
+    many(db,'SELECT o.*,c.email AS client_email,f.email AS assigned_email, (SELECT MAX(version) FROM workflow_quote_versions q WHERE q.order_id=o.id) AS quote_version FROM firm_service_orders o LEFT JOIN portal_accounts c ON c.uid=o.client_uid LEFT JOIN portal_accounts f ON f.uid=o.firm_uid ORDER BY o.created_at DESC LIMIT 300'),
     many(db,"SELECT a.uid,a.email,COALESCE(NULLIF(TRIM(c.firm_name),''),NULLIF(TRIM(c.name),''),NULLIF(TRIM(a.name),''),a.email) AS name,CASE WHEN c.account_type='professional' THEN 'professional' ELSE 'staff' END AS kind FROM portal_accounts a LEFT JOIN customer_profiles c ON c.uid=a.uid LEFT JOIN staff_roles s ON s.uid=a.uid LEFT JOIN account_policy p ON p.uid=a.uid WHERE ((s.uid IS NOT NULL AND LOWER(TRIM(s.email))=LOWER(TRIM(a.email))) OR c.account_type='professional') AND COALESCE(p.active,1)=1 AND a.uid<>? ORDER BY a.email LIMIT 500",ADMIN)
   ]);
   // Portal accounts can retain old UIDs after Firebase users are deleted and re-registered.
@@ -167,30 +167,24 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
   if(!admin)return json({error:'Admin only'},403);
   const amount=Number(b.amountPaise);
   if(!Number.isSafeInteger(amount)||amount<100||amount>1e11)return json({error:'Enter a valid quote amount'},400);
-  if(['COMPLETED','CANCELLED','ON_HOLD'].includes(order.status)||order.payment_verified_at||order.final_approved_at)
-   return json({error:'Quote cannot be revised after final approval, payment or closure'},409);
-  const unresolved=await one(db,"SELECT id FROM workflow_payments WHERE order_id=? AND status='Submitted' LIMIT 1",id);
-  if(unresolved)return json({error:'Verify or reject the existing payment reference before revising this quote'},409);
+  if(['COMPLETED','CANCELLED','IN_PROGRESS','FILED_PENDING_REVIEW'].includes(order.status)||order.payment_verified_at)return json({error:'Quote cannot be revised after verified payment or filing'},409);
   const previous=await one(db,'SELECT MAX(version) AS version FROM workflow_quote_versions WHERE order_id=?',id),version=Number(previous?.version||0)+1;
   const q=await db.prepare('INSERT INTO workflow_quote_versions(id,order_id,version,amount_paise,approved_by,created_at) VALUES(?,?,?,?,?,?)')
    .bind(crypto.randomUUID(),id,version,amount,uid,now).run();
   if(!q.meta.changes)return json({error:'Quote was not saved'},503);
-  // Quote approval must not request payment before filing work and Admin review.
-  const next=order.status==='AWAITING_PAYMENT'&&!order.final_approved_at?
-   (order.firm_uid===order.client_uid?'SUBMITTED':'UNDER_REVIEW'):order.status;
   await db.batch([
-   db.prepare("UPDATE firm_billing SET amount_paise=?,status='Awaiting final approval',updated_at=? WHERE order_id=? AND kind='Service'").bind(amount,now,id),
-   db.prepare('UPDATE firm_service_orders SET status=?,updated_at=? WHERE id=?').bind(next,now,id)
+   db.prepare("UPDATE firm_billing SET amount_paise=?,status='Payment pending',updated_at=? WHERE order_id=? AND kind='Service'").bind(amount,now,id),
+   db.prepare("UPDATE firm_service_orders SET status='AWAITING_PAYMENT',updated_at=? WHERE id=?").bind(now,id),
+   db.prepare("UPDATE workflow_payments SET status='Rejected',receipt_note='Superseded quote' WHERE order_id=? AND status='Submitted'").bind(id)
   ]);
-  await audit(db,id,uid,'QUOTE_APPROVED_V'+version,order.status,next,'Quote prepared; payment requested after final review. Amount paise: '+amount);
-  await notify(db,order.client_uid,id,'Quote recorded: '+order.service+' · INR '+(amount/100).toFixed(2)+'. Payment is due only after work approval.');
-  return json({saved:true,version,status:next});
+  await audit(db,id,uid,'QUOTE_APPROVED_V'+version,order.status,'AWAITING_PAYMENT','Amount paise: '+amount);
+  await notify(db,order.client_uid,id,'Quote approved: '+order.service+' · INR '+(amount/100).toFixed(2)+'. Payment confirmation required.');
+  return json({saved:true,version,status:'AWAITING_PAYMENT'});
  }
  if(action==='workflowPaymentSubmit'){
   if(admin||firm&&order.client_uid!==uid)return json({error:'Client only'},403);
   if(order.client_uid!==uid)return json({error:'Only the client can submit payment details'},403);
   if(order.payment_verified_at)return json({error:'Payment is already verified'},409);
-  if(order.status!=='AWAITING_PAYMENT'||!order.final_approved_at)return json({error:'Payment is requested only after firm work and final Admin approval'},409);
   const quote=await one(db,'SELECT version,amount_paise FROM workflow_quote_versions WHERE order_id=? ORDER BY version DESC LIMIT 1',id);
   if(!quote)return json({error:'Admin quote is required before payment'},409);
   const ref=plain(b.transactionRef,100),method=plain(b.method,40);
@@ -207,36 +201,26 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
   const payment=await one(db,"SELECT * FROM workflow_payments WHERE id=? AND order_id=? AND status='Submitted'",plain(b.paymentId,100),id);
   if(!payment)return json({error:'Pending payment not found'},404);
   const decision=plain(b.decision,20),receipt=plain(b.receiptNote,300);
-  if(!['Verified','Rejected'].includes(decision)||receipt.length<5)return json({error:'Verification decision and independent evidence note required'},400);
-  if(decision==='Verified'&&(order.payment_verified_at||order.status!=='AWAITING_PAYMENT'||!order.final_approved_at))
-   return json({error:'Only finally approved, unpaid bookings can receive verified payment'},409);
+  if(!['Verified','Rejected'].includes(decision)||receipt.length<5)return json({error:'Verification decision and evidence note required'},400);
+   if(decision==='Verified'&&order.payment_verified_at)return json({error:'Payment has already been verified for this booking'},409);
+   if(decision==='Verified'&&['CANCELLED','COMPLETED'].includes(order.status))return json({error:'Cannot verify payment for a closed booking'},409);
   const quote=await one(db,'SELECT version,amount_paise FROM workflow_quote_versions WHERE order_id=? ORDER BY version DESC LIMIT 1',id);
-  if(!quote||quote.version!==payment.quote_version||quote.amount_paise!==payment.amount_paise)
-   return json({error:'Payment is tied to an outdated quote'},409);
-  if(decision==='Rejected'){
-   const r=await db.prepare("UPDATE workflow_payments SET status='Rejected',verified_by=?,verified_at=?,receipt_note=? WHERE id=? AND order_id=? AND status='Submitted'")
-    .bind(uid,now,receipt,payment.id,id).run();
-   if(!r.meta.changes)return json({error:'Payment already reviewed; refresh booking'},409);
-   await audit(db,id,uid,'PAYMENT_REJECTED',order.status,order.status,receipt);
-   await notify(db,order.client_uid,id,'Payment reference rejected for '+order.service+'. Please resubmit.');
-   return json({saved:true,status:'Rejected'});
-  }
-  // D1 batch executes atomically. Claim the unpaid booking before marking its specific
-  // payment Verified, preventing double completion from concurrent verification.
-  const results=await db.batch([
-   db.prepare("UPDATE firm_service_orders SET status='COMPLETED',payment_verified_at=?,updated_at=? WHERE id=? AND status='AWAITING_PAYMENT' AND final_approved_at IS NOT NULL AND payment_verified_at IS NULL AND updated_at=? AND EXISTS(SELECT 1 FROM workflow_payments WHERE id=? AND order_id=? AND status='Submitted')")
-    .bind(now,now,id,order.updated_at,payment.id,id),
-   db.prepare("UPDATE workflow_payments SET status='Verified',verified_by=?,verified_at=?,receipt_note=? WHERE id=? AND order_id=? AND status='Submitted' AND EXISTS(SELECT 1 FROM firm_service_orders WHERE id=? AND status='COMPLETED' AND payment_verified_at=?)")
-    .bind(uid,now,receipt,payment.id,id,id,now),
-   db.prepare("UPDATE firm_billing SET status='Paid',updated_at=? WHERE order_id=? AND kind='Service' AND EXISTS(SELECT 1 FROM workflow_payments WHERE id=? AND order_id=? AND status='Verified')")
-    .bind(now,id,payment.id,id)
-  ]);
-  if(!results[0].meta.changes||!results[1].meta.changes)
-   return json({error:'Payment or booking changed; refresh and retry'},409);
-  await audit(db,id,uid,'PAYMENT_VERIFIED_OFFLINE',order.status,'COMPLETED',receipt);
-  await notify(db,order.client_uid,id,'Payment verified for '+order.service+'. Service complete.');
-  if(order.firm_uid!==order.client_uid)await notify(db,order.firm_uid,id,'Payment verified; booking completed: '+order.service);
-  return json({saved:true,status:'COMPLETED',paymentStatus:'Paid'});
+  if(!quote||quote.version!==payment.quote_version||quote.amount_paise!==payment.amount_paise)return json({error:'Payment is tied to an outdated quote'},409);
+  const verification=await db.prepare('UPDATE workflow_payments SET status=?,verified_by=?,verified_at=?,receipt_note=? WHERE id=? AND status=\'Submitted\'')
+    .bind(decision,uid,now,receipt,payment.id).run();
+  if(!verification.meta.changes)return json({error:'Payment was already reviewed; refresh booking'},409);
+  if(decision==='Verified'){
+   const docs=await many(db,"SELECT f.id,COALESCE(r.status,'Pending') AS status FROM firm_order_files f LEFT JOIN workflow_document_reviews r ON r.file_id=f.id WHERE f.order_id=? AND f.kind='Document'",id);
+   const verifiedDocs=docs.length>0&&docs.every(x=>x.status==='Verified');
+   const next=verifiedDocs?'DOCUMENTS_VERIFIED':'AWAITING_DOCUMENTS';
+   await db.batch([
+    db.prepare("UPDATE firm_service_orders SET status=?,payment_verified_at=?,document_verified_at=COALESCE(document_verified_at,?),updated_at=? WHERE id=?").bind(next,now,verifiedDocs?now:null,now,id),
+    db.prepare("UPDATE firm_billing SET status='Paid',updated_at=? WHERE order_id=? AND kind='Service'").bind(now,id)
+   ]);
+   await audit(db,id,uid,'PAYMENT_VERIFIED_OFFLINE',order.status,next,receipt);
+   await notify(db,order.client_uid,id,'Payment verified for '+order.service+'. Upload required documents.');
+  }else await audit(db,id,uid,'PAYMENT_REJECTED',order.status,order.status,receipt);
+  return json({saved:true});
  }
  if(action==='workflowReviewDocument'){
   if(!requireAssigned(order,uid,firm))return json({error:'Assigned firm only'},403);
@@ -249,7 +233,7 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
     .bind(file.id,id,result,uid,now,note).run();
   const docs=await many(db,"SELECT f.id,COALESCE(r.status,'Pending') AS status FROM firm_order_files f LEFT JOIN workflow_document_reviews r ON r.file_id=f.id WHERE f.order_id=? AND f.kind='Document'",id);
   const allVerified=docs.length>0&&docs.every(x=>x.status==='Verified');
-  const next=result==='Rejected'?'AWAITING_DOCUMENTS':allVerified?'DOCUMENTS_VERIFIED':order.status;
+  const next=result==='Rejected'?'AWAITING_DOCUMENTS':allVerified&&order.payment_verified_at?'DOCUMENTS_VERIFIED':order.status;
   await db.prepare('UPDATE firm_service_orders SET status=?,document_verified_at=?,updated_at=? WHERE id=?')
    .bind(next,allVerified?now:null,now,id).run();
   await audit(db,id,uid,'DOCUMENT_'+result.toUpperCase(),order.status,next,note||file.id);
@@ -259,10 +243,11 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
  }
  if(action==='workflowStartFiling'){
   if(!requireAssigned(order,uid,firm))return json({error:'Assigned firm only'},403);
+  if(!order.payment_verified_at)return json({error:'Payment must be independently verified before filing'},409);
   const docs=await many(db,"SELECT f.id,COALESCE(r.status,'Pending') AS status FROM firm_order_files f LEFT JOIN workflow_document_reviews r ON r.file_id=f.id WHERE f.order_id=? AND f.kind='Document'",id);
   if(!docs.length||docs.some(x=>x.status!=='Verified'))return json({error:'Every supporting document must be verified before filing'},409);
-  if(!['UNDER_REVIEW','QUOTE_APPROVED','DOCUMENTS_VERIFIED','AWAITING_DOCUMENTS','AWAITING_PAYMENT'].includes(order.status))return json({error:'This booking cannot start filing yet'},409);
-  const result=await change(db,order,'IN_PROGRESS',u,'FILING_STARTED','Firm work started; client payment follows final approval');
+  if(!['DOCUMENTS_VERIFIED','AWAITING_DOCUMENTS'].includes(order.status))return json({error:'This booking cannot start filing yet'},409);
+  const result=await change(db,order,'IN_PROGRESS',u,'FILING_STARTED','Payment and supporting documents verified');
   if(result.status===200)await notify(db,order.client_uid,id,'Filing in progress: '+order.service);
   return result;
  }
@@ -285,26 +270,19 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
  }
  if(action==='workflowFinalReview'){
   if(!admin)return json({error:'Admin only'},403);
-  if(order.status!=='FILED_PENDING_REVIEW')return json({error:'The filing is not pending Admin review'},409);
+  if(order.status!=='FILED_PENDING_REVIEW')return json({error:'The filing is not pending admin review'},409);
   const decision=plain(b.decision,20),note=plain(b.note,500);
   if(!['Approve','Rework'].includes(decision)||decision==='Rework'&&note.length<5)return json({error:'Review decision and rework reason required'},400);
-  if(!order.document_verified_at||!order.arn||!order.filing_date)return json({error:'Verified documents and filing reference are required'},409);
+  if(!order.payment_verified_at||!order.document_verified_at||!order.arn||!order.filing_date)return json({error:'Payment, documents and filing reference must be verified'},409);
   const final=await one(db,"SELECT id FROM firm_order_files WHERE order_id=? AND kind='Final file' LIMIT 1",id);
   if(!final)return json({error:'Final return PDF not uploaded'},409);
-  const quote=decision==='Approve'?await one(db,'SELECT version,amount_paise FROM workflow_quote_versions WHERE order_id=? ORDER BY version DESC LIMIT 1',id):null;
-  if(decision==='Approve'&&!quote)return json({error:'Approve service quote before releasing a client payment request'},409);
-  // Legacy orders with verified payment close immediately; new bookings pay at the end.
-  const next=decision==='Approve'?(order.payment_verified_at?'COMPLETED':'AWAITING_PAYMENT'):'IN_PROGRESS';
+  const next=decision==='Approve'?'COMPLETED':'IN_PROGRESS';
   const result=await change(db,order,next,u,decision==='Approve'?'FINAL_APPROVED':'REWORK_REQUESTED',note,{
    sql:'UPDATE firm_service_orders SET status=?,final_approved_at=?,final_approved_by=?,updated_at=? WHERE id=? AND updated_at=?',
    params:[next,decision==='Approve'?now:null,decision==='Approve'?uid:null,now,id,order.updated_at]
   });
   if(result.status===200){
-   if(decision==='Approve'){
-    await db.prepare("UPDATE firm_billing SET status=?,updated_at=? WHERE order_id=? AND kind='Service'")
-     .bind(next==='COMPLETED'?'Paid':'Payment pending',now,id).run();
-    await notify(db,order.client_uid,id,next==='COMPLETED'?'Final return approved. Service complete.':'Work approved. Please pay for '+order.service+' · INR '+(quote.amount_paise/100).toFixed(2));
-   }else await notify(db,order.client_uid,id,'Filing under review: rework requested.');
+   await notify(db,order.client_uid,id,decision==='Approve'?'Final return approved. Download is now available.':'Filing under review: rework requested.');
    if(order.firm_uid!==order.client_uid)await notify(db,order.firm_uid,id,decision==='Approve'?'Final filing approved by Admin.':'Admin requested filing rework: '+note);
   }
   return result;

@@ -1,6 +1,6 @@
 import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 import {clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
-import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=paylast2';
+import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=actionmenu1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);

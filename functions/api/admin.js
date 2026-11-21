@@ -34,17 +34,7 @@ export async function onRequestPost({request,env}){
  if(action==='dashboard'){
  const rows=(await db.prepare('SELECT module,status,COUNT(*) AS count,SUM(amount) AS amount FROM admin_records GROUP BY module,status').all()).results;
  const count=(m,s)=>rows.filter(r=>r.module===m&&(!s||r.status===s)).reduce((a,r)=>a+r.count,0);
- // Live client bookings and independently verified payments drive admin dashboard metrics.
- const [tasks,financial]=await Promise.all([
-  db.prepare("SELECT COUNT(*) AS total,SUM(CASE WHEN status NOT IN ('COMPLETED','CANCELLED') THEN 1 ELSE 0 END) AS active,SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,SUM(CASE WHEN status IN ('FILED_PENDING_REVIEW','AWAITING_PAYMENT','COMPLETED') AND substr(COALESCE(filing_date,''),1,7)=? THEN 1 ELSE 0 END) AS filed_month FROM firm_service_orders").bind(new Date(Date.now()+19800000).toISOString().slice(0,7)).first(),
-  db.prepare("SELECT COALESCE(SUM(CASE WHEN o.payment_verified_at IS NOT NULL THEN q.amount_paise ELSE 0 END),0) AS paid_paise,COALESCE(SUM(CASE WHEN o.status='AWAITING_PAYMENT' AND o.payment_verified_at IS NULL THEN q.amount_paise ELSE 0 END),0) AS due_paise FROM firm_service_orders o LEFT JOIN workflow_quote_versions q ON q.order_id=o.id AND q.version=(SELECT MAX(version) FROM workflow_quote_versions WHERE order_id=o.id)").first()
- ]);
- const inr=paise=>(Number(paise||0)/100).toLocaleString('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2});
- return respond({authorized:true,name:u.displayName||'Admin',metrics:{
-  customers:count('Customers'),services:count('Services & Masters','Active'),
-  tasks:Number(tasks?.active||0),filings:Number(tasks?.filed_month||0),
-  invoices:inr(financial?.due_paise),revenue:inr(financial?.paid_paise)
- }});
+ return respond({authorized:true,name:u.displayName||'Admin',metrics:{customers:count('Customers'),services:count('Services & Masters','Active'),tasks:count('Filing & Task Management','Pending'),filings:null,invoices:rows.filter(r=>r.module==='Invoices & Payments'&&r.status==='Pending').reduce((a,r)=>a+(r.amount||0),0),revenue:rows.filter(r=>r.module==='Invoices & Payments'&&r.status==='Paid').reduce((a,r)=>a+(r.amount||0),0)}});
  }
  if(action==='report')return respond({rows:(await db.prepare('SELECT module,status,COUNT(*) AS count,SUM(amount) AS amount FROM admin_records GROUP BY module,status ORDER BY module,status').all()).results});
  if(!modules.includes(input.module))return respond({error:'Invalid module'},400);

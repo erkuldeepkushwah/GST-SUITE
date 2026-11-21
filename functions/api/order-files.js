@@ -13,7 +13,7 @@ export async function onRequestPost({request,env}){
  const token=async()=>env.GST_GOOGLE_OAUTH_JSON?googleUserToken(env.GST_GOOGLE_OAUTH_JSON):googleToken(env.GST_GOOGLE_SERVICE_ACCOUNT_JSON);
  if(request.headers.get('Content-Type')?.includes('application/json')){
  const b=await request.json();const rec=await db.prepare(b.ticket===true?'SELECT * FROM portal_ticket_files WHERE id=?':'SELECT * FROM firm_order_files WHERE id=?').bind(String(b.id||'')).first();if(!rec||!(b.ticket===true?await ticketAccess(rec.ticket_id):await ownedOrder(db,uid,rec.order_id,firm,admin)))return json({error:'File unavailable'},404);
- if(b.ticket!==true&&rec.kind==='Final file'&&!admin&&!firm){const target=await ownedOrder(db,uid,rec.order_id,firm,false);if(!target?.final_approved_at||!target?.payment_verified_at||target.status!=='COMPLETED')return json({error:'Final return is available after final approval and verified payment'},403);}
+ if(b.ticket!==true&&rec.kind==='Final file'&&!admin&&!firm){const target=await ownedOrder(db,uid,rec.order_id,firm,false);if(!target?.final_approved_at)return json({error:'Final return awaits admin approval'},403);}
  if(b.action==='remove'){
  if(admin||b.ticket===true||rec.kind!=='Document'||rec.uploader_uid!==uid)return json({error:'Only your own supporting documents can be removed'},403);
  const order=await ownedOrder(db,uid,rec.order_id,firm,false);

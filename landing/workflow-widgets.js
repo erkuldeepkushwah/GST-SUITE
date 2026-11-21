@@ -16,28 +16,18 @@ function table(container,columns,data){
 }
 function pair(box,label,value){const p=el('p');p.style.margin='7px 0';p.append(el('strong',label+': '),el('span',value??'—'));box.append(p);}
 const safeAction=async(b,output,job)=>{b.disabled=true;output.textContent='Working…';try{await job();}catch(e){output.textContent=e?.message||'Request failed';}finally{b.disabled=false;}};
-const latestPayment=d=>d.payments?.[0]||null;
-const taskNames={SUBMITTED:'To Do',UNDER_REVIEW:'Pending',QUOTE_APPROVED:'Pending',AWAITING_DOCUMENTS:'Documents Pending',DOCUMENTS_VERIFIED:'Documents Verified',IN_PROGRESS:'In Progress',FILED_PENDING_REVIEW:'Work Completed',AWAITING_PAYMENT:'Payment Pending',COMPLETED:'Completed',ON_HOLD:'On Hold',CANCELLED:'Cancelled'};
-const taskName=s=>taskNames[s]||s||'—';
-const paymentName=(o,last)=>o.payment_verified_at?'Paid':last==='Submitted'?'Verification Pending':last==='Rejected'?'Rejected':o.status==='AWAITING_PAYMENT'&&o.final_approved_at?'Pending':'Not Due';
-function badge(value){
- const n=el('span',value);n.style.cssText='display:inline-flex;align-items:center;white-space:nowrap;border-radius:999px;padding:4px 10px;font-weight:650;font-size:12px;';
- const colors={'To Do':['#dbeafe','#1d4ed8'],Pending:['#fef3c7','#92400e'],'Documents Pending':['#fef3c7','#92400e'],'Documents Verified':['#dbeafe','#1d4ed8'],'In Progress':['#ede9fe','#6d28d9'],'Work Completed':['#cffafe','#155e75'],'Payment Pending':['#fef3c7','#92400e'],Completed:['#dcfce7','#166534'],Paid:['#dcfce7','#166534'],'Verification Pending':['#dbeafe','#1e40af'],'Not Due':['#f1f5f9','#475569'],Rejected:['#fee2e2','#991b1b'],Cancelled:['#fee2e2','#991b1b'],'On Hold':['#fee2e2','#991b1b']};
- const [bg,fg]=colors[value]||['#f1f5f9','#334155'];n.style.background=bg;n.style.color=fg;return n;
-}
+const latestPayment=d=>d.payments?.find(x=>x.status==='Submitted'||x.status==='Verified')||null;
 function milestones(box,d){
  box.append(el('h4','Filing Timeline'));
  const event=key=>(d.events||[]).find(x=>x.status===key)?.created_at;
  const rows=[
   ['Booking Confirmed',event('SUBMITTED')||d.order.created_at,d.order.booking_code||d.order.id],
-  ['Firm Assigned',event('UNDER_REVIEW'),'Admin assigned responsible firm'],
-  ['Documents Verified',d.order.document_verified_at,'Supporting documents verified'],
-  ['Filing In Progress',event('IN_PROGRESS'),'Assigned firm started work'],
-  ['Return Filed',event('FILED_PENDING_REVIEW'),'Firm submitted final return'],
+  ['Payment Received',d.order.payment_verified_at,'Verified payment / receipt'],
+  ['Documents Verified',d.order.document_verified_at,'Required document review completed'],
+  ['Filing In Progress',event('IN_PROGRESS'),'Assigned firm started filing'],
+  ['Return Filed',event('FILED_PENDING_REVIEW'),'Firm submitted final return for review'],
   ['ARN / Acknowledgement Updated',d.order.arn?event('FILED_PENDING_REVIEW'):null,d.order.arn||'Pending'],
-  ['Work Approved',d.order.final_approved_at,'Final work approved by Admin'],
-  ['Payment Received',d.order.payment_verified_at,'Bank settlement verified'],
-  ['Service Completed',event('COMPLETED'),'Paid and closed']
+  ['Final Return PDF Available',d.order.final_approved_at,'Admin approved release']
  ];
  table(box,['Milestone','Recorded at','Evidence'],rows.map(([label,when,evidence])=>[label,when?date(when):'Pending',when?evidence:'—']));
  const history=d.history||[];
@@ -54,11 +44,11 @@ export async function renderClientServices(panel,{api,go,user,orders,openFiles,p
   const q=lookup.value.toLowerCase().trim();
   const list=orders.filter(o=>(status.value==='All'||o.status===status.value)&&
      [o.booking_code,o.id,o.service,o.period].some(v=>String(v||'').toLowerCase().includes(q)));
-  table(result,['Booking ID','Service','Financial Year','Period','Task Status','Payment','Actions'],list.map(o=>{
+  table(result,['Booking ID','Service','Financial Year','Period','Status','Actions'],list.map(o=>{
    const actions=el('div');actions.style.cssText='display:flex;flex-wrap:wrap;gap:5px';
    actions.append(btn('View Details',()=>open(o)));
    actions.append(btn('Documents',()=>openFiles(o)));
-   return [o.booking_code||o.id,o.service,o.financial_year||'—',o.period||'—',badge(taskName(o.status)),badge(paymentName(o)),actions];
+   return [o.booking_code||o.id,o.service,o.financial_year||'—',o.period||'—',o.status,actions];
   }));
  }
  async function open(o){
@@ -72,10 +62,10 @@ export async function renderClientServices(panel,{api,go,user,orders,openFiles,p
    pair(box,'Service',d.order.service);pair(box,'Frequency',d.order.frequency);
    pair(box,'Financial year',d.order.financial_year);pair(box,'Filing period',d.order.period);
    pair(box,'Requested completion',d.order.requested_date||d.order.due_date);
-   pair(box,'Task status',taskName(d.order.status));
+   pair(box,'Booking status',d.order.status);
    pair(box,'Assigned firm',d.assignedFirm?.name||d.assignedFirm?.email||'Awaiting Admin assignment');
    pair(box,'Approved quote',d.quote?money(d.quote.amount_paise)+' (Version '+d.quote.version+')':'Pending Admin approval');
-   pair(box,'Payment',paymentName(d.order,latestPayment(d)?.status));
+   pair(box,'Payment',d.order.payment_verified_at?'Verified · '+date(d.order.payment_verified_at):latestPayment(d)?.status||'Awaiting payment');
    const documents=d.documents?.filter(x=>x.kind==='Document')||[];
    box.append(el('h4','Document Checklist / Verification'));
    pair(box,'Service requirements',d.catalog?.document_requirements||'Confirm with assigned firm');
@@ -85,7 +75,7 @@ export async function renderClientServices(panel,{api,go,user,orders,openFiles,p
    actions.append(btn('Upload / View Documents',()=>openFiles(o)),btn('Track Filing',()=>go('filings')),btn('Support',()=>go('support')));
    if(d.order.status==='COMPLETED')actions.append(btn('Download Final Return',()=>openFiles(o),true));
    box.append(actions);
-   if(d.quote&&d.order.status==='AWAITING_PAYMENT'&&d.order.final_approved_at&&!d.order.payment_verified_at){
+   if(d.quote&&!d.order.payment_verified_at){
     const form=card();form.append(el('h4','Submit payment reference for verification'));
     const method=select([['UPI','UPI'],['Bank Transfer','Bank Transfer'],['Other','Other']]);
     const reference=input('text');reference.placeholder='UTR / transaction reference';reference.maxLength=100;
@@ -96,7 +86,6 @@ export async function renderClientServices(panel,{api,go,user,orders,openFiles,p
      feedback.textContent=result.notice||'Submitted for verification.';reference.value='';
     }),true);form.append(send);box.append(form);
    }
-   if(d.quote&&!d.order.final_approved_at)box.append(el('p','Payment will be requested after the firm completes work and Admin approves the final return.'));
    if(d.payments?.length){box.append(el('h4','Payment Submissions'));table(box,['Method','Reference','Amount','Status','Date'],d.payments.map(x=>[x.method,x.transaction_ref,money(x.amount_paise),x.status,date(x.submitted_at)]));}
    milestones(box,d);box.append(btn('Close Details',()=>box.remove()));
    box.scrollIntoView({block:'start',behavior:'smooth'});
@@ -164,7 +153,7 @@ export async function renderFirmWorkflow(panel,{api,user,orders,openFiles}){
    const d=await api({action:'workflowDetails',orderId:target.value});feedback.textContent='';
    pair(output,'Booking ID',d.order.booking_code||d.order.id);pair(output,'Client',d.order.client_name);
    pair(output,'Service',d.order.service);pair(output,'Status',d.order.status);pair(output,'Required documents',d.catalog?.document_requirements||'Follow service instructions');
-   pair(output,'Payment',paymentName(d.order,latestPayment(d)?.status));
+   pair(output,'Payment',d.order.payment_verified_at?'Admin verified':'Not yet verified');
    output.append(btn('Open Documents / Upload Final',()=>openFiles(d.order),true));
    output.append(el('h4','Document Review'));
    table(output,['File','Current status','Review'],(d.documents||[]).filter(x=>x.kind==='Document').map(x=>{
@@ -177,7 +166,7 @@ export async function renderFirmWorkflow(panel,{api,user,orders,openFiles}){
     }
     controls.append(remark);return[x.name,x.review_status,controls];
    }));
-   const start=btn('Start Work / Filing',()=>safeAction(start,feedback,async()=>{
+   const start=btn('Start Filing',()=>safeAction(start,feedback,async()=>{
     await api({action:'workflowStartFiling',orderId:d.order.id});await show();
    }),true);start.disabled=d.order.status!=='DOCUMENTS_VERIFIED';output.append(start);
    output.append(el('h4','Submit Filed Return'));
@@ -201,15 +190,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
  const search=input('search');search.placeholder='Search booking ID, client, email or service';search.setAttribute('aria-label','Search service bookings');search.style.flex='1 1 220px';
  const stage=select([['All','All statuses']]);stage.setAttribute('aria-label','Filter booking status');
  const assigned=select([['All','All firms'],['Unassigned','Unassigned bookings']]);assigned.setAttribute('aria-label','Filter assigned firm');
- const refreshBtn=btn('Refresh Bookings',()=>reload());
- const from=input('date'),to=input('date');
- const exportBtn=btn('Export Bookings Excel',()=>safeAction(exportBtn,status,async()=>{
-  if(from.value&&to.value&&from.value>to.value)throw Error('From date cannot be after To date');
-  const report=await api({action:'workflowReport',reportType:'Bookings',from:from.value,to:to.value,financialYear:'All'});
-  const exporter=await import('./workflow-export.js?v=v1');await exporter.downloadWorkflowExcel(report);
-  status.textContent='Bookings Excel exported for the selected date range.';
- }));
- toolbar.append(search,stage,assigned,field('From',from),field('To',to),refreshBtn,exportBtn);
+ const refreshBtn=btn('Refresh Bookings',()=>reload());toolbar.append(search,stage,assigned,refreshBtn);
  const count=el('p','');count.setAttribute('role','status');
  const list=el('div');section.append(toolbar,count,list);panel.append(section);let orders=[],firms=[];
  async function open(order){
@@ -222,7 +203,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    pair(box,'Financial Year / Frequency',(d.order.financial_year||'—')+' / '+(d.order.frequency||'—'));
    pair(box,'Client',d.order.client_name+' / '+(d.client?.email||''));
    pair(box,'Service',d.order.service+' · '+d.order.period);
-   pair(box,'Task status',taskName(d.order.status));pair(box,'Payment status',paymentName(d.order,latestPayment(d)?.status));
+   pair(box,'Status',d.order.status);
    pair(box,'Requested date',d.order.requested_date||d.order.due_date);
    pair(box,'Firm',d.assignedFirm?.email||'Unassigned');
    const notice=el('p','');notice.setAttribute('role','status');box.append(notice);
@@ -241,7 +222,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    const save=btn('Approve / Revise Quote',()=>safeAction(save,notice,async()=>{
     if(!Number.isFinite(Number(amount.value))||Number(amount.value)<=0)throw Error('Enter a valid amount');
     await api({action:'workflowQuote',orderId:order.id,amountPaise:Math.round(Number(amount.value)*100)});
-    notice.textContent='Quote approved. Payment will be requested after Admin approves the finished work.';await reload();await open(order);
+    notice.textContent='Quote approved and client payment request created.';await reload();await open(order);
    }),true);quote.append(field('Amount (INR)',amount),save);box.append(quote);
    if(d.payments?.length){
     box.append(el('h4','Payment Verification'));
@@ -260,7 +241,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
      }box.append(row);
     }
    }
-   const final=card();final.append(el('h4','Final Review — Approve Work, Then Request Payment'));
+   const final=card();final.append(el('h4','Final Review & Release'));
    pair(final,'Filing date',d.order.filing_date||'Pending');pair(final,'ARN / Reference',d.order.arn||'Pending');
    pair(final,'Final approved',d.order.final_approved_at?date(d.order.final_approved_at):'No');
    final.append(btn('Manage uploaded files',()=>openFiles(order)));
@@ -311,17 +292,15 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
   const filtered=orders.filter(o=>
    [o.booking_code,o.id,o.client_name,o.client_email,o.service,o.category,o.financial_year,o.period].some(v=>String(v||'').toLowerCase().includes(q))&&
    (stage.value==='All'||o.status===stage.value)&&
-   (!from.value||new Date(Number(o.created_at)+19800000).toISOString().slice(0,10)>=from.value)&&
-   (!to.value||new Date(Number(o.created_at)+19800000).toISOString().slice(0,10)<=to.value)&&
    (assigned.value==='All'||assigned.value==='Unassigned'&&o.firm_uid===o.client_uid||o.firm_uid===assigned.value)
   );
   count.textContent=filtered.length+' of '+orders.length+' bookings shown (latest 300).';
-  table(list,['Booking ID','Customer','Email','Service','Financial Year','Filing Period','Assigned Firm','Task Status','Payment Status','Amount','Booked On','Actions'],filtered.map(o=>{
+  table(list,['Booking ID','Customer','Email','Service','Financial Year','Filing Period','Requested Date','Booked On','Status','Assigned Firm','Actions'],filtered.map(o=>{
    const actions=el('div');
    actions.append(btn('View Details',()=>open(o),true));
    if(!['COMPLETED','CANCELLED'].includes(o.status))actions.append(btn(o.firm_uid===o.client_uid?'Assign Firm':'Reassign Firm',()=>quickAssign(o)));
    actions.append(btn('Manage Files',()=>openFiles(o)));
-   return [o.booking_code||o.id,o.client_name||'Client',o.client_email||'—',o.service||'—',o.financial_year||'—',o.period||'—',o.firm_uid===o.client_uid?'Unassigned':o.assigned_email||'Firm assigned',badge(taskName(o.status)),badge(paymentName(o,o.latest_payment_status)),money(o.quote_amount_paise),date(o.created_at),actions];
+   return [o.booking_code||o.id,o.client_name||'Client',o.client_email||'—',o.service||'—',o.financial_year||'—',o.period||'—',o.requested_date||o.due_date||'—',date(o.created_at),o.status||'—',o.firm_uid===o.client_uid?'Unassigned':o.assigned_email||'Firm assigned',actions];
   }));
  }
  async function reload(){
@@ -335,14 +314,11 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    assigned.replaceChildren();assigned.add(new Option('All firms','All'));assigned.add(new Option('Unassigned bookings','Unassigned'));
    for(const f of firms)assigned.add(new Option((f.name||f.email)+' · '+f.email,f.uid));
    if([...assigned.options].some(o=>o.value===prevFirm))assigned.value=prevFirm;
-   draw();
-   const total=orders.length,todo=orders.filter(o=>o.status==='SUBMITTED').length,working=orders.filter(o=>o.status==='IN_PROGRESS').length,
-    due=orders.filter(o=>paymentName(o,o.latest_payment_status)==='Pending').length,paid=orders.filter(o=>o.payment_verified_at).length;
-   status.textContent=total+' bookings · To Do: '+todo+' · In Progress: '+working+' · Payment Pending: '+due+' · Paid: '+paid;
+   draw();status.textContent=orders.length+' client service bookings loaded.';
   }catch(e){status.textContent=e.message||'Unable to load bookings';}
   finally{refreshBtn.disabled=false;}
  }
- search.oninput=draw;stage.onchange=assigned.onchange=from.onchange=to.onchange=draw;await reload();
+ search.oninput=draw;stage.onchange=assigned.onchange=draw;await reload();
  const catalogue=card();catalogue.append(el('h3','Service Catalog & Document Requirements'));
  const description=el('p','Changes affect which services clients can book and what the assigned firm needs to review.');
  catalogue.append(description);section.after(catalogue);
@@ -360,81 +336,4 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    return [r.service+' / '+r.category,r.frequencies,toggle,req,save];
   }));
  }catch(e){description.textContent='Unable to load catalog: '+(e.message||'Unknown error');}
-}
-
-/** Admin payment ledger backed by live service orders, quotes and verified references. */
-export async function renderAdminPayments(panel,{api}){
- const section=card();section.classList.add('workflow-payment-review');
- section.append(el('h3','Client Service Payments'));
- section.append(el('p','Client payment is requested after approved firm work. A submitted UTR is never automatically considered Paid.'));
- const feedback=el('p','Loading payments…');feedback.setAttribute('role','status');
- const search=input('search');search.placeholder='Search booking ID, client or service';search.setAttribute('aria-label','Search client payments');
- const state=select([['All','All payment statuses'],['Not Due','Not Due'],['Pending','Pending'],['Verification Pending','Verification Pending'],['Paid','Paid'],['Rejected','Rejected']]);
- const from=input('date'),to=input('date'),controls=el('div');
- controls.style.cssText='display:flex;flex-wrap:wrap;align-items:end;gap:10px;';
- const reloadButton=btn('Refresh Payments',()=>load());
- const exportButton=btn('Export Payments Excel',()=>safeAction(exportButton,feedback,async()=>{
-  if(from.value&&to.value&&from.value>to.value)throw Error('From date cannot be after To date');
-  const report=await api({action:'workflowReport',reportType:'Payments',from:from.value,to:to.value,financialYear:'All'});
-  const exporter=await import('./workflow-export.js?v=v1');await exporter.downloadWorkflowExcel(report);
-  feedback.textContent='Payment report exported for the selected dates.';
- }));
- controls.append(field('Search',search),field('Payment status',state),field('From',from),field('To',to),reloadButton,exportButton);
- const output=el('div');section.append(controls,feedback,output);panel.append(section);
- let orders=[];
- const paymentDate=o=>new Date(Number(o.created_at||0)+19800000).toISOString().slice(0,10);
- function draw(){
-  output.replaceChildren();
-  const q=search.value.trim().toLowerCase();
-  const filtered=orders.filter(o=>
-   (state.value==='All'||paymentName(o,o.latest_payment_status)===state.value)&&
-   (!from.value||paymentDate(o)>=from.value)&&(!to.value||paymentDate(o)<=to.value)&&
-   [o.booking_code,o.client_name,o.client_email,o.service].some(v=>String(v||'').toLowerCase().includes(q))
-  );
-  const verified=filtered.reduce((sum,o)=>sum+(o.payment_verified_at?Number(o.quote_amount_paise)||0:0),0);
-  const due=filtered.reduce((sum,o)=>sum+(o.status==='AWAITING_PAYMENT'&&!o.payment_verified_at?Number(o.quote_amount_paise)||0:0),0);
-  feedback.textContent=filtered.length+' bookings · Paid: '+money(verified)+' · Pending: '+money(due);
-  table(output,['Booking ID','Client','Service','Amount','Task Status','Payment Status','Action'],filtered.map(o=>[
-   o.booking_code||o.id,o.client_name||'—',o.service||'—',money(o.quote_amount_paise),
-   badge(taskName(o.status)),badge(paymentName(o,o.latest_payment_status)),btn('View / Verify',()=>open(o),true)
-  ]));
- }
- async function open(o){
-  section.querySelector('.payment-detail')?.remove();
-  const box=card();box.classList.add('payment-detail');section.append(box);
-  const notice=el('p','Loading details…');notice.setAttribute('role','status');box.append(notice);
-  try{
-   const d=await api({action:'workflowDetails',orderId:o.id});notice.textContent='';
-   box.append(el('h4','Payment — '+(d.order.booking_code||o.id)));
-   pair(box,'Client',d.order.client_name+' / '+(d.client?.email||'—'));
-   pair(box,'Service',d.order.service);pair(box,'Task status',taskName(d.order.status));
-   pair(box,'Amount',money(d.quote?.amount_paise));pair(box,'Payment',paymentName(d.order,latestPayment(d)?.status));
-   if(!d.payments?.length)box.append(el('p','No payment references submitted yet. Payment becomes due only after final Admin approval.'));
-   for(const p of d.payments||[]){
-    const row=card();pair(row,'Method / UTR',p.method+' / '+p.transaction_ref);pair(row,'Amount',money(p.amount_paise));pair(row,'Status',p.status);
-    pair(row,'Submitted on',date(p.submitted_at));if(p.receipt_note)pair(row,'Verification note',p.receipt_note);
-    if(p.status==='Submitted'){
-     const note=input();note.placeholder='Bank settlement / provider evidence';note.maxLength=300;
-     row.append(field('Independent verification note',note));
-     for(const decision of ['Verified','Rejected']){
-      const action=btn(decision==='Verified'?'Confirm Paid':'Reject Reference',()=>safeAction(action,notice,async()=>{
-       if(decision==='Verified'&&!confirm('Have you independently confirmed the money in your bank/provider statement?'))return;
-       await api({action:'workflowPaymentVerify',orderId:o.id,paymentId:p.id,decision,receiptNote:note.value});
-       await load();await open(o);
-      }),decision==='Verified');row.append(action);
-     }
-    }
-    box.append(row);
-   }
-   box.append(btn('Close',()=>box.remove()));box.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }catch(e){notice.textContent=e?.message||'Could not load payment';}
- }
- async function load(){
-  reloadButton.disabled=true;
-  try{const data=await api({action:'workflowAdminOrders'});if(!section.isConnected)return;orders=data.orders||[];draw();}
-  catch(e){feedback.textContent=e?.message||'Unable to load payment records';}
-  finally{reloadButton.disabled=false;}
- }
- for(const control of [search,state,from,to])control.addEventListener(control===search?'input':'change',draw);
- await load();
 }

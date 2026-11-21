@@ -1,5 +1,5 @@
 import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
-import {renderClientNotifications} from './workflow-widgets.js?v=paylast2';
+import {renderClientNotifications} from './workflow-widgets.js?v=actionmenu1';
 import {portalCachedRequest,clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -72,10 +72,10 @@ function displaySectionError(panel,error){
  console.error('Dashboard section failed',error);
 }
 async function renderBusiness(panel,...args){
- try{const module=await import('./business-workspace.js?v=paylast2');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./business-workspace.js?v=actionmenu1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function renderWorkspace(panel,...args){
- try{const module=await import('./firm-workspace.js?v=paylast2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./firm-workspace.js?v=actionmenu1');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function appendDocumentUploads(panel,headingText){
  try{const module=await import('./document-upload.js?v=actionmenu1');if(!panel.isConnected)return;
