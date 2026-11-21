@@ -41,7 +41,7 @@ export async function onRequestPost({request,env}){
  return reply({loggedOut:true},200,{'Set-Cookie':'gst_otp=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'});
  }
  const policy=await db.prepare('SELECT active,otp FROM account_policy WHERE uid=?').bind(u.localId).first();if(policy?.active===0)return reply({error:'Account inactive. Contact administrator.'},403);
- const needsOtp=otpIsRequired(env,u.email,policy?.otp);
+ const needsOtp=otpIsRequired(env,u.email,policy?.otp,u.localId);
  if(action==='register'){
  const n=normalize(body.mobile);if(!/^[6-9]\d{9}$/.test(n))return reply({error:'Enter a valid 10-digit mobile number'},400);
  // Pilot only: prevent existing users claiming arbitrary numbers outside the test cohort.
