@@ -11,6 +11,7 @@ export async function workspace({db,b,u,firm,admin,liveAccounts}){
  const uid=u.localId,now=Date.now(),act=b.action;
  const str=(v,n=200)=>String(v||'').trim().slice(0,n);
  const assignedLive=async client=>{const row=await ownClient(db,uid,client);if(!row)return null;const account=(await liveAccounts([client])).get(client);return account&&!account.disabled?row:null;};
+ if(['workspaceDirectBook','workspaceBook'].includes(act))return json({error:'Outdated booking flow. Refresh and use the booking summary to submit a service request.'},409);
  if(act==='workspaceDueSave'){
  if(!admin)return json({error:'Admin required'},403);
  const service=str(b.service),period=str(b.period,40),due=str(b.dueDate,10),notes=str(b.notes,250);

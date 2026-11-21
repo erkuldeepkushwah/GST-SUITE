@@ -48,14 +48,8 @@ try {
   assert.deepEqual(periodOptions('Quarterly','2025-26').map(x=>x[0]),['2025-26 Q1 (Apr - Jun)','2025-26 Q2 (Jul - Sep)','2025-26 Q3 (Oct - Dec)','2025-26 Q4 (Jan - Mar)']);
   assert.equal(validFilingPeriod('Income Tax Return','2025-26'),true);
   assert.equal(validFilingPeriod('TDS Return','2025-26 Q5'),false);
-  const dueDate=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
-  const booking={action:'workspaceDirectBook',service:'TDS Return',period:order.period,requestId:'12345678-1234-1234-1234-123456789abc',dueDate};
-  assert.equal((await workspace({db,b:booking,u:{localId:firm},firm:true,admin:false})).status,403);
-  assert.equal((await workspace({db,b:{...booking,period:'2025-26 Q5'},u:{localId:client},firm:false,admin:false})).status,400);
-  assert.equal(batches.length,0);
-  assert.equal((await workspace({db,b:booking,u:{localId:client},firm:false,admin:false})).status,200);
-  assert.equal(batches.length,1);
-  const inserted=batches[0][0].params;
-  assert.deepEqual(inserted.slice(1,8),[client,client,'Test Business','TDS Return',order.period,dueDate,'Requested by business']);
+  assert.equal((await workspace({db,b:{action:'workspaceDirectBook'},u:{localId:client},firm:false,admin:false})).status,409,'Legacy booking cannot bypass the six-step booking wizard');
+  assert.equal((await workspace({db,b:{action:'workspaceBook'},u:{localId:firm},firm:true,admin:false})).status,409,'Firms cannot create unauthorised client bookings');
+  assert.equal(batches.length,0,'Legacy booking attempts must not write records');
   console.log('[portal regression] auth, roles, OTP, document admin scope, assignment and financial period checks passed');
 } finally {globalThis.fetch=originalFetch;}
