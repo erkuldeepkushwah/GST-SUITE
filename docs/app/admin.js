@@ -1,8 +1,8 @@
 import {portalCachedRequest,clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import {createUploadedDocuments} from './document-upload.js?v=no-refresh1';
 import {renderAdminWorkflow,renderReports,renderClientNotifications} from './workflow-widgets.js?v=workflow1';
-import {showTicketThread} from './business-workspace.js?v=due1';
-import {showOrderFiles} from './firm-workspace.js?v=due1';
+import {showTicketThread} from './business-workspace.js?v=perf2';
+import {showOrderFiles} from './firm-workspace.js?v=perf2';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {getAuth,signOut,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const auth=getAuth(initializeApp({apiKey:'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yoA',authDomain:'paypoint-e14c9.firebaseapp.com',projectId:'paypoint-e14c9',storageBucket:'paypoint-e14c9.firebasestorage.app',messagingSenderId:'970332210587',appId:'1:970332210587:web:10bedd6bf179372cc78d3e'}));

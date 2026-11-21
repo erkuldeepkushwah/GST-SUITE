@@ -1,3 +1,4 @@
+import {clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=workflow1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
@@ -17,7 +18,7 @@ function table(target,headers,rows){
  wrap.append(t);target.append(rows.length?wrap:el('p','No records yet.','empty'));
 }
 function downloadText(name,text){const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-export async function orderFileFetch(user,body){const headers={Authorization:'Bearer '+await user.getIdToken()};if(!(body instanceof FormData)){headers['Content-Type']='application/json';body=JSON.stringify(body);}const r=await fetch('/api/order-files',{method:'POST',headers,body,cache:'no-store'});if(!r.ok){const j=await r.json().catch(()=>null);throw Error(j?.error||'File request failed');}return r;}
+export async function orderFileFetch(user,body){const changesFiles=body instanceof FormData||body?.action==='remove';const headers={Authorization:'Bearer '+await user.getIdToken()};if(!(body instanceof FormData)){headers['Content-Type']='application/json';body=JSON.stringify(body);}const r=await fetch('/api/order-files',{method:'POST',headers,body,cache:'no-store'});if(!r.ok){const j=await r.json().catch(()=>null);throw Error(j?.error||'File request failed');}if(changesFiles)clearPortalApiCache();return r;}
 export async function showOrderFiles(panel,order,api,user,admin=false){
  panel.querySelector('.order-file-box')?.remove();const box=el('div',undefined,'order-file-box');box.style.cssText='padding:16px;border:1px solid #dbe5f0;border-radius:10px;margin-top:16px';panel.append(box);box.append(el('h3',order.service+' — '+order.client_name));const msg=el('p','Loading files…');box.append(msg);
  const file=el('input');file.type='file';file.accept='.pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls';
