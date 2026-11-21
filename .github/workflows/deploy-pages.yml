@@ -46,6 +46,11 @@ jobs:
           npm run check:export
           npm run check:reco
 
+      - name: Service booking and firm assignment regression tests
+        run: |
+          node tests/workflow-v2.mjs
+          node tests/live-accounts.mjs
+
       - name: Build
         env:
           # Relative, so the same build works whether it is served from
