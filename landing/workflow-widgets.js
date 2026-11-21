@@ -16,7 +16,7 @@ function table(container,columns,data){
 }
 function pair(box,label,value){const p=el('p');p.style.margin='7px 0';p.append(el('strong',label+': '),el('span',value??'—'));box.append(p);}
 const safeAction=async(b,output,job)=>{b.disabled=true;output.textContent='Working…';try{await job();}catch(e){output.textContent=e?.message||'Request failed';}finally{b.disabled=false;}};
-const latestPayment=d=>d.payments?.find(x=>x.status==='Submitted'||x.status==='Verified')||null;
+const latestPayment=d=>d.payments?.[0]||null;
 const taskNames={SUBMITTED:'To Do',UNDER_REVIEW:'Pending',QUOTE_APPROVED:'Pending',AWAITING_DOCUMENTS:'Documents Pending',DOCUMENTS_VERIFIED:'Documents Verified',IN_PROGRESS:'In Progress',FILED_PENDING_REVIEW:'Work Completed',AWAITING_PAYMENT:'Payment Pending',COMPLETED:'Completed',ON_HOLD:'On Hold',CANCELLED:'Cancelled'};
 const taskName=s=>taskNames[s]||s||'—';
 const paymentName=(o,last)=>o.payment_verified_at?'Paid':last==='Submitted'?'Verification Pending':last==='Rejected'?'Rejected':o.status==='AWAITING_PAYMENT'&&o.final_approved_at?'Pending':'Not Due';
@@ -350,4 +350,75 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    return [r.service+' / '+r.category,r.frequencies,toggle,req,save];
   }));
  }catch(e){description.textContent='Unable to load catalog: '+(e.message||'Unknown error');}
+}
+
+/** Admin payment ledger backed by live service orders, quotes and verified references. */
+export async function renderAdminPayments(panel,{api}){
+ const section=card();section.classList.add('workflow-payment-review');
+ section.append(el('h3','Client Service Payments'));
+ section.append(el('p','Client payment is requested after approved firm work. A submitted UTR is never automatically considered Paid.'));
+ const feedback=el('p','Loading payments…');feedback.setAttribute('role','status');
+ const search=input('search');search.placeholder='Search booking ID, client or service';search.setAttribute('aria-label','Search client payments');
+ const state=select([['All','All payment statuses'],['Not Due','Not Due'],['Pending','Pending'],['Verification Pending','Verification Pending'],['Paid','Paid'],['Rejected','Rejected']]);
+ const from=input('date'),to=input('date'),controls=el('div');
+ controls.style.cssText='display:flex;flex-wrap:wrap;align-items:end;gap:10px;';
+ const reloadButton=btn('Refresh Payments',()=>load());
+ controls.append(field('Search',search),field('Payment status',state),field('From',from),field('To',to),reloadButton);
+ const output=el('div');section.append(controls,feedback,output);panel.append(section);
+ let orders=[];
+ const paymentDate=o=>new Date(Number(o.created_at||0)+19800000).toISOString().slice(0,10);
+ function draw(){
+  output.replaceChildren();
+  const q=search.value.trim().toLowerCase();
+  const filtered=orders.filter(o=>
+   (state.value==='All'||paymentName(o,o.latest_payment_status)===state.value)&&
+   (!from.value||paymentDate(o)>=from.value)&&(!to.value||paymentDate(o)<=to.value)&&
+   [o.booking_code,o.client_name,o.client_email,o.service].some(v=>String(v||'').toLowerCase().includes(q))
+  );
+  const verified=filtered.reduce((sum,o)=>sum+(o.payment_verified_at?Number(o.quote_amount_paise)||0:0),0);
+  const due=filtered.reduce((sum,o)=>sum+(o.status==='AWAITING_PAYMENT'&&!o.payment_verified_at?Number(o.quote_amount_paise)||0:0),0);
+  feedback.textContent=filtered.length+' bookings · Paid: '+money(verified)+' · Pending: '+money(due);
+  table(output,['Booking ID','Client','Service','Amount','Task Status','Payment Status','Action'],filtered.map(o=>[
+   o.booking_code||o.id,o.client_name||'—',o.service||'—',money(o.quote_amount_paise),
+   badge(taskName(o.status)),badge(paymentName(o,o.latest_payment_status)),btn('View / Verify',()=>open(o),true)
+  ]));
+ }
+ async function open(o){
+  section.querySelector('.payment-detail')?.remove();
+  const box=card();box.classList.add('payment-detail');section.append(box);
+  const notice=el('p','Loading details…');notice.setAttribute('role','status');box.append(notice);
+  try{
+   const d=await api({action:'workflowDetails',orderId:o.id});notice.textContent='';
+   box.append(el('h4','Payment — '+(d.order.booking_code||o.id)));
+   pair(box,'Client',d.order.client_name+' / '+(d.client?.email||'—'));
+   pair(box,'Service',d.order.service);pair(box,'Task status',taskName(d.order.status));
+   pair(box,'Amount',money(d.quote?.amount_paise));pair(box,'Payment',paymentName(d.order,latestPayment(d)?.status));
+   if(!d.payments?.length)box.append(el('p','No payment references submitted yet. Payment becomes due only after final Admin approval.'));
+   for(const p of d.payments||[]){
+    const row=card();pair(row,'Method / UTR',p.method+' / '+p.transaction_ref);pair(row,'Amount',money(p.amount_paise));pair(row,'Status',p.status);
+    pair(row,'Submitted on',date(p.submitted_at));if(p.receipt_note)pair(row,'Verification note',p.receipt_note);
+    if(p.status==='Submitted'){
+     const note=input();note.placeholder='Bank settlement / provider evidence';note.maxLength=300;
+     row.append(field('Independent verification note',note));
+     for(const decision of ['Verified','Rejected']){
+      const action=btn(decision==='Verified'?'Confirm Paid':'Reject Reference',()=>safeAction(action,notice,async()=>{
+       if(decision==='Verified'&&!confirm('Have you independently confirmed the money in your bank/provider statement?'))return;
+       await api({action:'workflowPaymentVerify',orderId:o.id,paymentId:p.id,decision,receiptNote:note.value});
+       await load();await open(o);
+      }),decision==='Verified');row.append(action);
+     }
+    }
+    box.append(row);
+   }
+   box.append(btn('Close',()=>box.remove()));box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){notice.textContent=e?.message||'Could not load payment';}
+ }
+ async function load(){
+  reloadButton.disabled=true;
+  try{const data=await api({action:'workflowAdminOrders'});if(!section.isConnected)return;orders=data.orders||[];draw();}
+  catch(e){feedback.textContent=e?.message||'Unable to load payment records';}
+  finally{reloadButton.disabled=false;}
+ }
+ for(const control of [search,state,from,to])control.addEventListener(control===search?'input':'change',draw);
+ await load();
 }
