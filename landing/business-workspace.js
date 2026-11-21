@@ -77,6 +77,7 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  }),true);
  panel.append(book);
  await renderClientServices(panel,{api,user,go,orders:d.orders,openFiles:o=>showOrderFiles(panel,o,api,user),prefill});
+ }else if(section==='reports'){
  await renderReports(panel,{api,user});
  }else if(section==='documents'){
  const available=d.orders.filter(o=>o.status!=='Cancelled'),order=select([['','Select order'],...available.map(o=>[o.id,o.service+' · '+(o.period||'—')+' · '+o.status])]);panel.append(field('Order',order));if(prefill.orderId)order.value=prefill.orderId;const show=()=>{panel.querySelector('.order-file-box')?.remove();const o=available.find(x=>x.id===order.value);if(o)void showOrderFiles(panel,o,api,user);};order.onchange=show;show();if(!available.length)panel.append(button('Book a service',()=>go('services'),true));
