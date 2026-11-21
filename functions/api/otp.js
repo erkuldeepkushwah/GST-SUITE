@@ -71,7 +71,7 @@ export async function onRequestPost({request,env}){
  const text=['Hi '+firstName+',','','Welcome to Fingenuity Associates!','','Please use the following OTP to complete your login process.','','OTP: '+code,'','This OTP is valid for 5 minutes. Please do not share it with anyone.','','Regards,','Team Fingenuity Associates'].join('\n');
  const html='<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#17243b;max-width:600px;margin:auto;padding:24px"><p>Hi '+esc(firstName)+',</p><p>Welcome to <strong>Fingenuity Associates!</strong></p><p>Please use the following OTP to complete your login process.</p><p><strong>OTP: '+esc(code)+'</strong></p><p>This OTP is valid for 5 minutes. Please do not share it with anyone.</p><p>Regards,<br><strong>Team Fingenuity Associates</strong></p></div>';
  const sent=await sendPortalEmail(env,{to:u.email,subject:'OTP Verification',text,html,id:'gst-otp-'+id});
- if(!sent.ok){await db.prepare('UPDATE otp_challenges SET consumed=1 WHERE id=?').bind(id).run();return reply({error:'OTP email could not be sent',code:sent.code||'EMAIL_PROVIDER_ERROR'},502);}
+ if(!sent.ok){await db.prepare('UPDATE otp_challenges SET consumed=1 WHERE id=?').bind(id).run();return reply({error:'OTP email could not be sent ('+(sent.code||'EMAIL_PROVIDER_ERROR')+').',code:sent.code||'EMAIL_PROVIDER_ERROR'},502);}
  return reply({required:true,challenge:id,masked:u.email.slice(0,2)+'***@'+u.email.split('@')[1]});
  }
  if(action==='verify'){
