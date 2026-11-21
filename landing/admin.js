@@ -1,7 +1,7 @@
 import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 import {portalCachedRequest,clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import {createUploadedDocuments} from './document-upload.js?v=actionmenu1';
-import {renderAdminWorkflow,renderReports,renderClientNotifications} from './workflow-widgets.js?v=actionmenu1';
+import {renderAdminWorkflow,renderAdminPayments,renderReports,renderClientNotifications} from './workflow-widgets.js?v=paylast2';
 import {showTicketThread} from './business-workspace.js?v=actionmenu1';
 import {showOrderFiles} from './firm-workspace.js?v=actionmenu1';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
@@ -57,6 +57,14 @@ function renderModule(panel,name){
    const summary=make('summary','Manual Task Register — existing records (separate from client bookings)');
    summary.style.cssText='cursor:pointer;font-weight:600;padding:8px 0';
    manual.append(summary);bookingPanel.append(manual);panel=manual;
+  }
+  if(name==='Invoices & Payments'){
+   void renderAdminPayments(panel,{api:roleApi});
+   const manual=make('details',undefined,'manual-payment-register');
+   manual.style.cssText='margin-top:24px;border-top:1px solid #dbe5f0;padding-top:16px';
+   const summary=make('summary','Manual Invoices Register — legacy records (not linked to client bookings)');
+   summary.style.cssText='cursor:pointer;font-weight:600;padding:8px 0';
+   manual.append(summary);panel.append(manual);panel=manual;
   }
   if(name==='Support / Queries'){void renderWebsiteContactEnquiries(panel);panel.append(make('h3','Manual Support Register (existing records)'));}
  if(name==='Customers'){renderFirebaseCustomers(panel);return;}

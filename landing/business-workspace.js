@@ -1,6 +1,6 @@
 import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=dashboardfix2';
-import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=actionmenu1';
+import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=paylast2';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
@@ -36,14 +36,14 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  if(!panel.isConnected)return;msg.textContent='';
  if(section==='overview'){
  const grid=el('div',undefined,'stats');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px';
- const active=d.orders.filter(o=>!['Completed','Cancelled','Awaiting payment'].includes(o.status)).length,pending=d.orders.filter(o=>['Paid','Documents Required','Documents needed'].includes(o.status)).length;
- const values=[['Active Services',active,'filings'],['Pending Documents',pending,'documents'],['Unpaid Billing',d.billing.filter(b=>b.status!=='Paid').length,'billing']];
+ const active=d.orders.filter(o=>!['COMPLETED','CANCELLED','Completed','Cancelled'].includes(o.status)).length,pending=d.orders.filter(o=>['AWAITING_DOCUMENTS','Documents Required','Documents needed'].includes(o.status)).length;
+ const values=[['Active Services',active,'filings'],['Pending Documents',pending,'documents'],['Open Billing',d.billing.filter(b=>b.status!=='Paid').length,'billing']];
  for(const [label,count,target] of values){const card=button('',()=>go(target));card.className='stat';card.style.cssText='text-align:left;cursor:pointer;min-height:100px;background:#fff;border:1px solid #e3eaf3;border-radius:12px;padding:16px';card.append(el('div',label,'stat-label'),el('strong',String(count),'stat-number'));grid.append(card);}panel.append(grid);
- const activeAlerts=d.orders.filter(o=>['Documents Required','Documents needed'].includes(o.status));panel.append(el('h3','Latest updates'));for(const o of activeAlerts){const p=el('p',o.service+' — additional documents required');p.append(button('Upload',()=>go('documents',{orderId:o.id})));panel.append(p);}
+ const activeAlerts=d.orders.filter(o=>['AWAITING_DOCUMENTS','Documents Required','Documents needed'].includes(o.status));panel.append(el('h3','Latest updates'));for(const o of activeAlerts){const p=el('p',o.service+' — additional documents required');p.append(button('Upload',()=>go('documents',{orderId:o.id})));panel.append(p);}
  table(panel,['Recent service','Period','Due / requested date','Status'],d.orders.slice(0,5).map(o=>[o.service,o.period||'—',o.due_date||'—',o.status]));return;
  }
  if(section==='services'){
- panel.append(el('p','Choose a service, filing period and requested completion date. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
+ panel.append(el('p','Choose a service, filing period and requested completion date. Your booking will appear for your assigned firm and in Filing Status. Admin confirms your quote, the firm completes the work, and payment is requested after final Admin approval.'));
  const catalogue=(catalogResponse?.rows||[]).filter(x=>x.active===1);
  const mapping={};for(const item of catalogue)(mapping[item.category]??=[]).push(item.service);
  if(!catalogue.length)panel.append(el('p','There are currently no active booking services.'));
@@ -73,7 +73,7 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
   const summary=['BOOKING SUMMARY','Category: '+cat.value,'Service: '+svc.value,'Frequency: '+frequency.value,'Financial year: '+fy.value,'Filing period: '+period.value,'Requested completion: '+requested.value,'Price: Pending Admin quotation','','Confirm this service request?'].join('\n');
   if(!confirm(summary))return;
   const r=await api({action:'workflowBook',category:cat.value,service:svc.value,frequency:frequency.value,financialYear:fy.value,period:period.value,requestedDate:requested.value,requestId:key});
-  key=crypto.randomUUID();alert('Booking request received. Booking ID: '+r.bookingId+'\nAdmin will review your booking and confirm the quote.');
+  key=crypto.randomUUID();alert('Booking request received. Booking ID: '+r.bookingId+'\nAdmin will assign the firm and confirm the quote. Payment comes after approved work.');
   go('services',{orderId:r.id});
  }),true);
  panel.append(book);
@@ -88,7 +88,7 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  }else if(section==='billing'){
  panel.append(el('p','Payment requests and billing summaries. GST tax invoices and online payment require gateway and invoicing configuration.'));
  const statement=button('Download Statement PDF',()=>locked(statement,msg,()=>downloadBillingListPdf(d.billing,user)));panel.append(statement);
- table(panel,['Service','Amount','Payment status','Action'],d.billing.map(x=>{const a=el('div');const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadBillingPdf(x,user,d.orders.find(o=>o.id===x.order_id))));a.append(pdf);if(x.status!=='Paid')a.append(button('View Payment Request',()=>go('services',{orderId:x.order_id})));return[x.title,money(x.amount_paise),x.status,a];}));
+ table(panel,['Service','Amount','Payment status','Action'],d.billing.map(x=>{const a=el('div');const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadBillingPdf(x,user,d.orders.find(o=>o.id===x.order_id))));a.append(pdf);if(x.status!=='Paid')a.append(button('View Booking / Payment Details',()=>go('services',{orderId:x.order_id})));return[x.title,money(x.amount_paise),x.status,a];}));
 
  }else if(section==='support'){
  const subject=input('Subject'),body=el('textarea');body.rows=4;body.maxLength=3000;body.placeholder='Describe your issue';const order=select([['','No linked order'],...d.orders.map(x=>[x.id,x.service+' · '+(x.period||'')])]);const file=input('','','file');file.accept='.pdf,.jpg,.jpeg,.png,.csv,.xls,.xlsx';panel.append(field('Subject',subject),field('Message',body),field('Order (optional)',order),field('Attachment (optional)',file));

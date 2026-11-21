@@ -50,7 +50,7 @@ response=await workflow({db,u:client,firm:false,admin:false,b:{action:'workflowR
 assert.equal(response.status,400,'Reverse report dates rejected');
 active={id:'test-order',firm_uid:'test-firm',client_uid:'test-client',status:'DOCUMENTS_VERIFIED',payment_verified_at:null,updated_at:Date.now()};
 response=await workflow({db,u:firmUser,firm:true,admin:false,b:{action:'workflowStartFiling',orderId:'test-order'}});
-assert.equal(response.status,409,'Cannot file without verified settlement');
+assert.equal(response.status,409,'Verified documents required before filing');
 response=await workflow({db,u:client,firm:false,admin:false,b:{action:'workflowFinalReview',orderId:'test-order',decision:'Approve'}});
 assert.equal(response.status,403,'Client cannot approve final return');
 response=await workflow({db,u:admin,firm:false,admin:true,b:{action:'workflowFinalReview',orderId:'test-order',decision:'Approve'}});
@@ -61,7 +61,7 @@ assert.equal(response.status,404,'Unassigned firm cannot access client booking')
 active={id:'test-order',firm_uid:'test-firm',client_uid:'test-client',status:'AWAITING_DOCUMENTS',payment_verified_at:Date.now(),updated_at:Date.now()};
 response=await workflow({db,u:admin,firm:false,admin:true,b:{action:'workflowPaymentVerify',orderId:'test-order',paymentId:'second-payment',decision:'Verified',receiptNote:'Bank settlement confirmed'}});
 assert.equal(response.status,409,'Duplicate verified payment must be blocked');
-const conflictOrder={id:'test-order',client_uid:'test-client',firm_uid:'test-firm',status:'AWAITING_PAYMENT',payment_verified_at:null,updated_at:Date.now()};
+const conflictOrder={id:'test-order',client_uid:'test-client',firm_uid:'test-firm',status:'AWAITING_PAYMENT',final_approved_at:Date.now(),payment_verified_at:null,updated_at:Date.now()};
 const conflictDb={prepare(sql){return {bind(...params){return {
  async first(){
   if(sql.includes('SELECT * FROM firm_service_orders'))return conflictOrder;
@@ -70,14 +70,50 @@ const conflictDb={prepare(sql){return {bind(...params){return {
   throw Error('Unexpected payment lock query: '+sql.slice(0,90));
  },
  async run(){return {meta:{changes:0}};}
-};}};}};
+};}};},async batch(){return [{meta:{changes:0}},{meta:{changes:0}},{meta:{changes:0}}];}};
 const locked=await workflow({db:conflictDb,u:admin,firm:false,admin:true,b:{
  action:'workflowPaymentVerify',orderId:'test-order',paymentId:'payment-1',
  decision:'Verified',receiptNote:'Confirmed in bank statement'
 }});
 assert.equal(locked.status,409,'Concurrent payment review must not report success if another reviewer changed its status');
 
-console.log('[workflow-v2] booking validation, role isolation, payment gate, final approval and filter checks passed');
+// Payment-after-work: verified documents -> filing -> Admin approval -> client payment -> completed.
+const workOrder={id:'work-order',firm_uid:'test-firm',client_uid:'test-client',booking_code:'GST-TEST',
+ status:'UNDER_REVIEW',payment_verified_at:null,document_verified_at:null,final_approved_at:null,updated_at:Date.now(),arn:null,filing_date:null};
+const writes=[];
+const fixture={
+ prepare(sql){return {bind(...params){return {
+  async first(){
+   if(sql.includes('SELECT * FROM firm_service_orders WHERE id'))return workOrder;
+   if(sql.includes('SELECT version,amount_paise FROM workflow_quote_versions'))return {version:1,amount_paise:149900};
+   if(sql.includes("firm_order_files WHERE order_id")&&sql.includes("kind='Final file'"))return {id:'final.pdf'};
+   if(sql.includes('SELECT * FROM workflow_payments WHERE'))return {id:'pay-1',order_id:workOrder.id,quote_version:1,amount_paise:149900,status:'Submitted'};
+   if(sql.includes('SELECT id FROM workflow_payments'))return null;
+   throw Error('Unexpected fixture query: '+sql.slice(0,95));
+  },
+  async all(){return {results:sql.includes('firm_order_files f')?[{id:'doc-1',status:'Verified'}]:[]};},
+  async run(){writes.push({sql,params});return {meta:{changes:1}};}
+ };}};},
+ async batch(queries){writes.push(...queries);return queries.map(()=>({meta:{changes:1}}));}
+};
+const flow=(action,actor,role={},params={})=>workflow({db:fixture,u:actor,firm:!!role.firm,admin:!!role.admin,b:{action,orderId:workOrder.id,...params}});
+response=await flow('workflowPaymentSubmit',client,{}, {method:'UPI',transactionRef:'UTR0000111222'});
+assert.equal(response.status,409,'Payment is blocked before final work approval');
+response=await flow('workflowStartFiling',firmUser,{firm:true});
+assert.equal(response.status,200,'Firm can start with verified docs and no payment');
+assert.equal((await response.json()).status,'IN_PROGRESS');
+workOrder.status='FILED_PENDING_REVIEW';workOrder.document_verified_at=Date.now();workOrder.arn='ARN12345';workOrder.filing_date=today;
+response=await flow('workflowFinalReview',admin,{admin:true},{decision:'Approve',note:'Final return reviewed'});
+assert.equal(response.status,200);
+assert.equal((await response.json()).status,'AWAITING_PAYMENT','Admin approval creates the payment request');
+workOrder.status='AWAITING_PAYMENT';workOrder.final_approved_at=Date.now();
+response=await flow('workflowPaymentSubmit',client,{}, {method:'UPI',transactionRef:'UTR0000111222'});
+assert.equal(response.status,200,'Client can submit payment reference after approval');
+response=await flow('workflowPaymentVerify',admin,{admin:true},{paymentId:'pay-1',decision:'Verified',receiptNote:'Matched bank settlement record'});
+assert.equal(response.status,200);
+assert.equal((await response.json()).status,'COMPLETED','Verified payment closes booking');
+assert.ok(writes.length>0,'Workflow writes issued for verified payments');
+console.log('[workflow-v2] pay-last contract, role isolation, verified-docs, Admin review and concurrency checks passed');
 
 import {liveWorkflowFirmOptions} from '../functions/lib/live-accounts.js';
 const sampleRows=[

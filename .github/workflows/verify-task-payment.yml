@@ -1,0 +1,44 @@
+name: Verify service task and payment workflow
+
+on:
+  pull_request:
+    paths:
+      - 'functions/**'
+      - 'landing/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package*.json'
+      - '.github/workflows/verify-task-payment.yml'
+  push:
+    branches:
+      - feature/admin-task-payment-lifecycle
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Validate JavaScript modules
+        run: |
+          node --check functions/lib/workflow-v2.js
+          node --check functions/api/admin.js
+          node --check functions/api/order-files.js
+          node --check landing/workflow-widgets.js
+          node --check landing/admin.js
+          node --check landing/business-workspace.js
+      - name: Typecheck and lifecycle tests
+        run: |
+          npx tsc --noEmit
+          node tests/workflow-v2.mjs
+          node tests/portal-ui-regression.mjs
+          node tests/portal-regression.mjs
+      - run: npm run build
