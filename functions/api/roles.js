@@ -20,18 +20,29 @@ async function otpVerified(request,env,u){
 }
 
 const firmSql="SELECT uid,email FROM staff_roles UNION SELECT a.uid,a.email FROM portal_accounts a JOIN customer_profiles p ON p.uid=a.uid WHERE p.account_type='professional'";
+// Cache a machine-to-machine service token inside this Worker isolate, never a user's token.
+let firebaseServiceCredential=null;
 async function isFirm(db,uid,email){return !!await db.prepare("SELECT uid FROM ("+firmSql+") WHERE uid=? AND email=?").bind(uid,email).first();}
 async function firebaseDirectory(env,email,pageToken,localIds){
  if(!env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON)throw Error('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON is not configured');
  const sa=JSON.parse(env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON);
  if(sa.project_id!=='paypoint-e14c9'||!sa.client_email||!sa.private_key)throw Error('Firebase service account must belong to paypoint-e14c9');
- const enc=new TextEncoder(),b64=bytes=>btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
- const now=Math.floor(Date.now()/1000),url='https://oauth2.googleapis.com/token';
- const unsigned=b64(enc.encode(JSON.stringify({alg:'RS256',typ:'JWT'})))+'.'+b64(enc.encode(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/identitytoolkit',aud:url,iat:now,exp:now+300})));
- const key=await crypto.subtle.importKey('pkcs8',Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----|\s/g,'')),c=>c.charCodeAt(0)),{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
- const assertion=unsigned+'.'+b64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,enc.encode(unsigned))));
- const t=await fetch(url,{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion})});
- if(!t.ok)throw Error('Firebase service account authentication failed');const access=(await t.json()).access_token;
+ let access;
+ if(firebaseServiceCredential?.email===sa.client_email&&firebaseServiceCredential.expiresAt>Date.now()){
+  access=firebaseServiceCredential.token;
+ }else{
+  const enc=new TextEncoder(),b64=bytes=>btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
+  const now=Math.floor(Date.now()/1000),url='https://oauth2.googleapis.com/token';
+  const unsigned=b64(enc.encode(JSON.stringify({alg:'RS256',typ:'JWT'})))+'.'+b64(enc.encode(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/identitytoolkit',aud:url,iat:now,exp:now+300})));
+  const key=await crypto.subtle.importKey('pkcs8',Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----|\s/g,'')),c=>c.charCodeAt(0)),{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+  const assertion=unsigned+'.'+b64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,enc.encode(unsigned))));
+  const t=await fetch(url,{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:jwt-bearer',assertion})});
+  if(!t.ok)throw Error('Firebase service account authentication failed');
+  const credentials=await t.json();access=credentials.access_token;
+  if(!access)throw Error('Firebase OAuth returned no access token');
+  firebaseServiceCredential={email:sa.client_email,token:access,
+   expiresAt:Date.now()+Math.min(45*60*1000,Math.max(60000,(Number(credentials.expires_in||3600)-120)*1000))};
+ }
  const base='https://identitytoolkit.googleapis.com/v1/projects/'+encodeURIComponent(sa.project_id);
  const headers={Authorization:'Bearer '+access,'Content-Type':'application/json'};
  const read=async response=>{if(!response.ok)throw Error('Firebase directory request failed ('+response.status+')');return response.json();};

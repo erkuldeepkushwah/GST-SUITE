@@ -143,12 +143,27 @@ export async function workspace({db,b,u,firm,admin,liveAccounts}){
  }
  if(act==='workspaceData'){
  if(admin)return json({error:'Use administrator workspace'},403);
- const orders=firm?await all(db,"SELECT o.*,CASE WHEN o.firm_uid=o.client_uid THEN 'Business booking' ELSE 'Firm booking' END AS booking_source FROM firm_service_orders o LEFT JOIN account_policy p ON p.uid=o.client_uid WHERE o.firm_uid=? AND o.firm_uid<>o.client_uid AND COALESCE(p.active,1)=1 ORDER BY o.created_at DESC LIMIT 500",uid):await all(db,"SELECT * FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
- const tickets=await all(db,"SELECT id,subject,message,status,reply,order_id,created_at FROM portal_support_tickets WHERE owner_uid=? ORDER BY created_at DESC LIMIT 500",uid);
- if(!firm){const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? AND kind='Service' ORDER BY created_at DESC LIMIT 500",uid);const dueDates=await all(db,"SELECT * FROM portal_due_dates WHERE due_date>=? ORDER BY due_date LIMIT 500",new Date(now+19800000).toISOString().slice(0,10));const profile=await db.prepare("SELECT business_name,name,mobile,gstin,account_type FROM customer_profiles WHERE uid=?").bind(uid).first();const profileRequest=await db.prepare("SELECT business_name,mobile,gstin,status,updated_at FROM portal_profile_requests WHERE uid=?").bind(uid).first();return json({orders,tickets,billing,dueDates,services,profile,profileRequest,paymentConfigured:false});}
- const clients=await all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid);
- const trial=await db.prepare("SELECT starts_at,ends_at,client_limit,tool_limit,launches FROM firm_trials WHERE uid=?").bind(uid).first();
- const billing=await all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ // Independent D1 reads run concurrently; firm client Firebase checks remain mandatory.
+ const orderRead=firm
+  ?all(db,"SELECT o.*,CASE WHEN o.firm_uid=o.client_uid THEN 'Business booking' ELSE 'Firm booking' END AS booking_source FROM firm_service_orders o LEFT JOIN account_policy p ON p.uid=o.client_uid WHERE o.firm_uid=? AND o.firm_uid<>o.client_uid AND COALESCE(p.active,1)=1 ORDER BY o.created_at DESC LIMIT 500",uid)
+  :all(db,"SELECT * FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ const ticketRead=all(db,"SELECT id,subject,message,status,reply,order_id,created_at FROM portal_support_tickets WHERE owner_uid=? ORDER BY created_at DESC LIMIT 500",uid);
+ if(!firm){
+  const [orders,tickets,billing,dueDates,profile,profileRequest]=await Promise.all([
+   orderRead,ticketRead,
+   all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? AND kind='Service' ORDER BY created_at DESC LIMIT 500",uid),
+   all(db,"SELECT * FROM portal_due_dates WHERE due_date>=? ORDER BY due_date LIMIT 500",new Date(now+19800000).toISOString().slice(0,10)),
+   db.prepare("SELECT business_name,name,mobile,gstin,account_type FROM customer_profiles WHERE uid=?").bind(uid).first(),
+   db.prepare("SELECT business_name,mobile,gstin,status,updated_at FROM portal_profile_requests WHERE uid=?").bind(uid).first()
+  ]);
+  return json({orders,tickets,billing,dueDates,services,profile,profileRequest,paymentConfigured:false});
+ }
+ const [orders,tickets,clients,trial,billing]=await Promise.all([
+  orderRead,ticketRead,
+  all(db,"SELECT substr(w.id,8) AS uid,w.title,w.reference FROM staff_assignments w LEFT JOIN account_policy a ON a.uid=substr(w.id,8) LEFT JOIN customer_profiles c ON c.uid=substr(w.id,8) LEFT JOIN staff_roles f ON f.uid=substr(w.id,8) WHERE w.staff_uid=? AND w.section='Assigned Clients' AND w.id LIKE 'client:%' AND COALESCE(a.active,1)=1 AND COALESCE(c.account_type,'legacy')!='professional' AND f.uid IS NULL ORDER BY w.title LIMIT 500",uid),
+  db.prepare("SELECT starts_at,ends_at,client_limit,tool_limit,launches FROM firm_trials WHERE uid=?").bind(uid).first(),
+  all(db,"SELECT id,kind,title,amount_paise,status,created_at,order_id FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",uid)
+ ]);
  const linked=await liveAccounts([...clients.map(x=>x.uid),...orders.map(x=>x.client_uid)]);
  const active=id=>linked.has(id)&&!linked.get(id).disabled;
  const currentClients=clients.filter(x=>active(x.uid)).map(x=>({...x,reference:linked.get(x.uid).email}));
