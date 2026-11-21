@@ -1,6 +1,6 @@
 import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=dashboardfix2';
-import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=actionmenu1';
+import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=paylast2';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
