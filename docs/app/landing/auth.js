@@ -92,19 +92,26 @@ form.addEventListener('submit', async event => {
       await saveSignupProfile(account.user,profile);
       await updateProfile(account.user, { displayName: name });
       try { await identifyRole(account.user); } catch { console.warn('Account directory unavailable; retry on login.'); }
-      // Registration stays successful even when the separate welcome notification fails.
-      let welcome='not-sent';
+      // Registration is independent of email delivery. Do not retry an ambiguous send.
+      // Leave more time than the server-side 20s mail timeout so successful responses aren't lost.
+      let welcome='not-sent',welcomeCode='';
       try {
         const token = await account.user.getIdToken(true);
         button.textContent='Sending welcome email…';
-        const response=await fetch('/api/welcome',{method:'POST',headers:{Authorization:'Bearer '+token},cache:'no-store',signal:AbortSignal.timeout(20000)});
+        const response=await fetch('/api/welcome',{method:'POST',headers:{Authorization:'Bearer '+token},cache:'no-store',signal:AbortSignal.timeout(45000)});
         const result=await response.json().catch(()=>null);
         if(response.ok&&result?.accepted===true)welcome='accepted';
-        else if(result?.code==='SENDER_DOMAIN_UNVERIFIED'||result?.code==='EMAIL_CONFIGURATION')welcome='sender-configuration';
-        else console.warn('Welcome email request failed',response.status);
-      }catch{console.warn('Welcome email service unavailable.');}
+        else {
+          if(result?.code==='SENDER_DOMAIN_UNVERIFIED'||result?.code==='EMAIL_CONFIGURATION')welcome='sender-configuration';
+          welcomeCode=/^[A-Z0-9_]{4,60}$/.test(String(result?.code||''))?result.code:'WELCOME_API_ERROR';
+          console.warn('Welcome email request failed',{status:response.status,code:welcomeCode});
+        }
+      }catch(e){
+        welcomeCode=e?.name==='TimeoutError'?'WELCOME_TIMEOUT':'WELCOME_NETWORK_ERROR';
+        console.warn('Welcome email service unavailable',{code:welcomeCode});
+      }
       await signOut(auth);
-      window.location.replace('/login.html?registered=1&welcome='+encodeURIComponent(welcome));
+      window.location.replace('/login.html?registered=1&welcome='+encodeURIComponent(welcome)+(welcomeCode?'&emailCode='+encodeURIComponent(welcomeCode):''));
       return;
     } else {
       const remember = form.elements.remember.checked;
@@ -177,10 +184,13 @@ if (mode === 'login' && new URLSearchParams(window.location.search).get('adminDe
   show('Admin access denied. Please sign in with the authorized administrator account.');
 }
 if (mode === 'login' && new URLSearchParams(window.location.search).get('registered') === '1') {
-  const welcome=new URLSearchParams(window.location.search).get('welcome');
+  const params=new URLSearchParams(window.location.search);
+  const welcome=params.get('welcome');
+  const rawCode=params.get('emailCode')||'';
+  const errorCode=/^[A-Z0-9_]{4,60}$/.test(rawCode)?' ('+rawCode+')':'';
   if(welcome==='accepted')show('Account created successfully! Welcome email accepted for delivery. Please log in to continue.','success');
-  else if(welcome==='sender-configuration')show('Account created successfully. Welcome email could not be sent because the email sender is not configured for this recipient. You can log in.','success');
-  else if(welcome==='not-sent')show('Account created successfully. Welcome email delivery could not be confirmed. You can log in.','success');
+  else if(welcome==='sender-configuration')show('Account created successfully. Welcome email could not be sent due to sender configuration'+errorCode+'. You can log in.','success');
+  else if(welcome==='not-sent')show('Account created successfully. Welcome email delivery could not be confirmed'+errorCode+'. You can log in.','success');
   else show('Account created successfully! Please log in to continue.','success');
 }
 const reset = document.querySelector('#reset-password');
