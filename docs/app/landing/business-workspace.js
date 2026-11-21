@@ -40,11 +40,13 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  if(section==='services'){
  const dueBooking=false;
  panel.append(el('p',dueBooking?'Choose your service, filing period and requested completion date. Published deadlines are shown separately and must be verified for applicability.':'Choose a service and filing period. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
- const mapping={GST:['GST Registration','GSTR-1 Filing','GSTR-3B Filing','GST Reconciliation'],'Income Tax':['Income Tax Return'],TDS:['TDS Return'],Compliance:['Compliance']};
+ const catalogue=(await api({action:'workflowCatalog'})).rows.filter(x=>x.active===1);
+ const mapping={};for(const item of catalogue)(mapping[item.category]??=[]).push(item.service);
+ if(!catalogue.length)panel.append(el('p','There are currently no active booking services.'));
  const cat=select(Object.keys(mapping).map(x=>[x,x])),svc=select([]),frequency=select([]),fy=select(financialYears.map(y=>[y,y])),period=select([]);
  const fyField=field('Financial year',fy),periodField=field('Filing period',period);
  const schedule=select([['','Choose my own date']]),requested=input('','', 'date');
- requested.min=new Date(Date.now()+19800000).toISOString().slice(0,10);requested.required=dueBooking;
+ requested.min=new Date(Date.now()+19800000).toISOString().slice(0,10);requested.required=true;
  const dueHint=el('p','Choose a requested completion date, or select a matching published schedule.');dueHint.style.cssText='font-size:13px;color:#64748b';
  const matching=()=>d.dueDates.filter(x=>x.service===svc.value&&[period.value,'FY '+period.value].includes(x.period));
  function syncDate(){const item=matching().find(x=>x.id===schedule.value);requested.readOnly=!!item;if(item)requested.value=item.due_date;dueHint.textContent=item?'Published deadline selected. Confirm applicability to your business.':'Requested completion date (not a statutory deadline).';}
@@ -54,15 +56,15 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  const hint=el('p');hint.style.cssText='font-size:13px;color:#64748b;margin:8px 0';
  const current=new Date(),start=current.getMonth()>=3?current.getFullYear():current.getFullYear()-1;const currentFY=start+'-'+String(start+1).slice(-2);if(financialYears.includes(currentFY))fy.value=currentFY;
  function syncPeriods(){const type=frequency.value;period.replaceChildren();for(const [v,l] of periodOptions(type,fy.value))period.add(new Option(l,v));fyField.style.display=periodField.style.display=type==='Not applicable'?'none':'grid';hint.textContent=type==='Quarterly'&&['GSTR-1 Filing','GSTR-3B Filing'].includes(svc.value)?'Quarterly GST filing is subject to QRMP eligibility.':type==='Yearly'?'Financial year runs from 1 April to 31 March.':'';}
- function syncFrequency(){frequency.replaceChildren();for(const v of periodTypes(svc.value))frequency.add(new Option(v,v));syncPeriods();}
- function sync(){svc.replaceChildren();for(const v of mapping[cat.value])if(d.services.includes(v))svc.add(new Option(v,v));syncFrequency();}
+ function syncFrequency(){frequency.replaceChildren();const spec=catalogue.find(x=>x.service===svc.value);for(const v of String(spec?.frequencies||'').split(',').filter(Boolean))frequency.add(new Option(v,v));syncPeriods();}
+ function sync(){svc.replaceChildren();for(const v of mapping[cat.value]||[])svc.add(new Option(v,v));syncFrequency();}
  if(prefill.service){const found=Object.keys(mapping).find(k=>mapping[k].includes(prefill.service));if(found)cat.value=found;}
  sync();if(prefill.service&&Array.from(svc.options).some(o=>o.value===prefill.service)){svc.value=prefill.service;syncFrequency();}
  if(prefill.period){let matched=false;outer:for(const t of periodTypes(svc.value))for(const y of financialYears){const opts=periodOptions(t,y);const match=opts.find(([v])=>v===prefill.period||('FY '+v)===prefill.period);if(match){frequency.value=t;fy.value=y;syncPeriods();period.value=match[0];matched=true;break outer;}}if(!matched){period.selectedIndex=-1;msg.textContent='Select the correct filing period for this due date.';}}
  cat.onchange=()=>{sync();syncSchedule();};svc.onchange=()=>{syncFrequency();syncSchedule();};frequency.onchange=fy.onchange=()=>{syncPeriods();syncSchedule();};period.onchange=syncSchedule;syncSchedule();
  if(prefill.dueId&&matching().some(x=>x.id===prefill.dueId)){schedule.value=prefill.dueId;syncDate();}
  if(dueBooking){panel.append(el('h3','Schedule a Service'));}
- panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint,field('Due date option',schedule),field(dueBooking?'Select date':'Requested date (optional)',requested),dueHint);
+ panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint,field('Due date option',schedule),field('Requested completion date',requested),dueHint);
  let key=crypto.randomUUID();
  const book=button('View Summary & Confirm Booking',()=>locked(book,msg,async()=>{
   if(!svc.value||!period.value)throw Error('Choose service and filing period');

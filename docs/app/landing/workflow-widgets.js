@@ -18,12 +18,17 @@ const safeAction=async(b,output,job)=>{b.disabled=true;output.textContent='Worki
 const latestPayment=d=>d.payments?.find(x=>x.status==='Submitted'||x.status==='Verified')||null;
 function milestones(box,d){
  box.append(el('h4','Filing Timeline'));
- const map=[['Booking Confirmed','SUBMITTED'],['Payment Received','AWAITING_DOCUMENTS'],['Documents Verified','DOCUMENTS_VERIFIED'],['Filing In Progress','IN_PROGRESS'],['Return Filed','FILED_PENDING_REVIEW'],['Final Approved','COMPLETED']];
- const final=d.events||[];
- table(box,['Milestone','Recorded at'],map.map(([name,stage])=>{
-  const record=final.find(x=>x.status===stage);
-  return [name,record?date(record.created_at):'Pending'];
- }));
+ const event=key=>(d.events||[]).find(x=>x.status===key)?.created_at;
+ const rows=[
+  ['Booking Confirmed',event('SUBMITTED')||d.order.created_at,d.order.booking_code||d.order.id],
+  ['Payment Received',d.order.payment_verified_at,'Verified payment / receipt'],
+  ['Documents Verified',d.order.document_verified_at,'Required document review completed'],
+  ['Filing In Progress',event('IN_PROGRESS'),'Assigned firm started filing'],
+  ['Return Filed',event('FILED_PENDING_REVIEW'),'Firm submitted final return for review'],
+  ['ARN / Acknowledgement Updated',d.order.arn?event('FILED_PENDING_REVIEW'):null,d.order.arn||'Pending'],
+  ['Final Return PDF Available',d.order.final_approved_at,'Admin approved release']
+ ];
+ table(box,['Milestone','Recorded at','Evidence'],rows.map(([label,when,evidence])=>[label,when?date(when):'Pending',when?evidence:'—']));
  const history=d.history||[];
  if(history.length){box.append(el('h4','Audit History'));table(box,['Time','Change','Remark'],history.map(x=>[date(x.created_at),x.action||x.to_status,x.detail||'—']));}
 }
@@ -62,6 +67,7 @@ export async function renderClientServices(panel,{api,go,user,orders,openFiles,p
    pair(box,'Payment',d.order.payment_verified_at?'Verified · '+date(d.order.payment_verified_at):latestPayment(d)?.status||'Awaiting payment');
    const documents=d.documents?.filter(x=>x.kind==='Document')||[];
    box.append(el('h4','Document Checklist / Verification'));
+   pair(box,'Service requirements',d.catalog?.document_requirements||'Confirm with assigned firm');
    table(box,['Document','Review status','Remarks'],documents.map(x=>[x.name,x.review_status,x.review_note||'—']));
    if(!documents.length)box.append(el('p','No supporting documents uploaded yet.'));
    const actions=el('div');actions.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:12px 0';
@@ -145,7 +151,7 @@ export async function renderFirmWorkflow(panel,{api,user,orders,openFiles}){
   try{
    const d=await api({action:'workflowDetails',orderId:target.value});feedback.textContent='';
    pair(output,'Booking ID',d.order.booking_code||d.order.id);pair(output,'Client',d.order.client_name);
-   pair(output,'Service',d.order.service);pair(output,'Status',d.order.status);
+   pair(output,'Service',d.order.service);pair(output,'Status',d.order.status);pair(output,'Required documents',d.catalog?.document_requirements||'Follow service instructions');
    pair(output,'Payment',d.order.payment_verified_at?'Admin verified':'Not yet verified');
    output.append(btn('Open Documents / Upload Final',()=>openFiles(d.order),true));
    output.append(el('h4','Document Review'));
@@ -256,4 +262,21 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
   catch(e){status.textContent=e.message||'Unable to load bookings';}
  }
  search.oninput=draw;await reload();
+ const catalogue=card();catalogue.append(el('h3','Service Catalog & Document Requirements'));
+ const description=el('p','Changes affect which services clients can book and what the assigned firm needs to review.');
+ catalogue.append(description);section.after(catalogue);
+ try{
+  const data=await api({action:'workflowCatalog'});
+  const rows=data.rows||[];
+  table(catalogue,['Service / category','Frequency','Active','Document requirements','Action'],rows.map(r=>{
+   const toggle=select([['true','Enabled'],['false','Disabled']]);toggle.value=String(r.active===1);
+   const req=el('textarea');req.rows=3;req.maxLength=400;req.value=r.document_requirements||'Supporting documents requested by assigned firm';
+   req.style.cssText='padding:8px;min-width:175px;max-width:100%;box-sizing:border-box';
+   const save=btn('Save',()=>safeAction(save,description,async()=>{
+    await api({action:'workflowCatalogUpdate',service:r.service,active:toggle.value==='true',documentRequirements:req.value});
+    description.textContent='Catalog updated for '+r.service;
+   }));
+   return [r.service+' / '+r.category,r.frequencies,toggle,req,save];
+  }));
+ }catch(e){description.textContent='Unable to load catalog: '+(e.message||'Unknown error');}
 }
