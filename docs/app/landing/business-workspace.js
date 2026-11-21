@@ -1,4 +1,5 @@
 import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=dashboardfix2';
+import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=workflow1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
@@ -62,11 +63,24 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  if(prefill.dueId&&matching().some(x=>x.id===prefill.dueId)){schedule.value=prefill.dueId;syncDate();}
  if(dueBooking){panel.append(el('h3','Schedule a Service'));}
  panel.append(field('Category',cat),field('Service',svc),field('Filing frequency',frequency),fyField,periodField,hint,field('Due date option',schedule),field(dueBooking?'Select date':'Requested date (optional)',requested),dueHint);
- let key=crypto.randomUUID();const book=button('Book Service',()=>locked(book,msg,async()=>{if(!svc.value||!period.value)throw Error('Choose service and filing period');if(dueBooking&&!requested.value)throw Error('Select a due date');if(requested.value&&!requested.checkValidity())throw Error('Select a valid date');const r=await api({action:'workspaceDirectBook',service:svc.value,period:period.value,dueDate:requested.value,dueId:schedule.value,requestId:key});key=crypto.randomUUID();go('documents',{orderId:r.id});}),true);panel.append(book,el('h3','Booked Services'));
- table(panel,['Service','Filing period','Due / requested date','Date type','Status','Action'],d.orders.map(o=>[o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',o.status,button('View documents',()=>go('documents',{orderId:o.id}))]));
+ let key=crypto.randomUUID();
+ const book=button('View Summary & Confirm Booking',()=>locked(book,msg,async()=>{
+  if(!svc.value||!period.value)throw Error('Choose service and filing period');
+  if(!requested.value||!requested.checkValidity())throw Error('Select a valid requested completion date');
+  const summary=['BOOKING SUMMARY','Category: '+cat.value,'Service: '+svc.value,'Frequency: '+frequency.value,'Financial year: '+fy.value,'Filing period: '+period.value,'Requested completion: '+requested.value,'Price: Pending Admin quotation','','Confirm this service request?'].join('\n');
+  if(!confirm(summary))return;
+  const r=await api({action:'workflowBook',category:cat.value,service:svc.value,frequency:frequency.value,financialYear:fy.value,period:period.value,requestedDate:requested.value,requestId:key});
+  key=crypto.randomUUID();alert('Booking request received. Booking ID: '+r.bookingId+'\nAdmin will review your booking and confirm the quote.');
+  go('services',{orderId:r.id});
+ }),true);
+ panel.append(book);
+ await renderClientServices(panel,{api,user,go,orders:d.orders,openFiles:o=>showOrderFiles(panel,o,api,user),prefill});
+ await renderReports(panel,{api,user});
  }else if(section==='documents'){
  const available=d.orders.filter(o=>o.status!=='Cancelled'),order=select([['','Select order'],...available.map(o=>[o.id,o.service+' · '+(o.period||'—')+' · '+o.status])]);panel.append(field('Order',order));if(prefill.orderId)order.value=prefill.orderId;const show=()=>{panel.querySelector('.order-file-box')?.remove();const o=available.find(x=>x.id===order.value);if(o)void showOrderFiles(panel,o,api,user);};order.onchange=show;show();if(!available.length)panel.append(button('Book a service',()=>go('services'),true));
- }else if(section==='filings'||section==='notifications'){
+ }else if(section==='notifications'){
+ await renderClientNotifications(panel,{api});
+ }else if(section==='filings'){
  const rows=section==='notifications'?d.orders.filter(o=>['Documents Required','Documents needed'].includes(o.status)):d.orders;
  if(section==='filings'){const allPdf=button('Download Report PDF',()=>locked(allPdf,msg,()=>downloadFilingListPdf(rows,user)));panel.append(allPdf);}
  table(panel,['Service','Period','Due / requested date','Date type','Filing status','Action'],rows.map(o=>{const a=el('div');a.append(button('Timeline',()=>locked(a.firstChild,msg,async()=>{const t=await api({action:'workspaceTimeline',orderId:o.id});panel.querySelector('.filing-timeline')?.remove();const box=el('div',undefined,'filing-timeline');box.append(el('h3',o.service+' — Timeline'),el('p','Current status: '+t.status));table(box,['Event','Date / time'],t.rows.map(x=>[x.status,date(x.created_at)]));box.append(button('Documents / final return',()=>showOrderFiles(panel,o,api,user)));panel.append(box);})),button('Documents / return',()=>go('documents',{orderId:o.id})));const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadFilingPdf(o,user,api)));a.append(pdf);return[o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',o.status,a];}));
@@ -74,7 +88,7 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  }else if(section==='billing'){
  panel.append(el('p','Payment requests and billing summaries. GST tax invoices and online payment require gateway and invoicing configuration.'));
  const statement=button('Download Statement PDF',()=>locked(statement,msg,()=>downloadBillingListPdf(d.billing,user)));panel.append(statement);
- table(panel,['Service','Amount','Payment status','Action'],d.billing.map(x=>{const a=el('div');const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadBillingPdf(x,user,d.orders.find(o=>o.id===x.order_id))));a.append(pdf);if(x.status!=='Paid')a.append(button('Pay now',()=>{msg.textContent=x.amount_paise==null?'Wait for the admin quote.':'Online payment is not yet configured.';}));return[x.title,money(x.amount_paise),x.status,a];}));
+ table(panel,['Service','Amount','Payment status','Action'],d.billing.map(x=>{const a=el('div');const pdf=button('Download PDF',()=>locked(pdf,msg,()=>downloadBillingPdf(x,user,d.orders.find(o=>o.id===x.order_id))));a.append(pdf);if(x.status!=='Paid')a.append(button('View Payment Request',()=>go('services',{orderId:x.order_id})));return[x.title,money(x.amount_paise),x.status,a];}));
 
  }else if(section==='support'){
  const subject=input('Subject'),body=el('textarea');body.rows=4;body.maxLength=3000;body.placeholder='Describe your issue';const order=select([['','No linked order'],...d.orders.map(x=>[x.id,x.service+' · '+(x.period||'')])]);const file=input('','','file');file.accept='.pdf,.jpg,.jpeg,.png,.csv,.xls,.xlsx';panel.append(field('Subject',subject),field('Message',body),field('Order (optional)',order),field('Attachment (optional)',file));

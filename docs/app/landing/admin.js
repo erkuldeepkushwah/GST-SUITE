@@ -1,4 +1,5 @@
 import {createUploadedDocuments} from './document-upload.js?v=no-refresh1';
+import {renderAdminWorkflow,renderReports,renderClientNotifications} from './workflow-widgets.js?v=workflow1';
 import {showTicketThread} from './business-workspace.js?v=due1';
 import {showOrderFiles} from './firm-workspace.js?v=due1';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
@@ -42,6 +43,7 @@ const schemas={
  'Settings':['Setting name','Setting value','Description (record only; not system configuration)']
 };
 function renderModule(panel,name){
+ if(name==='Notifications')void renderClientNotifications(panel,{api:roleApi});
  if(name==='Documents & Vault'){const history=createUploadedDocuments(currentUser,{admin:true});panel.append(history.element);void history.refresh();return;}
  if(name==='Firm Operations'){void renderFirmOperations(panel);return;}
   if(name==='Support / Queries'){void renderWebsiteContactEnquiries(panel);panel.append(make('h3','Manual Support Register (existing records)'));}
@@ -49,6 +51,7 @@ function renderModule(panel,name){
  if(name==='Firms'){renderFirebaseCustomers(panel,true);return;}
  const status=make('p','','admin-status');status.setAttribute('role','status');panel.append(status);
  if(name==='Reports & Analytics'){
+  void renderReports(panel,{api:roleApi,user:currentUser});
  const p=make('p','Summary of manually maintained administrative registers.');panel.append(p);
  const load=async()=>{try{const {rows}=await api({action:'report'});if(!panel.isConnected)return;const wrap=make('div',undefined,'admin-table-wrap');const table=make('table',undefined,'admin-table');const head=make('tr');['Module','Status','Records','Amount (INR)'].forEach(v=>head.append(make('th',v)));const thead=make('thead');thead.append(head);table.append(thead);const tbody=make('tbody');rows.forEach(r=>{const tr=make('tr');[r.module,r.status,r.count,r.amount??0].forEach(v=>tr.append(make('td',String(v))));tbody.append(tr);});table.append(tbody);wrap.append(table);panel.append(wrap);status.textContent=rows.length?'Report loaded.':'No records yet.';const exportBtn=make('button','Export CSV','action');exportBtn.onclick=()=>{const lines=[['Module','Status','Records','Amount'],...rows.map(r=>[r.module,r.status,r.count,r.amount??0])];const csv=lines.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=make('a');a.href=url;a.download='gst-admin-report.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};panel.append(exportBtn);}catch(e){status.textContent=e.message;}};load();return;
  }
@@ -187,6 +190,7 @@ function renderFirebaseCustomers(panel,firmOnly=false){
 }
 
 async function renderFirmOperations(panel){
+ void renderAdminWorkflow(panel,{api:roleApi,openFiles:o=>showOrderFiles(panel,o,roleApi,currentUser,true)});
  const status=make('p','Loading firm operations…','admin-status');status.setAttribute('role','status');panel.append(status);
 
  const wrap=make('div');panel.append(wrap);
@@ -194,8 +198,8 @@ async function renderFirmOperations(panel){
  const save=async(button,payload)=>{button.disabled=true;try{await roleApi(payload);await load();status.textContent='Saved.';}catch(e){status.textContent=e.message;}finally{button.disabled=false;}};
  function grid(title,headers,rows){wrap.append(make('h2',title));const w=make('div',undefined,'admin-table-wrap');wrap.append(w);if(!rows.length){w.append(make('p','No records yet.','empty'));return;}const table=make('table',undefined,'admin-table');const header=table.createTHead().insertRow();for(const v of headers)header.append(make('th',v));const body=table.createTBody();for(const row of rows){const tr=body.insertRow();for(const v of row){const td=tr.insertCell();if(v instanceof Node)td.append(v);else td.textContent=String(v??'—');}}w.append(table);}
  async function load(){try{const {orders,billing,tickets,dueDates=[],profileRequests=[],services=[]}=await roleApi({action:'workspaceAdmin'});if(!panel.isConnected)return;wrap.replaceChildren();
- grid('Service Orders',['Payer','Client','Service','Period','Due / requested date','Date type','Booking date','Filing status','Files'],orders.map(o=>{const group=make('div');const select=make('select');for(const v of ['Awaiting payment','Documents Required','Documents Received','In Progress','Filed','Completed','Cancelled'])select.append(make('option',v));select.value=({'Documents needed':'Documents Required','In progress':'In Progress'})[o.status]||o.status;const update=make('button','Update','action');update.onclick=()=>save(update,{action:'workspaceAdminStatus',id:o.id,status:select.value});group.append(select,update);const files=make('button','Manage files','action');files.onclick=()=>showOrderFiles(panel,o,roleApi,currentUser,true);return[o.firm_email||'Account',o.client_name,o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',date(o.created_at),group,files];}));
- grid('Plan & Service Billing Requests',['Firm','Type','Description','Amount (INR)','Status','Action'],billing.map(x=>{const amount=make('input');amount.type='number';amount.min='0.01';amount.step='0.01';amount.placeholder='Quote amount';amount.setAttribute('aria-label','Quote amount in INR');amount.value=x.amount_paise==null?'':String(x.amount_paise/100);const b=make('button','Save quote','action');b.onclick=()=>save(b,{action:'workspaceAdminQuote',id:x.id,amountPaise:Math.round(Number(amount.value)*100)});return[x.firm_email||'Firm',x.kind,x.title,amount,x.status,b];}));
+ grid('Service Orders',['Payer','Client','Service','Period','Due / requested date','Date type','Booking date','Filing status','Files'],orders.map(o=>{const group=make('div');group.append(make('strong',o.status||'SUBMITTED'),make('p','Use Booking Review above for audited changes.'));const files=make('button','Manage files','action');files.onclick=()=>showOrderFiles(panel,o,roleApi,currentUser,true);return[o.firm_email||'Account',o.client_name,o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',date(o.created_at),group,files];}));
+ grid('Plan & Service Billing Requests',['Firm','Type','Description','Amount (INR)','Status','Action'],billing.map(x=>{const amount=make('input');amount.type='number';amount.min='0.01';amount.step='0.01';amount.placeholder='Quote amount';amount.setAttribute('aria-label','Quote amount in INR');amount.value=x.amount_paise==null?'':String(x.amount_paise/100);const b=make('button',x.kind==='Service'?'Review booking quote':'Save plan quote','action');b.onclick=()=>{if(x.kind==='Service'){status.textContent='Approve service quotes in Booking Review above.';return;}return save(b,{action:'workspaceAdminQuote',id:x.id,amountPaise:Math.round(Number(amount.value)*100)});};return[x.firm_email||'Firm',x.kind,x.title,amount,x.status,b];}));
  grid('Support Tickets',['Owner','Subject','Message','Reply','Status','Action'],tickets.map(t=>{const reply=make('textarea');reply.value=t.reply||'';reply.placeholder='Write reply';const sel=make('select');for(const v of ['Open','In Progress','Resolved'])sel.append(make('option',v));sel.value=t.status;const b=make('button','Save reply','action');b.onclick=()=>save(b,{action:'workspaceAdminReply',id:t.id,reply:reply.value,status:sel.value});const actions=make('div');const thread=make('button','Open thread','action');thread.onclick=()=>showTicketThread(panel,t,{api:roleApi,user:currentUser,admin:true});actions.append(b,thread);return[t.owner_email||'Account',t.subject,t.message,reply,sel,actions];}));
  grid('Upcoming Due Dates',['Service','Period','Due date','Notes','Action'],dueDates.map(x=>{const b=make('button','Remove','action');b.onclick=()=>{if(confirm('Remove published due date?'))return save(b,{action:'workspaceDueRemove',id:x.id});};return[x.service,x.period,x.due_date,x.notes,b];}));
  const form=make('form',undefined,'admin-form');

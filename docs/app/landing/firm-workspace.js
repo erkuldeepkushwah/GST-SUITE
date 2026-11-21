@@ -1,3 +1,4 @@
+import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=workflow1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
@@ -55,6 +56,8 @@ export async function renderWorkspace(panel,section,{api,user,firm,openTool,refr
  panel.append(pdf('Download Report PDF',()=>downloadFilingListPdf(selected(),user)));
  const result=el('div');panel.append(result);function draw(){result.replaceChildren();table(result,['Client','Service','Filing period','Due / requested date','Date type','Booked by','Filing status','Booked','Action'],selected().map(o=>{const actions=el('div');actions.append(btn('Documents / Final file',()=>showOrderFiles(panel,o,api,user)),pdf('Download PDF',()=>downloadFilingPdf(o,user,api)));return [o.client_name,o.service,o.period||'—',o.due_date||'—',o.due_date_source||'—',o.booking_source||'Firm booking',o.status,date(o.created_at),actions];}));}
  filter.onchange=draw;draw();
+ await renderFirmWorkflow(panel,{api,user,orders:d.orders,openFiles:o=>showOrderFiles(panel,o,api,user)});
+ await renderReports(panel,{api,user});
  }else if(section==='billing'){
  const f=select([['','All invoices'],['Plan','Plan'],['Service','Service']]);panel.append(field('Invoice type',f));const wrap=el('div');panel.append(wrap);
  const selected=()=>d.billing.filter(x=>!f.value||x.kind===f.value);
