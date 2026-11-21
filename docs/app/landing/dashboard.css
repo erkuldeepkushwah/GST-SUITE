@@ -202,7 +202,7 @@
  border-bottom:1px solid #cfd8e2;
 }
 #content .portal-data-table th:first-child,#content .portal-data-table td:first-child{min-width:175px}
-#content .portal-data-table tbody td{height:60px;background:#fff}
+#content .portal-data-table tbody td{height:20px!important;background:#fff}
 #content .portal-data-table tbody tr:nth-child(even) td{background:#f4f6f8}
 #content .portal-data-table tbody tr:hover td{background:#eaf2fc}
 #content .portal-data-table th:last-child,#content .portal-data-table td:last-child{border-right:0}
@@ -271,3 +271,23 @@
 .portal-action-popup .portal-action-danger{color:#d02626!important}
 .portal-action-popup .portal-action-danger:hover{background:#fff0f0!important;color:#a61d1d!important}
 .portal-action-popup button:disabled{opacity:.5;cursor:not-allowed}
+
+
+/* 20px spreadsheet rows. Use important to override legacy inline cell padding. */
+#content .portal-data-table thead tr,#content .portal-data-table tbody tr{height:20px}
+#content .portal-data-table thead th,#content .portal-data-table tbody td{
+ height:20px!important;padding:0 6px!important;line-height:18px!important;
+}
+#content .portal-data-table :is(th,td){font-size:11px}
+/* Editing controls must remain fully visible; those rows may grow as needed. */
+#content .portal-data-table tbody td:has(input),
+#content .portal-data-table tbody td:has(textarea),
+#content .portal-data-table tbody td:has(select){
+ height:auto!important;padding:4px 6px!important;
+}
+#content .portal-data-table tbody td:has(.portal-action-trigger){height:20px!important;padding:0 5px!important}
+#content .portal-data-table .portal-action-trigger{
+ width:20px;height:18px;min-height:18px;padding:2px;border-radius:3px;
+}
+#content .portal-data-table .portal-action-lines{width:11px;gap:2px}
+#content .portal-data-table .portal-action-lines span{height:1px}
