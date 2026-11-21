@@ -70,7 +70,7 @@ function displaySectionError(panel,error){
  console.error('Dashboard section failed',error);
 }
 async function renderBusiness(panel,...args){
- try{const module=await import('./business-workspace.js?v=reports-sidebar1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./business-workspace.js?v=due-date-calendar1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function renderWorkspace(panel,...args){
  try{const module=await import('./firm-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
