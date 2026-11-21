@@ -201,7 +201,15 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
  const search=input('search');search.placeholder='Search booking ID, client, email or service';search.setAttribute('aria-label','Search service bookings');search.style.flex='1 1 220px';
  const stage=select([['All','All statuses']]);stage.setAttribute('aria-label','Filter booking status');
  const assigned=select([['All','All firms'],['Unassigned','Unassigned bookings']]);assigned.setAttribute('aria-label','Filter assigned firm');
- const refreshBtn=btn('Refresh Bookings',()=>reload());toolbar.append(search,stage,assigned,refreshBtn);
+ const refreshBtn=btn('Refresh Bookings',()=>reload());
+ const from=input('date'),to=input('date');
+ const exportBtn=btn('Export Bookings Excel',()=>safeAction(exportBtn,status,async()=>{
+  if(from.value&&to.value&&from.value>to.value)throw Error('From date cannot be after To date');
+  const report=await api({action:'workflowReport',reportType:'Bookings',from:from.value,to:to.value,financialYear:'All'});
+  const exporter=await import('./workflow-export.js?v=v1');await exporter.downloadWorkflowExcel(report);
+  status.textContent='Bookings Excel exported for the selected date range.';
+ }));
+ toolbar.append(search,stage,assigned,field('From',from),field('To',to),refreshBtn,exportBtn);
  const count=el('p','');count.setAttribute('role','status');
  const list=el('div');section.append(toolbar,count,list);panel.append(section);let orders=[],firms=[];
  async function open(order){
@@ -303,6 +311,8 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
   const filtered=orders.filter(o=>
    [o.booking_code,o.id,o.client_name,o.client_email,o.service,o.category,o.financial_year,o.period].some(v=>String(v||'').toLowerCase().includes(q))&&
    (stage.value==='All'||o.status===stage.value)&&
+   (!from.value||new Date(Number(o.created_at)+19800000).toISOString().slice(0,10)>=from.value)&&
+   (!to.value||new Date(Number(o.created_at)+19800000).toISOString().slice(0,10)<=to.value)&&
    (assigned.value==='All'||assigned.value==='Unassigned'&&o.firm_uid===o.client_uid||o.firm_uid===assigned.value)
   );
   count.textContent=filtered.length+' of '+orders.length+' bookings shown (latest 300).';
@@ -332,7 +342,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
   }catch(e){status.textContent=e.message||'Unable to load bookings';}
   finally{refreshBtn.disabled=false;}
  }
- search.oninput=draw;stage.onchange=assigned.onchange=draw;await reload();
+ search.oninput=draw;stage.onchange=assigned.onchange=from.onchange=to.onchange=draw;await reload();
  const catalogue=card();catalogue.append(el('h3','Service Catalog & Document Requirements'));
  const description=el('p','Changes affect which services clients can book and what the assigned firm needs to review.');
  catalogue.append(description);section.after(catalogue);
@@ -363,7 +373,13 @@ export async function renderAdminPayments(panel,{api}){
  const from=input('date'),to=input('date'),controls=el('div');
  controls.style.cssText='display:flex;flex-wrap:wrap;align-items:end;gap:10px;';
  const reloadButton=btn('Refresh Payments',()=>load());
- controls.append(field('Search',search),field('Payment status',state),field('From',from),field('To',to),reloadButton);
+ const exportButton=btn('Export Payments Excel',()=>safeAction(exportButton,feedback,async()=>{
+  if(from.value&&to.value&&from.value>to.value)throw Error('From date cannot be after To date');
+  const report=await api({action:'workflowReport',reportType:'Payments',from:from.value,to:to.value,financialYear:'All'});
+  const exporter=await import('./workflow-export.js?v=v1');await exporter.downloadWorkflowExcel(report);
+  feedback.textContent='Payment report exported for the selected dates.';
+ }));
+ controls.append(field('Search',search),field('Payment status',state),field('From',from),field('To',to),reloadButton,exportButton);
  const output=el('div');section.append(controls,feedback,output);panel.append(section);
  let orders=[];
  const paymentDate=o=>new Date(Number(o.created_at||0)+19800000).toISOString().slice(0,10);
