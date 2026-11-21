@@ -36,8 +36,14 @@ async function firebaseDirectory(env,email,pageToken,localIds){
   const unsigned=b64(enc.encode(JSON.stringify({alg:'RS256',typ:'JWT'})))+'.'+b64(enc.encode(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/identitytoolkit',aud:url,iat:now,exp:now+300})));
   const key=await crypto.subtle.importKey('pkcs8',Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----|\s/g,'')),c=>c.charCodeAt(0)),{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
   const assertion=unsigned+'.'+b64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,enc.encode(unsigned))));
-  const t=await fetch(url,{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:jwt-bearer',assertion})});
-  if(!t.ok)throw Error('Firebase service account authentication failed');
+  const t=await fetch(url,{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion})});
+  if(!t.ok){
+   // Expose only the OAuth error category, never tokens, assertions or credentials.
+   const failure=await t.json().catch(()=>null);
+   const category=typeof failure?.error==='string'&&/^[a-z_]{1,40}$/.test(failure.error)?failure.error:'unknown';
+   console.warn('Firebase service credential OAuth request rejected',{httpStatus:t.status,category});
+   throw Error('Firebase service account authentication failed');
+  }
   const credentials=await t.json();access=credentials.access_token;
   if(!access)throw Error('Firebase OAuth returned no access token');
   firebaseServiceCredential={email:sa.client_email,token:access,
