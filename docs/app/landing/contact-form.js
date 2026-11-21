@@ -1,98 +1,25 @@
-/*!
- * Contact form — same approach as the steves repo: build the message and hand
- * it to the visitor's mail app addressed to the practice's Gmail.
- *
- * No backend, no third-party form service, nothing to activate. If the browser
- * has no mail handler the visitor gets the address and the message to copy.
- */
-(function () {
-  'use strict';
-
-  var form = document.getElementById('demo-contact-form');
-  if (!form) return;
-
-  var action = form.getAttribute('action') || '';
-  var m = action.match(/formsubmit\.co\/([^/?#]+)/i);
-  var TO = m ? m[1] : 'gstpractitioner.rakesh@gmail.com';
-
-  var status = document.createElement('div');
-  status.className = 'fg-form-status';
-  status.setAttribute('role', 'status');
-  status.setAttribute('aria-live', 'polite');
-  status.style.cssText = 'display:none;margin:14px 0 0;padding:12px 14px;border-radius:10px;' +
-    'font-size:14px;line-height:1.55;border:1px solid transparent';
-  form.appendChild(status);
-
-  function show(kind, html) {
-    var skin = {
-      ok: ['#ECFDF3', '#ABEFC6', '#067647'],
-      err: ['#FEF3F2', '#FECDCA', '#B42318']
-    }[kind] || ['#F8FAFC', '#E2E8F0', '#334155'];
-    status.style.display = 'block';
-    status.style.background = skin[0];
-    status.style.borderColor = skin[1];
-    status.style.color = skin[2];
-    status.innerHTML = html;
-  }
-
-  function val(name) {
-    var el = form.querySelector('[name="' + name + '"]');
-    return el ? (el.value || '').trim() : '';
-  }
-
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    var name = val('name');
-    var email = val('email');
-    var module = val('module');
-    var timeline = val('timeline');
-    var message = val('message');
-
-    if (!name || !email || !message) {
-      show('err', 'Please add your name, email and a line about what you need.');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-      show('err', 'That email address does not look right.');
-      return;
-    }
-
-    var subject = 'GST-SUITE enquiry' + (module ? ' — ' + module : '') + ' (' + name + ')';
-
-    var body = [
-      'Hello Fingenuity Associates,',
-      '',
-      module ? 'I am interested in: ' + module : 'I would like to know more about GST-SUITE.',
-      '',
-      'Here are my details:',
-      '',
-      'Name: ' + name,
-      'Email: ' + email,
-      module ? 'Module: ' + module : null,
-      timeline ? 'Timeline: ' + timeline : null,
-      '',
-      'Message / what I reconcile:',
-      message,
-      '',
-      'Looking forward to your response.',
-      '',
-      'Best regards,',
-      name
-    ].filter(function (line) { return line !== null; }).join('\r\n');
-
-    var mailto = 'mailto:' + TO +
-      '?subject=' + encodeURIComponent(subject) +
-      '&body=' + encodeURIComponent(body);
-
-    // hand it to the mail app
-    window.location.href = mailto;
-
-    show('ok',
-      'Your mail app should open with the message ready to send to <strong>' + TO + '</strong>. ' +
-      'Press send there and we reply within one working day. ' +
-      'If nothing opened, <a href="' + mailto + '">tap here</a> or write to ' +
-      '<a href="mailto:' + TO + '">' + TO + '</a> · ' +
-      '<a href="https://wa.me/919981425096" target="_blank" rel="noopener">WhatsApp us</a>.');
-  });
+// Contact form submit goes through Cloudflare Pages Functions, not Gmail or WordPress.
+(function(){
+ 'use strict';
+ const form=document.getElementById('demo-contact-form');if(!form)return;
+ const box=document.createElement('div');box.className='fg-form-status';box.setAttribute('role','status');box.setAttribute('aria-live','polite');box.style.cssText='display:none;margin:14px 0 0;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.55;border:1px solid transparent';form.append(box);
+ const button=form.querySelector('button[type="submit"]');
+ const value=name=>String(form.elements.namedItem(name)?.value||'').trim();
+ const show=(good,message)=>{box.style.display='block';box.style.background=good?'#ECFDF3':'#FEF3F2';box.style.borderColor=good?'#ABEFC6':'#FECDCA';box.style.color=good?'#067647':'#B42318';box.textContent=message;};
+ let sending=false;
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();e.stopImmediatePropagation();
+  if(sending)return;if(!form.checkValidity()){form.reportValidity();return;}
+  const data={name:value('name'),email:value('email'),module:value('module'),timeline:value('timeline'),message:value('message'),_honey:value('_honey')};
+  if(data.message.length<10){show(false,'Please enter at least 10 characters in your message.');return;}
+  sending=true;button.disabled=true;form.setAttribute('aria-busy','true');box.style.display='none';
+  const caption=button.querySelector('.elementor-button-text');const label=caption||button;const old=label.textContent;label.textContent='Submitting…';
+  try{
+   const res=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),cache:'no-store',signal:AbortSignal.timeout(20000)});
+   const json=await res.json().catch(()=>null);
+   if(!res.ok||json?.accepted!==true)throw Error(json?.error||'Submission failed');
+   form.reset();show(true,'Your enquiry was submitted successfully. Our team will contact you.');
+  }catch(error){show(false,error?.name==='TimeoutError'?'Request timed out. Please check with us before submitting again.':(error?.message||'Unable to send enquiry.'));}
+  finally{sending=false;button.disabled=false;form.removeAttribute('aria-busy');label.textContent=old;}
+ },true);
 })();

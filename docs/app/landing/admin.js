@@ -44,6 +44,7 @@ const schemas={
 function renderModule(panel,name){
  if(name==='Documents & Vault'){const history=createUploadedDocuments(currentUser,{admin:true});panel.append(history.element);void history.refresh();return;}
  if(name==='Firm Operations'){void renderFirmOperations(panel);return;}
+  if(name==='Support / Queries'){void renderWebsiteContactEnquiries(panel);panel.append(make('h3','Manual Support Register (existing records)'));}
  if(name==='Customers'){renderFirebaseCustomers(panel);return;}
  if(name==='Firms'){renderFirebaseCustomers(panel,true);return;}
  const status=make('p','','admin-status');status.setAttribute('role','status');panel.append(status);
@@ -69,6 +70,59 @@ function renderModule(panel,name){
  search.oninput=draw;
  form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{await api({action:'save',module:name,id:editId,title:title.value,reference:reference.value,status:select.value,amount:Number(amount.value)||0,notes:notes.value});reset();await load();status.textContent='Record saved.';}catch(e){status.textContent=e.message;}finally{save.disabled=false;}};
  load();
+}
+
+async function renderWebsiteContactEnquiries(panel){
+ const section=make('section',undefined,'website-enquiries');
+ section.append(make('h3','Website Contact Enquiries — Supabase'));
+ const info=make('p','Loading website enquiries…','admin-status');info.setAttribute('role','status');section.append(info);
+ const bar=make('div',undefined,'action-row');
+ const search=make('input',undefined,'admin-search');search.type='search';search.placeholder='Search name, email, module or message';search.setAttribute('aria-label','Search website enquiries');
+ const filter=make('select');filter.setAttribute('aria-label','Filter website enquiry status');
+ for(const value of ['All Statuses','New','In Progress','Resolved','Closed']){const option=make('option',value);option.value=value;filter.append(option);}
+ const reload=make('button','Refresh enquiries','action');reload.type='button';
+ bar.append(search,filter,reload);section.append(bar);
+ const wrap=make('div',undefined,'admin-table-wrap');section.append(wrap);panel.append(section);
+ let rows=[];
+ function draw(){
+  wrap.replaceChildren();
+  const q=search.value.trim().toLowerCase();
+  const filtered=rows.filter(r=>(filter.value==='All Statuses'||r.status===filter.value)&&
+    [r.name,r.email,r.module,r.timeline,r.message,r.status].some(v=>String(v||'').toLowerCase().includes(q)));
+  if(!filtered.length){wrap.append(make('p','No matching website enquiries.','empty'));return;}
+  const table=make('table',undefined,'admin-table'),thead=make('thead'),heading=make('tr');
+  for(const label of ['Received','Name / Email','Module / Timeline','Message','Status','Admin Notes','Action'])heading.append(make('th',label));
+  thead.append(heading);table.append(thead);
+  const tbody=make('tbody');
+  for(const r of filtered){
+   const tr=make('tr');
+   const date=make('td',new Date(r.created_at).toLocaleString('en-IN'));
+   const who=make('td');who.append(make('strong',r.name||'—'),make('div',r.email||'—'));
+   const detail=make('td');detail.append(make('div',r.module||'General enquiry'),make('div',r.timeline||'—'));
+   const message=make('td',r.message||'—');message.style.whiteSpace='pre-wrap';message.style.minWidth='180px';
+   const statusCell=make('td'),select=make('select');
+   for(const value of ['New','In Progress','Resolved','Closed']){const opt=make('option',value);opt.value=value;select.append(opt);}
+   select.value=r.status;statusCell.append(select);
+   const notesCell=make('td'),notes=make('textarea');notes.value=r.admin_notes||'';notes.rows=3;notes.maxLength=3000;notes.style.minWidth='170px';notesCell.append(notes);
+   const action=make('td'),save=make('button','Save','action primary');save.type='button';
+   save.onclick=async()=>{
+    save.disabled=true;
+    try{const result=await api({action:'contactUpdate',id:r.id,status:select.value,notes:notes.value});r.status=result.row.status;r.admin_notes=result.row.admin_notes;info.textContent='Enquiry updated successfully.';}
+    catch(e){info.textContent=e.message||'Unable to update enquiry.';}
+    finally{save.disabled=false;}
+   };
+   action.append(save);
+   [date,who,detail,message,statusCell,notesCell,action].forEach(cell=>tr.append(cell));tbody.append(tr);
+  }
+  table.append(tbody);wrap.append(table);
+ }
+ async function load(){
+  reload.disabled=true;info.textContent='Loading website enquiries…';
+  try{const result=await api({action:'contactList'});if(!section.isConnected)return;rows=Array.isArray(result.rows)?result.rows:[];draw();info.textContent=rows.length+' website enquiries loaded (latest 200).';}
+  catch(e){info.textContent=e.message||'Unable to load enquiries.';}
+  finally{reload.disabled=false;}
+ }
+ search.oninput=draw;filter.onchange=draw;reload.onclick=load;await load();
 }
 
 async function roleApi(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Role request failed');return j;}
