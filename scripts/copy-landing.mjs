@@ -45,6 +45,7 @@ for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','bu
 
 // Verify secure portal contracts with synthetic fixtures before publishing.
 execFileSync(process.execPath,['tests/portal-regression.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/contact-enquiries.mjs'],{stdio:'inherit'});
 
 // 1. keep a browsable copy at /landing/
 mkdirSync(join(DIST, 'landing'), { recursive: true });

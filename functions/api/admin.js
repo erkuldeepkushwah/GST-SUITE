@@ -1,4 +1,5 @@
 import {otpVerified} from './roles.js';
+import {contactConfigured,listContactEnquiries,updateContactEnquiry} from '../lib/contact-enquiries.js';
 // Administrative authorization is checked on the server, not by browser email alone.
 const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 export async function onRequestPost({request,env}){
@@ -15,6 +16,21 @@ export async function onRequestPost({request,env}){
  const body=await request.text();const input=body?JSON.parse(body):{};const action=input.action||'dashboard';
  if(!db)return respond({error:'Admin database unavailable'},503);
  if(!await otpVerified(request,env,{...u,authTime:(()=>{try{const raw=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(raw.padEnd(Math.ceil(raw.length/4)*4,'='))).auth_time;}catch{return null;}})()}))return respond({error:'Login OTP required'},403);
+ if(action==='contactList'){
+  if(!contactConfigured(env))return respond({error:'Contact database not configured'},503);
+  try{return respond({rows:await listContactEnquiries(env)});}
+  catch(e){console.warn('Admin contact query failed',{name:e?.name||'Error'});return respond({error:'Unable to load website enquiries'},503);}
+ }
+ if(action==='contactUpdate'){
+  const id=String(input.id||''),status=String(input.status||''),notes=String(input.notes||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||
+   !['New','In Progress','Resolved','Closed'].includes(status)||notes.length>3000)return respond({error:'Invalid enquiry update'},400);
+  if(!contactConfigured(env))return respond({error:'Contact database not configured'},503);
+  try{
+   const row=await updateContactEnquiry(env,id,status,notes);
+   return row?respond({saved:true,row}):respond({error:'Enquiry not found'},404);
+  }catch(e){console.warn('Admin contact update failed',{name:e?.name||'Error'});return respond({error:'Unable to update enquiry'},503);}
+ }
  if(action==='dashboard'){
  const rows=(await db.prepare('SELECT module,status,COUNT(*) AS count,SUM(amount) AS amount FROM admin_records GROUP BY module,status').all()).results;
  const count=(m,s)=>rows.filter(r=>r.module===m&&(!s||r.status===s)).reduce((a,r)=>a+r.count,0);
