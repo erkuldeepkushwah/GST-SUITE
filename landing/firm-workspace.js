@@ -1,5 +1,5 @@
 import {clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
-import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=workflow1';
+import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=horizontal1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
@@ -13,7 +13,7 @@ const select=(options)=>{const n=el('select');n.style.cssText='padding:10px;bord
 const field=(label,n)=>{const l=el('label');l.style.cssText='display:grid;gap:6px;margin:10px 0;max-width:540px';l.append(el('strong',label),n);return l;};
 const input=(placeholder,multi=false)=>{const n=el(multi?'textarea':'input');n.placeholder=placeholder;n.style.cssText='padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;max-width:100%';return n;};
 function table(target,headers,rows){
- const wrap=el('div');wrap.style.overflowX='auto';const t=el('table');t.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const h=t.createTHead().insertRow();headers.forEach(v=>{const th=el('th',v);th.style.cssText='padding:10px;background:#f4f8ff;white-space:nowrap';h.append(th);});
+ const wrap=el('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable data table');const t=el('table');t.className='portal-data-table';t.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const h=t.createTHead().insertRow();headers.forEach(v=>{const th=el('th',v);th.style.cssText='padding:10px;background:#f4f8ff;white-space:nowrap';h.append(th);});
  for(const row of rows){const tr=t.insertRow();for(const v of row){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3;vertical-align:top;overflow-wrap:anywhere';if(v instanceof Node)td.append(v);else td.textContent=v??'—';}}
  wrap.append(t);target.append(rows.length?wrap:el('p','No records yet.','empty'));
 }

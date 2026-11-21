@@ -166,3 +166,46 @@
 .document-files { margin: 0; padding-inline-start: 1.25rem; overflow-wrap: anywhere; }
 .document-files:empty,
 .document-form [role="status"]:empty { display: none; }
+
+
+/* One consistent horizontal data-grid layout for Client, Firm and Admin.
+   Keep all columns and action controls in a single row; scroll the table,
+   never the whole dashboard. */
+.content,.content>.panel,.content .panel,.admin-account-details{min-width:0;max-width:100%}
+#content .portal-table-scroll{
+ width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:auto;
+ overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+ border:1px solid #dce7f4;border-radius:12px;background:#fff;
+ scrollbar-width:thin;scrollbar-color:#b5c9e6 #f1f6fc;
+}
+#content .portal-table-scroll:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+#content .portal-table-scroll::-webkit-scrollbar{height:9px}
+#content .portal-table-scroll::-webkit-scrollbar-track{background:#f1f6fc;border-radius:8px}
+#content .portal-table-scroll::-webkit-scrollbar-thumb{background:#b5c9e6;border-radius:8px}
+#content table.portal-data-table{
+ width:100%;min-width:max(100%,760px);border-spacing:0;border-collapse:separate;
+ table-layout:auto;text-align:left;font-size:12px;line-height:1.5;
+}
+#content .portal-data-table th,#content .portal-data-table td{
+ box-sizing:border-box;min-width:115px;padding:12px 14px;
+ white-space:nowrap;vertical-align:middle;text-align:left;
+ border-bottom:1px solid #e8eef7;
+}
+#content .portal-data-table thead th{
+ position:sticky;top:0;z-index:1;background:#eaf2ff!important;
+ color:#153b71;font-size:11px;font-weight:800;letter-spacing:.01em;
+ border-bottom:1px solid #ccdcf1;
+}
+#content .portal-data-table tbody tr:nth-child(even) td{background:#f8fbff}
+#content .portal-data-table tbody tr:hover td{background:#eef5ff}
+#content .portal-data-table tbody tr:last-child td{border-bottom:0}
+#content .portal-data-table :is(button,.action,select){white-space:nowrap}
+#content .portal-data-table :is(input,textarea,select){max-width:300px}
+#content .portal-data-table textarea{min-width:180px;white-space:normal}
+#content .portal-data-table td:has(textarea),#content .portal-data-table td:has(input){white-space:normal}
+#content .portal-data-table .action{margin:2px 3px 2px 0;padding:8px 11px;min-height:34px}
+@media(max-width:750px){
+ #content .portal-table-scroll{border-radius:9px}
+ #content table.portal-data-table{min-width:max(100%,700px);font-size:12px}
+ #content .portal-data-table th,#content .portal-data-table td{padding:10px 12px;min-width:110px}
+}
