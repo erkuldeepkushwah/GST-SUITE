@@ -186,8 +186,13 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
  const section=card();section.classList.add('workflow-booking-review');section.append(el('h3','Booking Review — Admin / Firm Handoffs'));
  section.append(el('p','Price approval, firm assignment, payment verification, final review and audit trail. Client records remain private.'));
  const status=el('p','Loading bookings…');section.append(status);
- const search=input('search');search.placeholder='Find booking, client or service';
- const list=el('div');section.append(search,list);panel.append(section);let orders=[],firms=[];
+ const toolbar=el('div');toolbar.style.cssText='display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px';
+ const search=input('search');search.placeholder='Search booking ID, client, email or service';search.setAttribute('aria-label','Search service bookings');search.style.flex='1 1 220px';
+ const stage=select([['All','All statuses']]);stage.setAttribute('aria-label','Filter booking status');
+ const assigned=select([['All','All firms'],['Unassigned','Unassigned bookings']]);assigned.setAttribute('aria-label','Filter assigned firm');
+ const refreshBtn=btn('Refresh Bookings',()=>reload());toolbar.append(search,stage,assigned,refreshBtn);
+ const count=el('p','');count.setAttribute('role','status');
+ const list=el('div');section.append(toolbar,count,list);panel.append(section);let orders=[],firms=[];
  async function open(order){
   section.querySelector('.admin-booking-review')?.remove();
   const box=card();box.classList.add('admin-booking-review');section.append(box);
@@ -195,6 +200,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
   try{
    const d=await api({action:'workflowDetails',orderId:order.id});info.textContent='';
    box.append(el('h4','Booking '+(d.order.booking_code||d.order.id)));
+   pair(box,'Financial Year / Frequency',(d.order.financial_year||'—')+' / '+(d.order.frequency||'—'));
    pair(box,'Client',d.order.client_name+' / '+(d.client?.email||''));
    pair(box,'Service',d.order.service+' · '+d.order.period);
    pair(box,'Status',d.order.status);
@@ -204,8 +210,11 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    const assign=select([['','Select firm'],...firms.map(f=>[f.uid,(f.name||f.email)+' · '+f.email])]);
    if(d.order.firm_uid!==d.order.client_uid)assign.value=d.order.firm_uid;
    const assignBtn=btn('Assign / Reassign Firm',()=>safeAction(assignBtn,notice,async()=>{
-    await api({action:'workflowAssign',orderId:order.id,firmUid:assign.value});notice.textContent='Firm assigned.';await reload();await open(order);
+    if(!assign.value)throw Error('Select an active firm first.');
+    if(order.firm_uid!==order.client_uid&&order.firm_uid!==assign.value&&!confirm('Reassign this client and booking to the selected firm?'))return;
+    await api({action:'workflowAssign',orderId:order.id,firmUid:assign.value});notice.textContent='Firm assigned to client and booking.';await reload();await open(order);
    }));
+   assignBtn.disabled=!firms.length||['COMPLETED','CANCELLED'].includes(d.order.status);
    box.append(field('Assigned Firm',assign),assignBtn);
    const quote=card();quote.append(el('h4','Admin Approved Quote'));
    pair(quote,'Current quote',d.quote?money(d.quote.amount_paise)+' (v'+d.quote.version+')':'Not approved');
@@ -253,16 +262,63 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    box.append(btn('Close Review',()=>box.remove()));box.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){info.textContent=e.message||'Unable to load booking';}
  }
+ function quickAssign(order){
+  section.querySelector('.booking-quick-assign')?.remove();
+  section.querySelector('.admin-booking-review')?.remove();
+  const box=card();box.classList.add('booking-quick-assign');
+  box.append(el('h4',(order.firm_uid===order.client_uid?'Assign':'Reassign')+' Firm — '+(order.booking_code||order.id)));
+  pair(box,'Customer',(order.client_name||'Client')+' · '+(order.client_email||'—'));
+  pair(box,'Service',order.service+' · '+(order.period||'—'));
+  const picker=select([['','Select active firm'],...firms.map(f=>[f.uid,(f.name||f.email)+' · '+f.email])]);
+  picker.setAttribute('aria-label','Active firm for service booking');
+  if(firms.some(f=>f.uid===order.firm_uid))picker.value=order.firm_uid;
+  const feedback=el('p','This assigns the booking and customer to the selected firm. Existing other bookings are unchanged.');
+  feedback.setAttribute('role','status');
+  const save=btn('Confirm Firm Assignment',()=>safeAction(save,feedback,async()=>{
+   if(!picker.value)throw Error('Select an active firm.');
+   if(order.firm_uid===picker.value){feedback.textContent='This booking is already assigned to that firm.';return;}
+   if(order.firm_uid!==order.client_uid&&!confirm('Reassign this client and booking to the selected firm?')){feedback.textContent='Reassignment cancelled.';return;}
+   const choice=firms.find(f=>f.uid===picker.value);
+   await api({action:'workflowAssign',orderId:order.id,firmUid:picker.value});
+   box.remove();await reload();
+   status.textContent='Booking '+(order.booking_code||order.id)+' assigned to '+(choice?.email||'selected firm')+'.';
+  }),true);
+  save.disabled=!firms.length;
+  box.append(field('Select Firm',picker),feedback,save,btn('Cancel',()=>box.remove()));
+  section.insertBefore(box,list);box.scrollIntoView({behavior:'smooth',block:'nearest'});picker.focus();
+ }
  function draw(){
   list.replaceChildren();const q=search.value.toLowerCase().trim();
-  const filtered=orders.filter(o=>[o.booking_code,o.id,o.client_name,o.client_email,o.service,o.period].some(v=>String(v||'').toLowerCase().includes(q)));
-  table(list,['Booking ID','Client','Service / Period','Status','Assigned Firm','Action'],filtered.map(o=>[o.booking_code||o.id,o.client_name,o.service+' / '+(o.period||'—'),o.status,o.assigned_email||'Unassigned',btn('Review',()=>open(o),true)]));
+  const filtered=orders.filter(o=>
+   [o.booking_code,o.id,o.client_name,o.client_email,o.service,o.category,o.financial_year,o.period].some(v=>String(v||'').toLowerCase().includes(q))&&
+   (stage.value==='All'||o.status===stage.value)&&
+   (assigned.value==='All'||assigned.value==='Unassigned'&&o.firm_uid===o.client_uid||o.firm_uid===assigned.value)
+  );
+  count.textContent=filtered.length+' of '+orders.length+' bookings shown (latest 300).';
+  table(list,['Booking ID','Customer','Email','Service','Financial Year','Filing Period','Requested Date','Booked On','Status','Assigned Firm','Actions'],filtered.map(o=>{
+   const actions=el('div');
+   actions.append(btn('View Details',()=>open(o),true));
+   if(!['COMPLETED','CANCELLED'].includes(o.status))actions.append(btn(o.firm_uid===o.client_uid?'Assign Firm':'Reassign Firm',()=>quickAssign(o)));
+   actions.append(btn('Manage Files',()=>openFiles(o)));
+   return [o.booking_code||o.id,o.client_name||'Client',o.client_email||'—',o.service||'—',o.financial_year||'—',o.period||'—',o.requested_date||o.due_date||'—',date(o.created_at),o.status||'—',o.firm_uid===o.client_uid?'Unassigned':o.assigned_email||'Firm assigned',actions];
+  }));
  }
  async function reload(){
-  try{const r=await api({action:'workflowAdminOrders'});if(!section.isConnected)return;orders=r.orders;firms=r.firms;draw();status.textContent=orders.length+' bookings loaded.';}
-  catch(e){status.textContent=e.message||'Unable to load bookings';}
+  refreshBtn.disabled=true;
+  try{
+   const r=await api({action:'workflowAdminOrders'});if(!section.isConnected)return;orders=r.orders;firms=r.firms;
+   const prevStatus=stage.value,prevFirm=assigned.value;
+   stage.replaceChildren();stage.add(new Option('All statuses','All'));
+   for(const state of [...new Set(orders.map(o=>o.status).filter(Boolean))].sort())stage.add(new Option(state,state));
+   if([...stage.options].some(o=>o.value===prevStatus))stage.value=prevStatus;
+   assigned.replaceChildren();assigned.add(new Option('All firms','All'));assigned.add(new Option('Unassigned bookings','Unassigned'));
+   for(const f of firms)assigned.add(new Option((f.name||f.email)+' · '+f.email,f.uid));
+   if([...assigned.options].some(o=>o.value===prevFirm))assigned.value=prevFirm;
+   draw();status.textContent=orders.length+' client service bookings loaded.';
+  }catch(e){status.textContent=e.message||'Unable to load bookings';}
+  finally{refreshBtn.disabled=false;}
  }
- search.oninput=draw;await reload();
+ search.oninput=draw;stage.onchange=assigned.onchange=draw;await reload();
  const catalogue=card();catalogue.append(el('h3','Service Catalog & Document Requirements'));
  const description=el('p','Changes affect which services clients can book and what the assigned firm needs to review.');
  catalogue.append(description);section.after(catalogue);
