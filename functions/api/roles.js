@@ -1,10 +1,10 @@
 import {workspace} from '../lib/firm-workspace.js';
 import {liveAccountMap, liveFirmRows} from '../lib/live-accounts.js';
+import {otpIsRequired} from '../lib/otp-policy.js';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
 const sections=['Assigned Clients','My Tasks','Service Management','Document Review','Filing & Updates','Invoices & Payments','Client Support','Notifications'];
 async function policy(db,uid){return await db.prepare('SELECT active,otp FROM account_policy WHERE uid=?').bind(uid).first();}
-function otpDefault(env,email){return env.GST_OTP_MODE==='required'||(env.GST_OTP_MODE==='test'&&email===String(env.GST_OTP_TEST_EMAIL||'').toLowerCase());}
 async function identity(request,env){
  const token=request.headers.get('Authorization')?.match(/^Bearer (\S+)$/i)?.[1];if(!token)return null;
  const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+encodeURIComponent(env.FIREBASE_WEB_API_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:token})});
@@ -12,7 +12,7 @@ async function identity(request,env){
  try{const p=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');u.authTime=JSON.parse(atob(p.padEnd(Math.ceil(p.length/4)*4,'='))).auth_time;}catch{return null;}return u;
 }
 async function otpVerified(request,env,u){
- const p=await policy(env.GST_AUTH_DB,u.localId);const required=p?.otp==null?otpDefault(env,u.email.toLowerCase()):!!p.otp;if(!required)return true;
+ const p=await policy(env.GST_AUTH_DB,u.localId);const required=otpIsRequired(env,u.email,p?.otp);if(!required)return true;
  const cookie=request.headers.get('Cookie')?.match(/(?:^|;\s*)gst_otp=([a-f0-9]{64})(?:;|$)/)?.[1];if(!cookie||!env.RESEND_API_KEY)return false;
  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.RESEND_API_KEY),{name:'HMAC',hash:'SHA-256'},false,['sign']);const hash=Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode('gst-auth-v1:'+cookie))),x=>x.toString(16).padStart(2,'0')).join('');
  return !!await env.GST_AUTH_DB.prepare('SELECT uid FROM otp_sessions WHERE digest=? AND uid=? AND auth_time=? AND expires>?').bind(hash,u.localId,u.authTime,Date.now()).first();
@@ -67,6 +67,7 @@ export async function onRequestPost({request,env}){
  const row=await db.prepare('SELECT role FROM staff_roles WHERE uid=? AND email=?').bind(u.localId,email).first();
  const profile=!admin?await db.prepare('SELECT account_type,name,mobile,business_name,gstin,profession,firm_name FROM customer_profiles WHERE uid=?').bind(u.localId).first():null;return json({role:admin?'admin':row||profile?.account_type==='professional'?'firm':'customer',name:u.displayName||email,accountType:row?'professional':profile?.account_type||'legacy',profile});
  }
+ if(admin&&!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
  if(['clientFirms','assignClient','assignClientByContact','unassignClient','accountPolicy','directory','adminAccountDetails'].includes(b.action)){
  if(!admin)return json({error:'Admin required'},403);
  if(b.action==='adminAccountDetails'){
@@ -86,7 +87,7 @@ export async function onRequestPost({request,env}){
  clients=clients.filter(x=>linked.has(x.uid)).map(x=>({...x,email:linked.get(x.uid).email}));
  const orders=role==='Firm'?await rows("SELECT o.id,o.client_name,o.service,o.period,o.due_date,o.due_date_source,o.status,o.created_at,CASE WHEN o.firm_uid=o.client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders o WHERE o.firm_uid=? OR (o.firm_uid=o.client_uid AND EXISTS(SELECT 1 FROM staff_assignments w WHERE w.id='client:'||o.client_uid AND w.staff_uid=? AND w.section='Assigned Clients')) ORDER BY o.created_at DESC LIMIT 500",target,target):await rows("SELECT id,client_name,service,period,due_date,due_date_source,status,created_at,CASE WHEN firm_uid=client_uid THEN 'Business' ELSE 'Firm' END AS booked_by FROM firm_service_orders WHERE client_uid=? ORDER BY created_at DESC LIMIT 500",target);
  const billing=await rows("SELECT id,kind,title,amount_paise,status,created_at FROM firm_billing WHERE firm_uid=? ORDER BY created_at DESC LIMIT 500",target);
- return json({profile:{uid:target,role,name:profile?.name||account.name,email:account.email,mobile:profile?.mobile||mobile?.mobile||account.phone,business_name:profile?.business_name||null,gstin:profile?.gstin||null,firm_name:profile?.firm_name||null,profession:profile?.profession||null,created_at:profile?.created_at||Number(account.createdAt)||null,last_login:Number(account.lastLoginAt)||null,active:!account.disabled&&p?.active!==0,verified:account.verified,otp:p?.otp==null?otpDefault(env,mail):!!p.otp},assignedFirm,clients,orders,billing});
+ return json({profile:{uid:target,role,name:profile?.name||account.name,email:account.email,mobile:profile?.mobile||mobile?.mobile||account.phone,business_name:profile?.business_name||null,gstin:profile?.gstin||null,firm_name:profile?.firm_name||null,profession:profile?.profession||null,created_at:profile?.created_at||Number(account.createdAt)||null,last_login:Number(account.lastLoginAt)||null,active:!account.disabled&&p?.active!==0,verified:account.verified,otp:otpIsRequired(env,mail,p?.otp)},assignedFirm,clients,orders,billing});
  }
  if(b.action==='clientFirms'){
  const rows=(await db.prepare("SELECT r.uid,r.email,'Firm' AS role FROM ("+firmSql+") r LEFT JOIN account_policy p ON p.uid=r.uid WHERE COALESCE(p.active,1)=1 ORDER BY r.email").all()).results;
@@ -128,12 +129,13 @@ export async function onRequestPost({request,env}){
  if(b.action==='accountPolicy'){
  const target=String(b.uid||''),mail=String(b.email||'').trim().toLowerCase();
  if(!target||target===ADMIN||mail==='kuldeep@gmail.com'||!['active','otp'].includes(b.field)||typeof b.value!=='boolean')return json({error:'Invalid account setting'},400);
+ if(b.field==='otp'&&b.value===false&&env.GST_OTP_MODE==='required')return json({error:'OTP is mandatory for every account'},409);
  const d=await firebaseDirectory(env,mail,null);if(!d.users.some(x=>x.uid===target&&x.email===mail))return json({error:'Account not found'},404);
  const field=b.field;await db.batch([db.prepare('INSERT INTO account_policy(uid,active,otp) VALUES(?,1,NULL) ON CONFLICT(uid) DO NOTHING').bind(target),db.prepare('UPDATE account_policy SET '+field+'=? WHERE uid=?').bind(b.value?1:0,target),db.prepare('DELETE FROM otp_sessions WHERE uid=?').bind(target),db.prepare('UPDATE otp_challenges SET consumed=1 WHERE uid=?').bind(target)]);
  return json({saved:true});
  }
  if(b.action==='directory'){
- try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const roleKeys=new Set(roles.map(r=>r.uid+'\n'+String(r.email||'').toLowerCase()));const clients=new Map((await db.prepare("SELECT w.id,r.uid AS firm_uid,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x]));const currentFirms=await liveAccounts(d.users.map(x=>clients.get(x.uid)?.firm_uid));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:(()=>{const a=clients.get(x.uid);const f=a&&currentFirms.get(a.firm_uid);return f&&!f.disabled&&policies.get(f.uid)?.active!==0&&f.email===String(a.email||'').toLowerCase()?f.email:null;})(),active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:policies.get(x.uid)?.otp==null?otpDefault(env,x.email):!!policies.get(x.uid).otp,role:roleKeys.has(x.uid+'\n'+x.email)?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
+ try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const roleKeys=new Set(roles.map(r=>r.uid+'\n'+String(r.email||'').toLowerCase()));const clients=new Map((await db.prepare("SELECT w.id,r.uid AS firm_uid,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x]));const currentFirms=await liveAccounts(d.users.map(x=>clients.get(x.uid)?.firm_uid));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:(()=>{const a=clients.get(x.uid);const f=a&&currentFirms.get(a.firm_uid);return f&&!f.disabled&&policies.get(f.uid)?.active!==0&&f.email===String(a.email||'').toLowerCase()?f.email:null;})(),active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:otpIsRequired(env,x.email,policies.get(x.uid)?.otp),role:roleKeys.has(x.uid+'\n'+x.email)?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
  }
  return json({error:'Invalid admin action'},400);
  }

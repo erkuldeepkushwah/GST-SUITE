@@ -1,4 +1,5 @@
 import {sendPortalEmail} from '../lib/portal-email.js';
+import {otpIsRequired} from '../lib/otp-policy.js';
 // Email OTP pilot. D1 enforces one-time codes, expiry and attempt limits.
 const reply=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store',...headers}});
 const normalize=v=>String(v||'').replace(/^\+91/,'').replace(/\s/g,'');
@@ -13,7 +14,6 @@ async function userFor(req,env){
  try{const p=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');u.authTime=JSON.parse(atob(p.padEnd(Math.ceil(p.length/4)*4,'='))).auth_time;}catch{return null;}
  return u;
 }
-const required=(env,u)=>env.GST_OTP_MODE==='required'||(env.GST_OTP_MODE==='test'&&u.email.toLowerCase()===String(env.GST_OTP_TEST_EMAIL||'').toLowerCase());
 export async function onRequestPost({request,env}){
  if(request.headers.get('Origin')&&request.headers.get('Origin')!==new URL(request.url).origin)return reply({error:'Invalid origin'},403);
  const db=env.GST_AUTH_DB;if(!db||!env.RESEND_API_KEY||!env.FIREBASE_WEB_API_KEY)return reply({error:'Authentication service unavailable'},503);
@@ -41,7 +41,7 @@ export async function onRequestPost({request,env}){
  return reply({loggedOut:true},200,{'Set-Cookie':'gst_otp=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'});
  }
  const policy=await db.prepare('SELECT active,otp FROM account_policy WHERE uid=?').bind(u.localId).first();if(policy?.active===0)return reply({error:'Account inactive. Contact administrator.'},403);
- const needsOtp=policy?.otp==null?required(env,u):!!policy.otp;
+ const needsOtp=otpIsRequired(env,u.email,policy?.otp);
  if(action==='register'){
  const n=normalize(body.mobile);if(!/^[6-9]\d{9}$/.test(n))return reply({error:'Enter a valid 10-digit mobile number'},400);
  // Pilot only: prevent existing users claiming arbitrary numbers outside the test cohort.

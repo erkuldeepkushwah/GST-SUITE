@@ -1,3 +1,4 @@
+import {otpVerified} from './roles.js';
 // Administrative authorization is checked on the server, not by browser email alone.
 const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 export async function onRequestPost({request,env}){
@@ -13,6 +14,7 @@ export async function onRequestPost({request,env}){
  const modules=['Customers','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Settings'];
  const body=await request.text();const input=body?JSON.parse(body):{};const action=input.action||'dashboard';
  if(!db)return respond({error:'Admin database unavailable'},503);
+ if(!await otpVerified(request,env,{...u,authTime:(()=>{try{const raw=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(raw.padEnd(Math.ceil(raw.length/4)*4,'='))).auth_time;}catch{return null;}})()}))return respond({error:'Login OTP required'},403);
  if(action==='dashboard'){
  const rows=(await db.prepare('SELECT module,status,COUNT(*) AS count,SUM(amount) AS amount FROM admin_records GROUP BY module,status').all()).results;
  const count=(m,s)=>rows.filter(r=>r.module===m&&(!s||r.status===s)).reduce((a,r)=>a+r.count,0);
