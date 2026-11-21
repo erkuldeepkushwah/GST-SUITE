@@ -49,6 +49,15 @@ function renderModule(panel,name){
  if(name==='Notifications')void renderClientNotifications(panel,{api:roleApi});
  if(name==='Documents & Vault'){const history=createUploadedDocuments(currentUser,{admin:true});panel.append(history.element);void history.refresh();return;}
  if(name==='Firm Operations'){void renderFirmOperations(panel);return;}
+  if(name==='Filing & Task Management'){
+   const bookingPanel=panel;
+   void renderAdminWorkflow(bookingPanel,{api:roleApi,openFiles:o=>showOrderFiles(bookingPanel,o,roleApi,currentUser,true)});
+   const manual=make('details',undefined,'manual-task-register');
+   manual.style.cssText='margin-top:24px;border-top:1px solid #dbe5f0;padding-top:16px';
+   const summary=make('summary','Manual Task Register — existing records (separate from client bookings)');
+   summary.style.cssText='cursor:pointer;font-weight:600;padding:8px 0';
+   manual.append(summary);bookingPanel.append(manual);panel=manual;
+  }
   if(name==='Support / Queries'){void renderWebsiteContactEnquiries(panel);panel.append(make('h3','Manual Support Register (existing records)'));}
  if(name==='Customers'){renderFirebaseCustomers(panel);return;}
  if(name==='Firms'){renderFirebaseCustomers(panel,true);return;}

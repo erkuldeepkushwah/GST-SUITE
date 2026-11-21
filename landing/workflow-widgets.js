@@ -186,8 +186,13 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
  const section=card();section.classList.add('workflow-booking-review');section.append(el('h3','Booking Review — Admin / Firm Handoffs'));
  section.append(el('p','Price approval, firm assignment, payment verification, final review and audit trail. Client records remain private.'));
  const status=el('p','Loading bookings…');section.append(status);
- const search=input('search');search.placeholder='Find booking, client or service';
- const list=el('div');section.append(search,list);panel.append(section);let orders=[],firms=[];
+ const toolbar=el('div');toolbar.style.cssText='display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px';
+ const search=input('search');search.placeholder='Search booking ID, client, email or service';search.setAttribute('aria-label','Search service bookings');search.style.flex='1 1 220px';
+ const stage=select([['All','All statuses']]);stage.setAttribute('aria-label','Filter booking status');
+ const assigned=select([['All','All firms'],['Unassigned','Unassigned bookings']]);assigned.setAttribute('aria-label','Filter assigned firm');
+ const refreshBtn=btn('Refresh Bookings',()=>reload());toolbar.append(search,stage,assigned,refreshBtn);
+ const count=el('p','');count.setAttribute('role','status');
+ const list=el('div');section.append(toolbar,count,list);panel.append(section);let orders=[],firms=[];
  async function open(order){
   section.querySelector('.admin-booking-review')?.remove();
   const box=card();box.classList.add('admin-booking-review');section.append(box);
@@ -195,6 +200,7 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
   try{
    const d=await api({action:'workflowDetails',orderId:order.id});info.textContent='';
    box.append(el('h4','Booking '+(d.order.booking_code||d.order.id)));
+   pair(box,'Financial Year / Frequency',(d.order.financial_year||'—')+' / '+(d.order.frequency||'—'));
    pair(box,'Client',d.order.client_name+' / '+(d.client?.email||''));
    pair(box,'Service',d.order.service+' · '+d.order.period);
    pair(box,'Status',d.order.status);
@@ -204,8 +210,11 @@ export async function renderAdminWorkflow(panel,{api,openFiles}){
    const assign=select([['','Select firm'],...firms.map(f=>[f.uid,(f.name||f.email)+' · '+f.email])]);
    if(d.order.firm_uid!==d.order.client_uid)assign.value=d.order.firm_uid;
    const assignBtn=btn('Assign / Reassign Firm',()=>safeAction(assignBtn,notice,async()=>{
-    await api({action:'workflowAssign',orderId:order.id,firmUid:assign.value});notice.textContent='Firm assigned.';await reload();await open(order);
+    if(!assign.value)throw Error('Select an active firm first.');
+    if(order.firm_uid!==order.client_uid&&order.firm_uid!==assign.value&&!confirm('Reassign this client and booking to the selected firm?'))return;
+    await api({action:'workflowAssign',orderId:order.id,firmUid:assign.value});notice.textContent='Firm assigned to client and booking.';await reload();await open(order);
    }));
+   assignBtn.disabled=!firms.length||['COMPLETED','CANCELLED'].includes(d.order.status);
    box.append(field('Assigned Firm',assign),assignBtn);
    const quote=card();quote.append(el('h4','Admin Approved Quote'));
    pair(quote,'Current quote',d.quote?money(d.quote.amount_paise)+' (v'+d.quote.version+')':'Not approved');
