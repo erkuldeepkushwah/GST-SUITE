@@ -139,17 +139,29 @@ export async function workflow({db,b,u,firm,admin,liveAccounts}){
   const role=await one(db,"SELECT a.uid,a.email FROM portal_accounts a LEFT JOIN staff_roles s ON s.uid=a.uid LEFT JOIN customer_profiles c ON c.uid=a.uid LEFT JOIN account_policy p ON p.uid=a.uid WHERE a.uid=? AND ((s.uid IS NOT NULL AND LOWER(TRIM(s.email))=LOWER(TRIM(a.email))) OR c.account_type='professional') AND COALESCE(p.active,1)=1",target);
   if(!role)return json({error:'Firm is unavailable or inactive'},400);
   // A stale D1 record must never receive a live booking assignment.
-  const current=await liveAccounts([target]),account=current.get(target);
+  const current=await liveAccounts([target,order.client_uid]),account=current.get(target),client=current.get(order.client_uid);
   if(!account||account.disabled||account.email!==String(role.email||'').trim().toLowerCase())
    return json({error:'Firm account is no longer active in Firebase. Select an active firm.'},409);
+  if(!client||client.disabled)return json({error:'Client account is no longer active in Firebase. Cannot assign an orphaned booking.'},409);
+  const clientPolicy=await one(db,'SELECT active FROM account_policy WHERE uid=?',order.client_uid);
+  if(clientPolicy?.active===0)return json({error:'Client account is inactive. Reactivate the customer before assignment.'},409);
   if(['COMPLETED','CANCELLED'].includes(order.status))return json({error:'Cannot reassign a closed booking'},409);
+  if(order.firm_uid===target)return json({saved:true,status:order.status,alreadyAssigned:true});
   const next=order.status==='SUBMITTED'?'UNDER_REVIEW':order.status,previous=order.firm_uid;
-  const r=await change(db,order,next,u,'FIRM_ASSIGNED',previous+' -> '+target,{
-   sql:'UPDATE firm_service_orders SET firm_uid=?,status=?,updated_at=? WHERE id=? AND updated_at=?',
-   params:[target,next,now,order.id,order.updated_at]
-  });
-  if(r.status===200)await notify(db,target,id,'Service assigned: '+order.service+' ('+(order.booking_code||order.id)+')');
-  return r;
+  // Keep the booked service and the customer's Assigned Clients relationship synchronized.
+  // D1 batch runs both mutations atomically; the timestamp is an optimistic concurrency guard.
+  const changed=await db.batch([
+   db.prepare('UPDATE firm_service_orders SET firm_uid=?,status=?,updated_at=? WHERE id=? AND updated_at=?')
+    .bind(target,next,now,order.id,order.updated_at),
+   db.prepare("INSERT INTO staff_assignments(id,staff_uid,section,title,reference,status,notes,updated) SELECT 'client:'||o.client_uid,?,'Assigned Clients',?,?,'Assigned','',? FROM firm_service_orders o WHERE o.id=? AND o.firm_uid=? AND o.updated_at=? ON CONFLICT(id) DO UPDATE SET staff_uid=excluded.staff_uid,title=excluded.title,reference=excluded.reference,status=excluded.status,updated=excluded.updated")
+    .bind(target,plain(order.client_name||client.name||client.email,150),client.email,now,order.id,target,now)
+  ]);
+  if(!changed[0].meta.changes)return json({error:'Booking changed; refresh and retry'},409);
+  if(!changed[1].meta.changes)return json({error:'Client assignment was not updated; refresh booking'},503);
+  await audit(db,order.id,uid,'FIRM_ASSIGNED',order.status,next,previous+' -> '+target+'; client assignment synchronized');
+  await notify(db,target,id,'Service assigned: '+order.service+' ('+(order.booking_code||order.id)+')');
+  await notify(db,order.client_uid,id,'Your booking '+(order.booking_code||order.id)+' was assigned to a firm.');
+  return json({saved:true,status:next,assignedFirmUid:target,clientAssigned:true});
  }
  if(action==='workflowQuote'){
   if(!admin)return json({error:'Admin only'},403);

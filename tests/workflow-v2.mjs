@@ -111,3 +111,60 @@ assert.equal(response.status,409,'An orphaned Firebase firm UID must not receive
 assert.equal(calls.length,mutationsBefore,'Stale firm validation must not mutate bookings');
 console.log('[firm dropdown] stale UID assignment fails closed');
 
+
+// Admin booking assignment updates both D1 order owner and Assigned Clients.
+// Uses synthetic data only; never touches production accounts or bookings.
+const sampleBooking={id:'client-sample:request-a',client_uid:'client-sample',client_name:'Sample Business',firm_uid:'client-sample',service:'GSTR-1 Filing',booking_code:'GST-TEST',status:'SUBMITTED',updated_at:100};
+const assignmentWrites=[];
+let policyActive=1,conflict=false;
+const assignmentDb={
+ prepare(sql){return {bind(...params){return {
+  sql,params,
+  first:async()=>{
+   if(sql.startsWith('SELECT * FROM firm_service_orders WHERE id'))return sampleBooking;
+   if(sql.includes('SELECT a.uid,a.email FROM portal_accounts'))return {uid:'firm-active',email:'firm@example.test'};
+   if(sql.includes('SELECT active FROM account_policy'))return {active:policyActive};
+   throw Error('Unexpected assignment read: '+sql);
+  },
+  run:async()=>{assignmentWrites.push({sql,params});return {meta:{changes:1}};}
+ };}};},
+ batch:async queries=>{assignmentWrites.push(...queries);return queries.map((_,index)=>({meta:{changes:conflict&&index===0?0:1}}));}
+};
+const liveClients=new Map([['firm-active',{uid:'firm-active',email:'firm@example.test',disabled:false}],['client-sample',{uid:'client-sample',email:'client@example.test',disabled:false}]]);
+const liveFor=async ids=>new Map([...liveClients].filter(([key])=>ids.includes(key)));
+const assign=(actor=admin,liveAccounts=liveFor)=>workflow({db:assignmentDb,u:actor,firm:false,admin:actor===admin,liveAccounts,b:{action:'workflowAssign',orderId:sampleBooking.id,firmUid:'firm-active'}});
+let assignment=await assign();
+assert.equal(assignment.status,200,'Admin can assign a fresh booking');
+let assignmentResult=await assignment.json();
+assert.equal(assignmentResult.clientAssigned,true,'Assignment also updates the customer-firm relationship');
+assert.equal(assignmentResult.status,'UNDER_REVIEW','New booking enters review after firm assignment');
+assert.ok(assignmentWrites.some(x=>x.sql.includes('UPDATE firm_service_orders SET firm_uid')),'Booking firm is persisted');
+assert.ok(assignmentWrites.some(x=>x.sql.includes('INSERT INTO staff_assignments')),'Firm assigned to client in Firm Panel');
+assert.ok(assignmentWrites.some(x=>x.sql.includes('INSERT INTO workflow_audit')),'Audit event exists');
+assert.equal(assignmentWrites.filter(x=>x.sql.includes('INSERT INTO workflow_notifications')).length,2,'Firm and client notified');
+assignment=await assign({localId:'client-sample'});
+assert.equal(assignment.status,403,'Client cannot assign a firm');
+const countBefore=assignmentWrites.length;
+assignment=await assign(admin,async ids=>new Map([['firm-active',liveClients.get('firm-active')]]));
+assert.equal(assignment.status,409,'Deleted client must never be reassigned');
+assert.equal(assignmentWrites.length,countBefore,'Deleted client denial causes no database writes');
+policyActive=0;
+assignment=await assign();
+assert.equal(assignment.status,409,'Inactive client must not be assigned');
+policyActive=1;
+conflict=true;
+assignment=await assign();
+assert.equal(assignment.status,409,'Concurrent booking changes are rejected');
+conflict=false;
+console.log('[admin booking assignment] success, role protection, stale user, inactive user, concurrency checks passed');
+
+// UI regression: the live-booking table must appear under the correct admin nav item.
+import {readFileSync} from 'node:fs';
+const adminUi=readFileSync(new URL('../landing/admin.js',import.meta.url),'utf8');
+const bookingUi=readFileSync(new URL('../landing/workflow-widgets.js',import.meta.url),'utf8');
+assert.match(adminUi,/name==='Filing & Task Management'\)\{/,'Bookings mounted in Filing & Task Management');
+assert.match(adminUi,/renderAdminWorkflow\(bookingPanel/,'Live bookings rendered from backend, not manual records');
+assert.match(bookingUi,/\['Booking ID','Customer','Email','Service'/,'Booking table includes client identity');
+assert.match(bookingUi,/btn\(o\.firm_uid===o\.client_uid\?'Assign Firm':'Reassign Firm'/,'Admin table has direct assignment action');
+assert.match(bookingUi,/action:'workflowAssign',orderId:order\.id,firmUid:picker\.value/,'Row assignment calls the server-side endpoint');
+console.log('[admin booking UI] menu placement, table and row assignment actions passed');
