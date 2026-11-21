@@ -291,3 +291,40 @@
 }
 #content .portal-data-table .portal-action-lines{width:11px;gap:2px}
 #content .portal-data-table .portal-action-lines span{height:1px}
+
+
+/* Customers is the canonical table sizing for ALL role panels.
+   Override legacy inline table and cell styles without changing renderers or actions. */
+#content{--customer-table-row-height:20px;--customer-table-font-size:11px;--customer-table-cell-padding:6px}
+#content table.portal-data-table{
+ border-collapse:separate!important;font-size:var(--customer-table-font-size)!important;
+}
+#content .portal-data-table thead th,
+#content .portal-data-table tbody td{
+ box-sizing:border-box!important;vertical-align:middle!important;
+ padding:0 var(--customer-table-cell-padding)!important;
+ height:var(--customer-table-row-height)!important;
+ line-height:18px!important;font-size:var(--customer-table-font-size)!important;
+ border-bottom:1px solid #d5dde5!important;border-right:1px solid #d5dde5!important;
+ white-space:nowrap;
+}
+#content .portal-data-table thead th{background:#edf1f4!important}
+#content .portal-data-table tbody tr:nth-child(odd) td{background:#fff!important}
+#content .portal-data-table tbody tr:nth-child(even) td{background:#f4f6f8!important}
+#content .portal-data-table tbody tr:hover td{background:#eaf2fc!important}
+#content .portal-data-table th:last-child,#content .portal-data-table td:last-child{border-right:0!important}
+#content .portal-data-table tbody tr:last-child td{border-bottom:0!important}
+#content .portal-data-table tbody td p{margin:0!important;line-height:18px!important}
+#content .portal-data-table tbody td .action:not(.portal-action-trigger){
+ min-height:18px!important;padding:0 6px!important;margin:0 2px!important;
+ font-size:10px!important;line-height:16px!important;
+}
+/* Keep editable cells usable even when ordinary display rows are 20px. */
+#content .portal-data-table tbody td:has(input),
+#content .portal-data-table tbody td:has(textarea),
+#content .portal-data-table tbody td:has(select){
+ height:auto!important;padding:4px var(--customer-table-cell-padding)!important;
+}
+#content .portal-data-table tbody td:has(.portal-action-trigger){
+ height:var(--customer-table-row-height)!important;padding:0 5px!important;
+}
