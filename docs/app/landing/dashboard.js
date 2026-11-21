@@ -20,6 +20,7 @@ const backdrop = document.getElementById('backdrop');
 const sections = {
   overview: ['Overview', ''],
   services: ['My Services', 'Your GST return, registration and tax service requests will appear here once a customer-services backend is connected.'],
+  reports: ['Reports & Analytics', 'View and export your booking, filing, payment and document reports.'],
   documents: ['Upload Documents', 'Choose a category and attach your tax or accounting documents.'],
   downloads: ['Downloads & Vault', 'Filed returns and document downloads will appear here after customer-specific secure storage is configured.'],
   billing: ['Billing & Invoices', 'Service invoices and payments will appear here after billing integration. No amount is currently due in this preview because billing data is not connected.'],
@@ -47,9 +48,9 @@ function createServicesWorkspace(panel) {
 
 let currentUser = null, accountType='legacy', customerProfile=null, portalRole='customer';
 const menuConfig={
- business:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
+ business:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['reports','Reports & Analytics','chart-no-axes-combined'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
  firm:[['overview','Dashboard','house'],['assigned','Assigned Clients','users'],['companies','Client Companies','building-2'],['documents','Upload Documents','cloud-upload'],['tools','My Tools','layers-3'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']],
- legacy:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']]
+ legacy:[['overview','Dashboard','house'],['services','My Services','layers-3'],['documents','Upload Docs','cloud-upload'],['filings','Filing Status','file-check'],['reports','Reports & Analytics','chart-no-axes-combined'],['billing','Invoices','receipt-text'],['support','Support','message-circle'],['profile','Profile','user-round'],['logout','Logout','log-out']]
 };
 Object.assign(sections,{assigned:['Assigned Clients','Clients allocated to your firm by the administrator.'],companies:['Client Companies','Browse all registered clients and companies, including those not assigned to your firm.'],tools:['My Tools','GST reconciliation workspace.'],filings:['Filing Status','Track your filing and task records.']});
 const menu=()=>menuConfig[portalRole==='firm'?'firm':accountType==='business'?'business':'legacy'];
@@ -69,7 +70,7 @@ function displaySectionError(panel,error){
  console.error('Dashboard section failed',error);
 }
 async function renderBusiness(panel,...args){
- try{const module=await import('./business-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./business-workspace.js?v=reports-sidebar1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function renderWorkspace(panel,...args){
  try{const module=await import('./firm-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
@@ -186,7 +187,7 @@ function showSection(section,prefill={}) {
   const h = document.createElement('h2'); h.textContent = title;
   const p = document.createElement('p'); p.textContent = summary;
   panel.append(h,p);
-  if(portalRole==='customer'&&['services','documents','filings','billing','support','profile','notifications'].includes(section)) {
+  if(portalRole==='customer'&&['services','documents','filings','reports','billing','support','profile','notifications'].includes(section)) {
     p.remove();void renderBusiness(panel,section,{api:firmApi,user:currentUser,go:showSection,prefill});
     if(section==='documents'){
       void appendDocumentUploads(panel,'General Document Upload');
