@@ -1,5 +1,6 @@
+import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 import {clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
-import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=horizontal1';
+import {renderFirmWorkflow,renderReports} from './workflow-widgets.js?v=actionmenu1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
@@ -15,7 +16,7 @@ const input=(placeholder,multi=false)=>{const n=el(multi?'textarea':'input');n.p
 function table(target,headers,rows){
  const wrap=el('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable data table');const t=el('table');t.className='portal-data-table';t.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const h=t.createTHead().insertRow();headers.forEach(v=>{const th=el('th',v);th.style.cssText='padding:10px;background:#f4f8ff;white-space:nowrap';h.append(th);});
  for(const row of rows){const tr=t.insertRow();for(const v of row){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3;vertical-align:top;overflow-wrap:anywhere';if(v instanceof Node)td.append(v);else td.textContent=v??'—';}}
- wrap.append(t);target.append(rows.length?wrap:el('p','No records yet.','empty'));
+ enhancePortalTableActions(t);wrap.append(t);target.append(rows.length?wrap:el('p','No records yet.','empty'));
 }
 function downloadText(name,text){const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 export async function orderFileFetch(user,body){const changesFiles=body instanceof FormData||body?.action==='remove';const headers={Authorization:'Bearer '+await user.getIdToken()};if(!(body instanceof FormData)){headers['Content-Type']='application/json';body=JSON.stringify(body);}const r=await fetch('/api/order-files',{method:'POST',headers,body,cache:'no-store'});if(!r.ok){const j=await r.json().catch(()=>null);throw Error(j?.error||'File request failed');}if(changesFiles)clearPortalApiCache();return r;}

@@ -1,3 +1,4 @@
+import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 // Booking lifecycle widgets. Render inside existing sidebars; no navigation items are added.
 const el=(tag,content,cls)=>{const n=document.createElement(tag);if(content!==undefined)n.textContent=String(content);if(cls)n.className=cls;return n;};
 const btn=(name,fn,primary=false)=>{const n=el('button',name,'action'+(primary?' primary':''));n.type='button';n.onclick=fn;return n;};
@@ -11,7 +12,7 @@ function table(container,columns,data){
  const wrap=el('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable data table');wrap.style.margin='12px 0';const t=el('table');t.className='portal-data-table';t.style.cssText='width:100%;border-collapse:collapse;font-size:13px;text-align:left';
  const h=t.createTHead().insertRow();for(const c of columns){const th=el('th',c);th.style.cssText='padding:10px;background:#eff6ff;white-space:nowrap';h.append(th);}
  const body=t.createTBody();for(const row of data){const tr=body.insertRow();for(const x of row){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e2e8f0;vertical-align:top;overflow-wrap:anywhere';if(x instanceof Node)td.append(x);else td.textContent=String(x??'—');}}
- wrap.append(t);container.append(data.length?wrap:el('p','No matching records.','empty'));
+ enhancePortalTableActions(t);wrap.append(t);container.append(data.length?wrap:el('p','No matching records.','empty'));
 }
 function pair(box,label,value){const p=el('p');p.style.margin='7px 0';p.append(el('strong',label+': '),el('span',value??'—'));box.append(p);}
 const safeAction=async(b,output,job)=>{b.disabled=true;output.textContent='Working…';try{await job();}catch(e){output.textContent=e?.message||'Request failed';}finally{b.disabled=false;}};

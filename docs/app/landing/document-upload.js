@@ -1,3 +1,4 @@
+import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
 const fileLimit = 5;
 const sizeLimit = 10 * 1024 * 1024;
 const supportedExtension = /\.(pdf|jpe?g|png|csv|xlsx?)$/i;
@@ -116,7 +117,7 @@ export function createUploadedDocuments(user,{admin=false}={}){
  catch(e){info.textContent=e.message;}finally{remove.disabled=button.disabled=false;}
  };td.append(remove);}
  }
- wrap.append(table);
+ enhancePortalTableActions(table);wrap.append(table);
  }
  async function load(reset=false){if(busy)return;busy=true;more.disabled=true;info.textContent='Loading documents…';try{const start=reset?0:offset;const r=await api({action:'list',offset:start});const d=await r.json();if(reset)rows=[];rows.push(...d.documents);offset=start+d.documents.length;hasMore=d.hasMore;more.hidden=!hasMore;draw();}catch(e){info.textContent=e.message;}finally{busy=false;more.disabled=false;}}
  search.oninput=draw;more.onclick=()=>load(false);return {element:section,refresh:()=>load(true)};

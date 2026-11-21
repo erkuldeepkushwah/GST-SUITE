@@ -1,4 +1,5 @@
-import {renderClientNotifications} from './workflow-widgets.js?v=workflow1';
+import {enhancePortalTableActions} from './portal-action-menu.js?v=actionmenu1';
+import {renderClientNotifications} from './workflow-widgets.js?v=actionmenu1';
 import {portalCachedRequest,clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
@@ -71,13 +72,13 @@ function displaySectionError(panel,error){
  console.error('Dashboard section failed',error);
 }
 async function renderBusiness(panel,...args){
- try{const module=await import('./business-workspace.js?v=horizontal1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./business-workspace.js?v=actionmenu1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function renderWorkspace(panel,...args){
- try{const module=await import('./firm-workspace.js?v=horizontal1');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./firm-workspace.js?v=actionmenu1');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function appendDocumentUploads(panel,headingText){
- try{const module=await import('./document-upload.js?v=horizontal1');if(!panel.isConnected)return;
+ try{const module=await import('./document-upload.js?v=actionmenu1');if(!panel.isConnected)return;
  if(headingText){const heading=document.createElement('h3');heading.textContent=headingText;panel.append(heading);}
  const history=module.createUploadedDocuments(currentUser);
  panel.append(module.createDocumentForm(currentUser,history.refresh),history.element);void history.refresh();
@@ -103,7 +104,7 @@ async function renderCompanyDirectory(panel){
  if(!filtered.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='No matching clients.';wrap.append(empty);return;}
  const table=document.createElement('table');table.className='portal-data-table';table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Company Name','Client Name','Contact','Account Status','Assignment Status']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const r of filtered){const tr=body.insertRow();for(const value of [r.companyName,r.clientName,r.contact||'No access',r.accountStatus,r.assignmentStatus]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}}
- wrap.append(table);
+ enhancePortalTableActions(table);wrap.append(table);
  }
  async function load(){if(busy)return;busy=true;more.disabled=true;status.textContent='Loading registered clients…';try{const result=await firmApi({action:'firmCompanies',pageToken:next});if(!panel.isConnected)return;rows.push(...result.rows);next=result.nextPageToken||null;more.hidden=!next;draw();}catch(e){status.textContent=e.message;}finally{busy=false;more.disabled=false;}}
  search.oninput=draw;filter.onchange=draw;more.onclick=load;await load();
@@ -128,7 +129,7 @@ async function showAssignedClient(panel,record){
  const wrap=document.createElement('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable account data table');const table=document.createElement('table');table.className='portal-data-table';table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';
  const head=table.createTHead().insertRow();for(const label of ['Service','Filing Period','Due / Requested Date','Date Type','Booked By','Status','Booking Date']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const o of result.orders){const row=body.insertRow();for(const v of [o.service,o.period,o.due_date,o.due_date_source,o.booked_by,o.status,new Date(o.created_at).toLocaleDateString('en-IN')]){const td=row.insertCell();td.textContent=v||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere';}}
- wrap.append(table);box.append(wrap);
+ enhancePortalTableActions(table);wrap.append(table);box.append(wrap);
  }catch(e){if(box.isConnected)message.textContent=e.message||'Unable to load client details.';}
 }
 async function renderFirmRecords(panel,section){
@@ -143,7 +144,7 @@ async function renderFirmRecords(panel,section){
  const button=document.createElement('button');button.type='button';button.className='action';button.textContent='View Details';button.onclick=open;td.append(button);
  const name=document.createElement('button');name.type='button';name.textContent=r.title||'Client';name.style.cssText='background:none;border:0;padding:0;color:#2563eb;font:inherit;font-weight:600;text-align:left;cursor:pointer';name.onclick=open;tr.cells[0].replaceChildren(name);
  }else td.textContent='View only';}
- wrap.append(table);panel.append(wrap);
+ enhancePortalTableActions(table);wrap.append(table);panel.append(wrap);
  }catch(e){message.textContent=e.message;}
 }
 function refreshIcons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
