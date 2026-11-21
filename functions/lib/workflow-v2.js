@@ -1,4 +1,5 @@
 import {financialYears,periodTypes,periodOptions} from '../../landing/filing-periods.js';
+import {liveWorkflowFirmOptions} from './live-accounts.js';
 const ADMIN='7arK2z41nhTMyjwasmXKCWR0uw93';
 const json=(x,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store'}});
 const one=(db,sql,...params)=>db.prepare(sql).bind(...params).first();
@@ -51,7 +52,7 @@ async function detail(db,order){
  return {order,quote:quotes[0]||null,quotes,payments,documents,events,history,assignedFirm:order.firm_uid!==order.client_uid?firmAccount:null,client:clientAccount,catalog};
 }
 function requireAssigned(order,uid,firm){return firm&&order.firm_uid===uid&&order.firm_uid!==order.client_uid;}
-export async function workflow({db,b,u,firm,admin}){
+export async function workflow({db,b,u,firm,admin,liveAccounts}){
  const action=b.action,uid=u.localId,now=Date.now();
  if(action==='workflowCatalog'){
   const rows=await many(db,'SELECT service,category,active,frequencies,document_requirements FROM workflow_service_catalog ORDER BY category,service');
@@ -93,10 +94,14 @@ export async function workflow({db,b,u,firm,admin}){
  }
  if(action==='workflowAdminOrders'){
   if(!admin)return json({error:'Admin only'},403);
-  const [orders,firms]=await Promise.all([
+  const [orders,candidates]=await Promise.all([
     many(db,'SELECT o.*,c.email AS client_email,f.email AS assigned_email, (SELECT MAX(version) FROM workflow_quote_versions q WHERE q.order_id=o.id) AS quote_version FROM firm_service_orders o LEFT JOIN portal_accounts c ON c.uid=o.client_uid LEFT JOIN portal_accounts f ON f.uid=o.firm_uid ORDER BY o.created_at DESC LIMIT 300'),
-    many(db,"SELECT a.uid,a.email,COALESCE(c.firm_name,c.name,a.name,a.email) AS name FROM portal_accounts a LEFT JOIN customer_profiles c ON c.uid=a.uid LEFT JOIN staff_roles s ON s.uid=a.uid LEFT JOIN account_policy p ON p.uid=a.uid WHERE (s.uid IS NOT NULL OR c.account_type='professional') AND COALESCE(p.active,1)=1 ORDER BY a.email LIMIT 300")
+    many(db,"SELECT a.uid,a.email,COALESCE(NULLIF(TRIM(c.firm_name),''),NULLIF(TRIM(c.name),''),NULLIF(TRIM(a.name),''),a.email) AS name,CASE WHEN c.account_type='professional' THEN 'professional' ELSE 'staff' END AS kind FROM portal_accounts a LEFT JOIN customer_profiles c ON c.uid=a.uid LEFT JOIN staff_roles s ON s.uid=a.uid LEFT JOIN account_policy p ON p.uid=a.uid WHERE ((s.uid IS NOT NULL AND LOWER(TRIM(s.email))=LOWER(TRIM(a.email))) OR c.account_type='professional') AND COALESCE(p.active,1)=1 AND a.uid<>? ORDER BY a.email LIMIT 500",ADMIN)
   ]);
+  // Portal accounts can retain old UIDs after Firebase users are deleted and re-registered.
+  // Only expose live, active and matching Firebase identities, one option per email.
+  const current=await liveAccounts(candidates.map(x=>x.uid));
+  const firms=liveWorkflowFirmOptions(candidates,current,ADMIN);
   return json({orders,firms});
  }
  if(action==='workflowReport'){
@@ -131,8 +136,12 @@ export async function workflow({db,b,u,firm,admin}){
   if(!admin)return json({error:'Admin only'},403);
   const target=plain(b.firmUid,128);
   if(!target||target===ADMIN||target===order.client_uid)return json({error:'Select a registered firm'},400);
-  const role=await one(db,"SELECT a.uid FROM portal_accounts a LEFT JOIN staff_roles s ON s.uid=a.uid LEFT JOIN customer_profiles c ON c.uid=a.uid LEFT JOIN account_policy p ON p.uid=a.uid WHERE a.uid=? AND (s.uid IS NOT NULL OR c.account_type='professional') AND COALESCE(p.active,1)=1",target);
+  const role=await one(db,"SELECT a.uid,a.email FROM portal_accounts a LEFT JOIN staff_roles s ON s.uid=a.uid LEFT JOIN customer_profiles c ON c.uid=a.uid LEFT JOIN account_policy p ON p.uid=a.uid WHERE a.uid=? AND ((s.uid IS NOT NULL AND LOWER(TRIM(s.email))=LOWER(TRIM(a.email))) OR c.account_type='professional') AND COALESCE(p.active,1)=1",target);
   if(!role)return json({error:'Firm is unavailable or inactive'},400);
+  // A stale D1 record must never receive a live booking assignment.
+  const current=await liveAccounts([target]),account=current.get(target);
+  if(!account||account.disabled||account.email!==String(role.email||'').trim().toLowerCase())
+   return json({error:'Firm account is no longer active in Firebase. Select an active firm.'},409);
   if(['COMPLETED','CANCELLED'].includes(order.status))return json({error:'Cannot reassign a closed booking'},409);
   const next=order.status==='SUBMITTED'?'UNDER_REVIEW':order.status,previous=order.firm_uid;
   const r=await change(db,order,next,u,'FIRM_ASSIGNED',previous+' -> '+target,{

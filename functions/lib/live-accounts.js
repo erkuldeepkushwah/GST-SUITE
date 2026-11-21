@@ -15,3 +15,20 @@ export function liveFirmRows(rows,current,adminUid){
  }
  return [...selected.values()].sort((a,b)=>a.email.localeCompare(b.email));
 }
+
+/** Only current Firebase identities may appear in the booking assignment picker. */
+export function liveWorkflowFirmOptions(rows,current,adminUid){
+ const unique=new Map();
+ for(const row of rows){
+  const user=current.get(row.uid);
+  const email=String(user?.email||'').trim().toLowerCase();
+  if(!user||user.disabled||row.uid===adminUid||
+    !email||email!==String(row.email||'').trim().toLowerCase())continue;
+  const name=String(row.name||'').trim()||String(user.name||'').trim()||email;
+  const firm={uid:row.uid,email,name,kind:row.kind==='professional'?'professional':'staff'};
+  const old=unique.get(email);
+  if(!old||(firm.kind==='professional'&&old.kind!=='professional'))unique.set(email,firm);
+ }
+ return [...unique.values()].sort((a,b)=>a.email.localeCompare(b.email))
+  .map(({uid,email,name})=>({uid,email,name}));
+}

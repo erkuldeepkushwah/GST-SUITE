@@ -16,6 +16,7 @@ const db={
      if(sql.includes('workflow_service_catalog WHERE service'))return {category:'GST',active:1,frequencies:'Monthly,Quarterly'};
      if(sql.includes('customer_profiles WHERE uid'))return {name:'Example Business'};
      if(sql.includes('SELECT * FROM firm_service_orders WHERE id'))return active;
+     if(sql.includes('SELECT a.uid,a.email FROM portal_accounts'))return {uid:params[0],email:'old@example.test'};
      if(sql.includes('workflow_quote_versions'))return null;
      throw Error('Unexpected query: '+sql.slice(0,110));
     },
@@ -57,3 +58,36 @@ active={...active,firm_uid:active.client_uid};
 response=await workflow({db,u:firmUser,firm:true,admin:false,b:{action:'workflowStartFiling',orderId:'test-order'}});
 assert.equal(response.status,404,'Unassigned firm cannot access client booking');
 console.log('[workflow-v2] booking validation, role isolation, payment gate, final approval and filter checks passed');
+
+import {liveWorkflowFirmOptions} from '../functions/lib/live-accounts.js';
+const sampleRows=[
+ {uid:'stale-k',email:'same@example.test',name:'Old Firm'},
+ {uid:'firm1',email:'same@example.test',name:'Real Firm',kind:'professional'},
+ {uid:'firm1',email:'same@example.test',name:'Real Firm',kind:'professional'},
+ {uid:'staff1',email:'staff@example.test',name:'Active Staff',kind:'staff'},
+ {uid:'inactive',email:'inactive@example.test',name:'Inactive',kind:'professional'},
+ {uid:'changed',email:'previous@example.test',name:'Changed Email',kind:'professional'},
+ {uid:'admin',email:'admin@example.test',name:'Admin',kind:'professional'}
+];
+const current=new Map([
+ ['firm1',{uid:'firm1',email:'same@example.test',disabled:false}],
+ ['staff1',{uid:'staff1',email:'staff@example.test',disabled:false}],
+ ['inactive',{uid:'inactive',email:'inactive@example.test',disabled:true}],
+ ['changed',{uid:'changed',email:'new@example.test',disabled:false}],
+ ['admin',{uid:'admin',email:'admin@example.test',disabled:false}]
+]);
+const cleaned=liveWorkflowFirmOptions(sampleRows,current,'admin');
+assert.deepEqual(cleaned,[
+ {uid:'firm1',email:'same@example.test',name:'Real Firm'},
+ {uid:'staff1',email:'staff@example.test',name:'Active Staff'}
+],'No duplicate, deleted, disabled, changed-email, or admin users in picker');
+console.log('[firm dropdown] Firebase active UID filtering and email deduplication passed');
+active={...active,status:'SUBMITTED',firm_uid:'test-client'};
+const mutationsBefore=calls.length;
+response=await workflow({db,u:admin,firm:false,admin:true,liveAccounts:async()=>new Map(),b:{
+ action:'workflowAssign',orderId:'test-order',firmUid:'deleted-firm'
+}});
+assert.equal(response.status,409,'An orphaned Firebase firm UID must not receive a booking assignment');
+assert.equal(calls.length,mutationsBefore,'Stale firm validation must not mutate bookings');
+console.log('[firm dropdown] stale UID assignment fails closed');
+

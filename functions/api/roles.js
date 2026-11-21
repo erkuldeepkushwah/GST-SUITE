@@ -143,7 +143,7 @@ export async function onRequestPost({request,env}){
  if(String(b.action||'').startsWith('workflow')){
  const firm=!admin&&await isFirm(db,u.localId,email);
  if(!admin&&!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
- return await workflow({db,b,u,firm,admin});
+ return await workflow({db,b,u,firm,admin,liveAccounts});
  }
  if(String(b.action||'').startsWith('workspace')){
  const firm=!admin&&await isFirm(db,u.localId,email);
