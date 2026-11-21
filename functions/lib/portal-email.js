@@ -28,7 +28,9 @@ export async function sendPortalEmail(env,{to,subject,text,html,id}){
         let target;
         try{target=new URL(location||'');}catch{return failScript('SCRIPT_REDIRECT_INVALID','redirect',response.status);}
         if(target.origin!=='https://script.googleusercontent.com'||target.username||target.password)return failScript('SCRIPT_ACCESS_OR_REDIRECT','redirect',response.status);
-        response=await fetch(target.href,{method:'GET',redirect:'error',signal});
+        response=await fetch(target.href,{method:'GET',redirect:'manual',signal});
+        // Cloudflare Workers do not implement redirect:'error'. Never follow extra hops.
+        if(response.status>=300&&response.status<400)return failScript('SCRIPT_REDIRECT_CHAIN','redirect',response.status);
       }
       if(!response.ok)return failScript(response.status===401||response.status===403?'SCRIPT_ACCESS_DENIED':'SCRIPT_HTTP_ERROR','response',response.status);
       const result=await response.json().catch(()=>null);
