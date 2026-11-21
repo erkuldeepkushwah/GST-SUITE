@@ -14,28 +14,34 @@ export async function sendPortalEmail(env,{to,subject,text,html,id}){
   if(!emailConfigured(env))return fail('EMAIL_CONFIGURATION');
   try{
     if(env.GST_EMAIL_PROVIDER==='apps-script'){
+      const failScript=(code,stage,status)=>{console.warn('Apps Script email delivery failed',{code,stage,...(status?{httpStatus:status}:{})});return fail(code);};
       const timestamp=Date.now();
       const payload=JSON.stringify({id,to,subject,text,html});
       const key=await crypto.subtle.importKey('raw',enc.encode(env.GST_APPS_SCRIPT_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
       const signature=hex(await crypto.subtle.sign('HMAC',key,enc.encode(timestamp+'.'+payload)));
       const signal=AbortSignal.timeout(20000);
       let response=await fetch(scriptUrl(env),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp,payload,signature}),redirect:'manual',signal});
-      // ContentService returns its JSON via a one-time Google URL. Never resend the signed body.
-      if([301,302,303].includes(response.status)){
+      // Apps Script ContentService responds with a one-time redirect to Googleusercontent.
+      // Never forward a signed request body or Authorization header to a redirected host.
+      if([301,302,303,307,308].includes(response.status)){
         const location=response.headers.get('Location');
-        const target=new URL(location||'');
-        if(target.origin!=='https://script.googleusercontent.com'||target.username||target.password)return fail('EMAIL_PROVIDER_ERROR');
+        let target;
+        try{target=new URL(location||'');}catch{return failScript('SCRIPT_REDIRECT_INVALID','redirect',response.status);}
+        if(target.origin!=='https://script.googleusercontent.com'||target.username||target.password)return failScript('SCRIPT_ACCESS_OR_REDIRECT','redirect',response.status);
         response=await fetch(target.href,{method:'GET',redirect:'error',signal});
       }
-      if(!response.ok)return fail('EMAIL_PROVIDER_ERROR');
-      const result=await response.json();
-      if(result?.ok===true&&result.id===id)return {ok:true,id};
-      return fail(result?.code==='QUOTA'?'EMAIL_RATE_LIMIT':'EMAIL_PROVIDER_ERROR');
+      if(!response.ok)return failScript(response.status===401||response.status===403?'SCRIPT_ACCESS_DENIED':'SCRIPT_HTTP_ERROR','response',response.status);
+      const result=await response.json().catch(()=>null);
+      if(!result||typeof result!=='object')return failScript('SCRIPT_INVALID_RESPONSE','json');
+      if(result.ok===true&&result.id===id)return {ok:true,id};
+      if(result.ok===true)return failScript('SCRIPT_RESPONSE_MISMATCH','confirmation');
+      const codeMap={UNAUTHORIZED:'SCRIPT_AUTH_FAILED',INVALID:'SCRIPT_INVALID_REQUEST',QUOTA:'EMAIL_RATE_LIMIT',SEND_FAILED:'SCRIPT_SEND_FAILED',BUSY:'SCRIPT_BUSY',DUPLICATE:'SCRIPT_DUPLICATE'};
+      return failScript(codeMap[result.code]||'SCRIPT_REJECTED','provider');
     }
     const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':id},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[to],subject,text,html}),signal:AbortSignal.timeout(20000)});
     const result=await response.json().catch(()=>null);
     if(response.ok&&result?.id)return {ok:true,id:result.id};
     const configuration=response.status===403&&(/resend\.dev|domain|testing|verif/i.test(String(result?.message||''))||/resend\.dev/i.test(env.RESEND_FROM_EMAIL));
     return fail(configuration?'SENDER_DOMAIN_UNVERIFIED':response.status===429?'EMAIL_RATE_LIMIT':response.status===401||response.status===403?'EMAIL_CONFIGURATION':'EMAIL_PROVIDER_ERROR');
-  }catch{return fail('EMAIL_PROVIDER_ERROR');}
+  }catch(e){const code=e?.name==='TimeoutError'?'EMAIL_TIMEOUT':'EMAIL_PROVIDER_ERROR';console.warn('Portal email transport error',{provider:env.GST_EMAIL_PROVIDER||'resend',code,errorName:typeof e?.name==='string'?e.name.slice(0,35):'Unknown'});return fail(code);}
 }

@@ -42,3 +42,12 @@ function doPost(e) {
   }catch(err){return reject('SEND_FAILED');}
   finally{if(lock&&lock.hasLock())lock.releaseLock();}
 }
+
+// Optional manual diagnostic: select checkSetup in the Apps Script editor and click Run.
+// Logs contain only configuration status and remaining quota, never the secret or OTP.
+function checkSetup(){
+ const secret=PropertiesService.getScriptProperties().getProperty('GST_APPS_SCRIPT_SECRET')||'';
+ const details={scriptSecretConfigured:/^[a-f0-9]{64}$/i.test(secret),remainingMailRecipients:MailApp.getRemainingDailyQuota()};
+ console.log(JSON.stringify(details));
+ return details;
+}
