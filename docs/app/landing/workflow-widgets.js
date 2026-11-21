@@ -8,7 +8,7 @@ const card=()=>{const n=el('section');n.style.cssText='border:1px solid #dbe5f0;
 const date=v=>v?new Date(typeof v==='number'?v:v).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):'—';
 const money=paise=>paise==null?'Quote pending':(Number(paise)/100).toLocaleString('en-IN',{style:'currency',currency:'INR'});
 function table(container,columns,data){
- const wrap=el('div');wrap.style.cssText='overflow:auto;margin:12px 0';const t=el('table');t.style.cssText='width:100%;border-collapse:collapse;font-size:13px;text-align:left';
+ const wrap=el('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable data table');wrap.style.margin='12px 0';const t=el('table');t.className='portal-data-table';t.style.cssText='width:100%;border-collapse:collapse;font-size:13px;text-align:left';
  const h=t.createTHead().insertRow();for(const c of columns){const th=el('th',c);th.style.cssText='padding:10px;background:#eff6ff;white-space:nowrap';h.append(th);}
  const body=t.createTBody();for(const row of data){const tr=body.insertRow();for(const x of row){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e2e8f0;vertical-align:top;overflow-wrap:anywhere';if(x instanceof Node)td.append(x);else td.textContent=String(x??'—');}}
  wrap.append(t);container.append(data.length?wrap:el('p','No matching records.','empty'));

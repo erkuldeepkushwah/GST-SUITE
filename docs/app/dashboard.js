@@ -71,13 +71,13 @@ function displaySectionError(panel,error){
  console.error('Dashboard section failed',error);
 }
 async function renderBusiness(panel,...args){
- try{const module=await import('./business-workspace.js?v=perf2');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./business-workspace.js?v=horizontal1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function renderWorkspace(panel,...args){
- try{const module=await import('./firm-workspace.js?v=perf2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./firm-workspace.js?v=horizontal1');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function appendDocumentUploads(panel,headingText){
- try{const module=await import('./document-upload.js?v=dashboardfix2');if(!panel.isConnected)return;
+ try{const module=await import('./document-upload.js?v=horizontal1');if(!panel.isConnected)return;
  if(headingText){const heading=document.createElement('h3');heading.textContent=headingText;panel.append(heading);}
  const history=module.createUploadedDocuments(currentUser);
  panel.append(module.createDocumentForm(currentUser,history.refresh),history.element);void history.refresh();
@@ -94,14 +94,14 @@ async function renderCompanyDirectory(panel){
  const filter=document.createElement('select');filter.setAttribute('aria-label','Assignment status');filter.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px';for(const [value,label] of [['all','All Clients'],['Assigned to your firm','Assigned to My Firm'],['Unassigned','Unassigned'],['Assigned elsewhere','Assigned Elsewhere']])filter.add(new Option(label,value));
  bar.append(search,filter);panel.append(bar);
  const status=document.createElement('p');status.setAttribute('role','status');panel.append(status);
- const wrap=document.createElement('div');wrap.style.overflowX='auto';panel.append(wrap);
+ const wrap=document.createElement('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable account data table');panel.append(wrap);
  const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;panel.append(more);
  let rows=[],next=null,busy=false;
  function draw(){
  const query=search.value.trim().toLowerCase();const filtered=rows.filter(r=>(filter.value==='all'||r.assignmentStatus===filter.value)&&[r.companyName,r.clientName,r.contact].some(v=>String(v||'').toLowerCase().includes(query)));
  wrap.replaceChildren();status.textContent=filtered.length+' of '+rows.length+' loaded clients'+(next?' · More available':'');
  if(!filtered.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='No matching clients.';wrap.append(empty);return;}
- const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Company Name','Client Name','Contact','Account Status','Assignment Status']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
+ const table=document.createElement('table');table.className='portal-data-table';table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Company Name','Client Name','Contact','Account Status','Assignment Status']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const r of filtered){const tr=body.insertRow();for(const value of [r.companyName,r.clientName,r.contact||'No access',r.accountStatus,r.assignmentStatus]){const td=tr.insertCell();td.textContent=value||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}}
  wrap.append(table);
  }
@@ -125,7 +125,7 @@ async function showAssignedClient(panel,record){
  const dt=document.createElement('dt');dt.textContent=label;dt.style.cssText='font-size:12px;color:#64748b;margin-bottom:6px';const dd=document.createElement('dd');dd.textContent=value||'Not provided';dd.style.cssText='margin:0;font-weight:600;overflow-wrap:anywhere';cell.append(dt,dd);profile.append(cell);}
  box.append(profile);const h=document.createElement('h3');h.textContent='Booked Services';box.append(h);
  if(!result.orders.length){const empty=document.createElement('p');empty.textContent='No services booked yet.';box.append(empty);return;}
- const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';
+ const wrap=document.createElement('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable account data table');const table=document.createElement('table');table.className='portal-data-table';table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';
  const head=table.createTHead().insertRow();for(const label of ['Service','Filing Period','Due / Requested Date','Date Type','Booked By','Status','Booking Date']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const o of result.orders){const row=body.insertRow();for(const v of [o.service,o.period,o.due_date,o.due_date_source,o.booked_by,o.status,new Date(o.created_at).toLocaleDateString('en-IN')]){const td=row.insertCell();td.textContent=v||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere';}}
  wrap.append(table);box.append(wrap);
@@ -137,7 +137,7 @@ async function renderFirmRecords(panel,section){
  try{const {rows}=await firmApi({action:'firmData'});if(!panel.isConnected)return;
  const map={assigned:['Assigned Clients'],companies:['Assigned Clients'],filings:['Filing & Updates','My Tasks','Document Review'],billing:['Invoices & Payments'],support:['Client Support'],notifications:['Notifications']};
  const records=rows.filter(r=>(map[section]||[]).includes(r.section));message.textContent=records.length?records.length+' record(s)':'No records available yet.';
- if(!records.length)return;const wrap=document.createElement('div');wrap.style.overflowX='auto';const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Title','Client / Reference','Status','Instructions','Action']){const cell=document.createElement('th');cell.textContent=label;cell.style.padding='10px';head.append(cell);}
+ if(!records.length)return;const wrap=document.createElement('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable account data table');const table=document.createElement('table');table.className='portal-data-table';table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();for(const label of ['Title','Client / Reference','Status','Instructions','Action']){const cell=document.createElement('th');cell.textContent=label;cell.style.padding='10px';head.append(cell);}
  const body=table.createTBody();for(const r of records){const tr=body.insertRow();for(const [i,value] of [r.title,r.reference,r.status,r.notes].entries()){const td=tr.insertCell();td.style.cssText='padding:10px;border-bottom:1px solid #e3eaf3';if(i===0&&section==='assigned'&&String(r.id).startsWith('client:')){const name=document.createElement('button');name.type='button';name.className='action';name.style.cssText='border:0;background:transparent;color:#2563eb;text-align:left;padding:0;font-weight:600;text-decoration:underline';name.textContent=value||'Client';name.onclick=()=>showAssignedClient(panel,r);td.append(name);}else td.textContent=value||'—';}const td=tr.insertCell();if(['My Tasks','Document Review','Filing & Updates','Client Support'].includes(r.section)){const sel=document.createElement('select');for(const status of ['Pending','In Progress','Completed'])sel.add(new Option(status,status));sel.value=r.status;const button=document.createElement('button');button.className='action';button.textContent='Update';button.onclick=async()=>{button.disabled=true;try{await firmApi({action:'firmUpdate',id:r.id,status:sel.value});tr.cells[2].textContent=sel.value;message.textContent='Status updated.';}catch(e){message.textContent=e.message;}finally{button.disabled=false;}};td.append(sel,button);}else if(section==='assigned'&&String(r.id).startsWith('client:')){const view=document.createElement('button');view.type='button';view.className='action';view.textContent='View details';view.onclick=()=>showAssignedClient(panel,r);td.append(view);}else if(r.section==='Assigned Clients'&&r.id.startsWith('client:')){
  const open=()=>showAssignedClient(panel,r);
  const button=document.createElement('button');button.type='button';button.className='action';button.textContent='View Details';button.onclick=open;td.append(button);

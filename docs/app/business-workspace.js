@@ -1,11 +1,11 @@
 import {financialYears,periodTypes,periodOptions} from './filing-periods.js?v=dashboardfix2';
-import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=workflow1';
+import {renderClientServices,renderClientNotifications,renderReports} from './workflow-widgets.js?v=horizontal1';
 const pdfModule=()=>import('./portal-pdf.js?v=due1');
 const downloadBillingPdf=async(...args)=>(await pdfModule()).downloadBillingPdf(...args);
 const downloadFilingPdf=async(...args)=>(await pdfModule()).downloadFilingPdf(...args);
 const downloadFilingListPdf=async(...args)=>(await pdfModule()).downloadFilingListPdf(...args);
 const downloadBillingListPdf=async(...args)=>(await pdfModule()).downloadBillingListPdf(...args);
-import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=perf2';
+import {showOrderFiles,orderFileFetch} from './firm-workspace.js?v=horizontal1';
 import {EmailAuthProvider,reauthenticateWithCredential,updatePassword,verifyBeforeUpdateEmail} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 const el=(tag,txt,cls)=>{const n=document.createElement(tag);if(txt!==undefined)n.textContent=txt;if(cls)n.className=cls;return n;};
 const button=(txt,fn,primary=false)=>{const b=el('button',txt,'action'+(primary?' primary':''));b.type='button';b.onclick=fn;return b;};
@@ -14,7 +14,7 @@ const money=v=>v==null?'Quote pending':(v/100).toLocaleString('en-IN',{style:'cu
 const select=opts=>{const n=el('select');n.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;max-width:100%';for(const [v,l] of opts)n.add(new Option(l,v));return n;};
 const input=(placeholder,value='',type='text')=>{const n=el('input');n.type=type;n.placeholder=placeholder;n.value=value||'';n.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;font:inherit;width:100%;box-sizing:border-box';return n;};
 const field=(label,n)=>{const l=el('label');l.style.cssText='display:grid;gap:6px;margin:12px 0;max-width:540px';l.append(el('strong',label),n);return l;};
-function table(panel,headers,rows){const wrap=el('div');wrap.style.overflowX='auto';const t=el('table');t.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const h=t.createTHead().insertRow();for(const x of headers){const th=el('th',x);th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';h.append(th);}const body=t.createTBody();for(const row of rows){const tr=body.insertRow();for(const x of row){const td=tr.insertCell();td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;vertical-align:top;overflow-wrap:anywhere';if(x instanceof Node)td.append(x);else td.textContent=x??'—';}}wrap.append(t);panel.append(rows.length?wrap:el('p','No records available.','empty'));}
+function table(panel,headers,rows){const wrap=el('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Scrollable data table');const t=el('table');t.className='portal-data-table';t.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const h=t.createTHead().insertRow();for(const x of headers){const th=el('th',x);th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';h.append(th);}const body=t.createTBody();for(const row of rows){const tr=body.insertRow();for(const x of row){const td=tr.insertCell();td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;vertical-align:top;overflow-wrap:anywhere';if(x instanceof Node)td.append(x);else td.textContent=x??'—';}}wrap.append(t);panel.append(rows.length?wrap:el('p','No records available.','empty'));}
 function saveFile(name,blob){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 const locked=async(b,msg,fn)=>{if(b.disabled)return;b.disabled=true;try{await fn();}catch(e){msg.textContent=e.message||'Request failed';}finally{b.disabled=false;}};
 export async function showTicketThread(panel,ticket,{api,user,admin=false}){

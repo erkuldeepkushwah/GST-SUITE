@@ -97,14 +97,14 @@ export function createUploadedDocuments(user,{admin=false}={}){
  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0';
  const search=document.createElement('input');search.type='search';search.placeholder='Search loaded documents';search.setAttribute('aria-label','Search uploaded documents');search.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;min-width:0;flex:1';
  bar.append(search);
- const wrap=document.createElement('div');wrap.style.overflowX='auto';const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;
+ const wrap=document.createElement('div');wrap.className='portal-table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Uploaded documents table');const more=document.createElement('button');more.type='button';more.className='action';more.textContent='Load more';more.hidden=true;
  section.append(heading,bar,info,wrap,more);
  let rows=[],offset=0,busy=false,hasMore=false;
  async function api(body){const response=await fetch('/api/documents',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify({...body,admin}),cache:'no-store'});if(!response.ok){const j=await response.json().catch(()=>null);throw Error(j?.error||'Document request failed');}return response;}
  function draw(){
  const q=search.value.trim().toLowerCase();const filtered=rows.filter(r=>[r.name,r.category,r.uploadedBy].some(x=>String(x||'').toLowerCase().includes(q)));wrap.replaceChildren();info.textContent=filtered.length+' document(s)'+(hasMore?' · More available':'');
  if(!filtered.length){const p=document.createElement('p');p.className='empty';p.textContent='No uploaded documents found.';wrap.append(p);return;}
- const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();
+ const table=document.createElement('table');table.className='portal-data-table';table.style.cssText='width:100%;border-collapse:collapse;text-align:left;font-size:13px';const head=table.createTHead().insertRow();
  for(const label of ['File Name','Category',...(admin?['Uploaded by']:[]),'Size','Uploaded on','Status','Action']){const th=document.createElement('th');th.textContent=label;th.style.cssText='padding:12px;background:#f4f8ff;white-space:nowrap';head.append(th);}
  const body=table.createTBody();for(const row of filtered){const tr=body.insertRow();const size=Number(row.size);const displaySize=size>=1048576?(size/1048576).toFixed(2)+' MB':(size/1024).toFixed(1)+' KB';
  for(const v of [row.name,row.category,...(admin?[row.uploadedBy]:[]),displaySize,new Date(row.created_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),'Uploaded']){const td=tr.insertCell();td.textContent=v||'—';td.style.cssText='padding:12px;border-bottom:1px solid #e3eaf3;overflow-wrap:anywhere';}
