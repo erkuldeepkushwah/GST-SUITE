@@ -58,3 +58,17 @@ export async function downloadBillingListPdf(records,user){
  const end=grid(doc,['#','Reference / description','Type','Status','Amount'],records.length?records.map((r,i)=>[i+1,safe(r.id)+'\n'+safe(r.title),r.kind||'Service',r.status,amount(r.amount_paise)]):[['-','No records','-','-','-']],y,[10,70,20,36,42]);
  note(doc,'Records shown: '+records.length+'. This statement is not a GST tax invoice or a payment receipt.',end+3);finish(doc,'billing-statement');
 }
+
+export async function downloadWorkflowReportPdf(report,user){
+ const filters=report.filters||{};
+ const subtitle='Report: '+safe(report.reportType)+' | '+(filters.from||'Any start')+' to '+(filters.to||'Any end')+' | FY '+(filters.financialYear||'All');
+ const {doc,y}=await start('REPORTS & ANALYTICS',subtitle,user);
+ const list=Array.isArray(report.rows)?report.rows:[];
+ const rows=list.map((r,i)=>[
+  i+1,safe(r.booking_code||r.id),safe(r.service),safe(r.financial_year||r.period||'-'),
+  safe(r.payment?.status||r.status),r.payment?.amount_paise==null?amount(r.amount_paise):amount(r.payment.amount_paise)
+ ]);
+ let end=grid(doc,['#','Booking ID','Service','FY / period','Status','Amount'],rows.length?rows:[['-','No results','-','-','-','-']],y,[11,38,47,31,32,19]);
+ note(doc,'Filtered records: '+list.length+'. Total quoted or verified payment value: '+amount(report.totalPaise)+'. Generated '+date(report.generatedAt)+'. Payment amounts shown do not imply settlement unless independently verified.',end+3);
+ finish(doc,'gst-report-'+key(report.reportType));
+}

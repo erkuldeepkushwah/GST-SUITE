@@ -1,3 +1,4 @@
+import {renderClientNotifications} from './workflow-widgets.js?v=workflow1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
@@ -200,6 +201,7 @@ function showSection(section,prefill={}) {
     void renderCompanyDirectory(panel);
   } else if (portalRole==='firm' && ['assigned','notifications'].includes(section)) {
     void renderFirmRecords(panel,section);
+    if(section==='notifications')void renderClientNotifications(panel,{api:firmApi});
     if(section==='support'){const link=document.createElement('a');link.href='/contact.html';link.textContent='Contact support';link.className='action';panel.append(link);}
   } else if (section === 'documents') {
     void appendDocumentUploads(panel);

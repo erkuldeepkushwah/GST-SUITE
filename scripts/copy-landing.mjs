@@ -39,12 +39,13 @@ if (!files.length) {
 
 // Parse portal entry points as real ES modules (package.json has type=module).
 // Reject duplicate top-level declarations and invalid imports before deployment.
-for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','business-workspace.js','firm-workspace.js','document-upload.js','filing-periods.js']) {
+for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','business-workspace.js','firm-workspace.js','document-upload.js','filing-periods.js','workflow-widgets.js','workflow-export.js']) {
   if (existsSync(join(SRC,file))) execFileSync(process.execPath,['--check',join(SRC,file)],{stdio:'inherit'});
 }
 
 // Verify secure portal contracts with synthetic fixtures before publishing.
 execFileSync(process.execPath,['tests/portal-regression.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/workflow-v2.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['tests/contact-enquiries.mjs'],{stdio:'inherit'});
 
 // 1. keep a browsable copy at /landing/
@@ -70,6 +71,11 @@ if (existsSync(join(SRC,'portal-pdf.js'))) {
   buildSync({ entryPoints:[join(SRC,'portal-pdf.js')],bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true,outfile:join(DIST,'portal-pdf.js') });
   cpSync(join(DIST,'portal-pdf.js'),join(DIST,'landing','portal-pdf.js'));
 }
+if (existsSync(join(SRC,'workflow-export.js'))) {
+ buildSync({entryPoints:[join(SRC,'workflow-export.js')],bundle:true,format:'esm',platform:'browser',target:'es2020',minify:true,outfile:join(DIST,'workflow-export.js')});
+ cpSync(join(DIST,'workflow-export.js'),join(DIST,'landing','workflow-export.js'));
+}
+
 
 // Copy module artwork from the repository's shared assets folder.
 // This makes /assets/module-*.webp available to marketing home and /landing/ pages.

@@ -39,7 +39,7 @@ try {
   otpRequired=0;
   assert.equal((await documents({request:request({action:'list',admin:true},true),env})).status,403,'Client cannot access all documents');
   assert.equal(await ownedOrder(db,client,order.id,false,false),order);
-  assert.equal(await ownedOrder(db,firm,order.id,true,false),order);
+  assert.equal(await ownedOrder(db,firm,order.id,true,false),null,'Unassigned client booking is hidden from firms');
   assert.equal(await ownedOrder(db,stranger,order.id,true,false),null);
   assert.equal(await ownedOrder(db,stranger,order.id,false,false),null);
   assert.equal((await workspace({db,b:{action:'workspaceClientDetails',clientUid:client},u:{localId:stranger},firm:true,admin:false})).status,404);

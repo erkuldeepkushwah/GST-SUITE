@@ -1,4 +1,5 @@
 import {workspace} from '../lib/firm-workspace.js';
+import {workflow} from '../lib/workflow-v2.js';
 import {liveAccountMap, liveFirmRows} from '../lib/live-accounts.js';
 import {otpIsRequired} from '../lib/otp-policy.js';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -138,6 +139,11 @@ export async function onRequestPost({request,env}){
  try{const d=await firebaseDirectory(env,b.email?String(b.email).trim().toLowerCase():null,b.pageToken?String(b.pageToken):null);const roles=(await db.prepare(firmSql).all()).results;const roleKeys=new Set(roles.map(r=>r.uid+'\n'+String(r.email||'').toLowerCase()));const clients=new Map((await db.prepare("SELECT w.id,r.uid AS firm_uid,r.email FROM staff_assignments w JOIN ("+firmSql+") r ON r.uid=w.staff_uid WHERE w.section='Assigned Clients' AND w.id LIKE 'client:%'").all()).results.map(x=>[x.id.slice(7),x]));const currentFirms=await liveAccounts(d.users.map(x=>clients.get(x.uid)?.firm_uid));const policies=new Map((await db.prepare('SELECT * FROM account_policy').all()).results.map(p=>[p.uid,p]));return json({source:'Firebase Authentication',rows:d.users.filter(x=>x.uid!==ADMIN).map(x=>({...x,assignedFirm:(()=>{const a=clients.get(x.uid);const f=a&&currentFirms.get(a.firm_uid);return f&&!f.disabled&&policies.get(f.uid)?.active!==0&&f.email===String(a.email||'').toLowerCase()?f.email:null;})(),active:!x.disabled&&policies.get(x.uid)?.active!==0,otp:otpIsRequired(env,x.email,policies.get(x.uid)?.otp,x.uid),role:roleKeys.has(x.uid+'\n'+x.email)?'Firm':'Customer'})),nextPageToken:d.nextPageToken});}catch(e){return json({error:e.message},503);}
  }
  return json({error:'Invalid admin action'},400);
+ }
+ if(String(b.action||'').startsWith('workflow')){
+ const firm=!admin&&await isFirm(db,u.localId,email);
+ if(!admin&&!await otpVerified(request,env,u))return json({error:'Login OTP required'},403);
+ return await workflow({db,b,u,firm,admin});
  }
  if(String(b.action||'').startsWith('workspace')){
  const firm=!admin&&await isFirm(db,u.localId,email);
