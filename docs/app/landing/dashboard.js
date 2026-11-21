@@ -1,4 +1,5 @@
 import {renderClientNotifications} from './workflow-widgets.js?v=workflow1';
+import {portalCachedRequest,clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 
@@ -70,7 +71,7 @@ function displaySectionError(panel,error){
  console.error('Dashboard section failed',error);
 }
 async function renderBusiness(panel,...args){
- try{const module=await import('./business-workspace.js?v=due-date-calendar1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
+ try{const module=await import('./business-workspace.js?v=perf1');if(panel.isConnected)await module.renderBusiness(panel,...args);}catch(e){displaySectionError(panel,e);}
 }
 async function renderWorkspace(panel,...args){
  try{const module=await import('./firm-workspace.js?v=dashboardfix2');if(panel.isConnected)await module.renderWorkspace(panel,...args);}catch(e){displaySectionError(panel,e);}
@@ -82,10 +83,11 @@ async function appendDocumentUploads(panel,headingText){
  panel.append(module.createDocumentForm(currentUser,history.refresh),history.element);void history.refresh();
  }catch(e){displaySectionError(panel,e);}
 }
-async function firmApi(payload){
+async function rawFirmApi(payload){
  const response=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await currentUser.getIdToken()},body:JSON.stringify(payload),cache:'no-store',signal:AbortSignal.timeout(15000)});
  const result=await response.json();if(!response.ok)throw Error(result.error||'Unable to load firm records');return result;
 }
+function firmApi(payload){return portalCachedRequest('roles',currentUser?.uid,payload,()=>rawFirmApi(payload));}
 async function renderCompanyDirectory(panel){
  const bar=document.createElement('div');bar.className='action-row';bar.style.cssText='display:flex;flex-wrap:wrap;gap:10px;align-items:center';
  const search=document.createElement('input');search.type='search';search.placeholder='Search clients or companies';search.setAttribute('aria-label','Search companies');search.style.cssText='padding:10px;border:1px solid #ccd9eb;border-radius:8px;min-width:0;flex:1';
@@ -258,7 +260,7 @@ function showLoginFailure(message){
 }
 onAuthStateChanged(auth, async user => {
   const generation=++authGeneration;
-  if (!user) { window.location.replace('/login.html'); return; }
+  if (!user) {clearPortalApiCache();window.location.replace('/login.html'); return; }
   try {
     const token=await user.getIdToken();
     const headers={'Content-Type':'application/json',Authorization:'Bearer '+token};
@@ -275,6 +277,7 @@ onAuthStateChanged(auth, async user => {
     if(generation!==authGeneration)return;
     portalRole=role.role;accountType=role.accountType||'legacy';customerProfile=role.profile||null;
     currentUser=user;
+   clearPortalApiCache();
     const name=user.displayName?.trim()||user.email?.split('@')[0]||'Customer';
     document.getElementById('top-name').textContent=name;
     document.getElementById('menu-name').textContent=name;
@@ -329,7 +332,7 @@ async function revokeOtpSession(){
 async function logout() {
   const button = document.getElementById('logout');button.disabled = true;
   document.getElementById('profile-logout').disabled = true;
-  try { await revokeOtpSession(); await signOut(auth); window.location.replace('/login.html'); }
+  try { await revokeOtpSession(); clearPortalApiCache(); await signOut(auth); window.location.replace('/login.html'); }
   catch { button.disabled = false; document.getElementById('profile-logout').disabled = false; alert('Could not log out. Please try again.'); }
 }
 

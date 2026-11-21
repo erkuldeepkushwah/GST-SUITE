@@ -28,7 +28,11 @@ export async function showTicketThread(panel,ticket,{api,user,admin=false}){
 }
 export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  const msg=el('p','Loading…');msg.setAttribute('role','status');panel.append(msg);
- try{const d=await api({action:'workspaceData'});if(!panel.isConnected)return;msg.textContent='';
+ try{
+ if(section==='reports'){msg.textContent='';await renderReports(panel,{api,user});return;}
+ if(section==='notifications'){msg.textContent='';await renderClientNotifications(panel,{api});return;}
+ const [d,catalogResponse]=await Promise.all([api({action:'workspaceData'}),section==='services'?api({action:'workflowCatalog'}):Promise.resolve(null)]);
+ if(!panel.isConnected)return;msg.textContent='';
  if(section==='overview'){
  const grid=el('div',undefined,'stats');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px';
  const active=d.orders.filter(o=>!['Completed','Cancelled','Awaiting payment'].includes(o.status)).length,pending=d.orders.filter(o=>['Paid','Documents Required','Documents needed'].includes(o.status)).length;
@@ -39,7 +43,7 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  }
  if(section==='services'){
  panel.append(el('p','Choose a service, filing period and requested completion date. Your booking will appear for your assigned firm and in Filing Status. Payment requires an admin quote.'));
- const catalogue=(await api({action:'workflowCatalog'})).rows.filter(x=>x.active===1);
+ const catalogue=(catalogResponse?.rows||[]).filter(x=>x.active===1);
  const mapping={};for(const item of catalogue)(mapping[item.category]??=[]).push(item.service);
  if(!catalogue.length)panel.append(el('p','There are currently no active booking services.'));
  const cat=select(Object.keys(mapping).map(x=>[x,x])),svc=select([]),frequency=select([]),fy=select(financialYears.map(y=>[y,y])),period=select([]);
@@ -73,12 +77,8 @@ export async function renderBusiness(panel,section,{api,user,go,prefill={}}){
  }),true);
  panel.append(book);
  await renderClientServices(panel,{api,user,go,orders:d.orders,openFiles:o=>showOrderFiles(panel,o,api,user),prefill});
- }else if(section==='reports'){
- await renderReports(panel,{api,user});
  }else if(section==='documents'){
  const available=d.orders.filter(o=>o.status!=='Cancelled'),order=select([['','Select order'],...available.map(o=>[o.id,o.service+' · '+(o.period||'—')+' · '+o.status])]);panel.append(field('Order',order));if(prefill.orderId)order.value=prefill.orderId;const show=()=>{panel.querySelector('.order-file-box')?.remove();const o=available.find(x=>x.id===order.value);if(o)void showOrderFiles(panel,o,api,user);};order.onchange=show;show();if(!available.length)panel.append(button('Book a service',()=>go('services'),true));
- }else if(section==='notifications'){
- await renderClientNotifications(panel,{api});
  }else if(section==='filings'){
  const rows=section==='notifications'?d.orders.filter(o=>['Documents Required','Documents needed'].includes(o.status)):d.orders;
  if(section==='filings'){const allPdf=button('Download Report PDF',()=>locked(allPdf,msg,()=>downloadFilingListPdf(rows,user)));panel.append(allPdf);}

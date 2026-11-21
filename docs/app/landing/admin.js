@@ -1,3 +1,4 @@
+import {portalCachedRequest,clearPortalApiCache} from './portal-fast-cache.js?v=perf1';
 import {createUploadedDocuments} from './document-upload.js?v=no-refresh1';
 import {renderAdminWorkflow,renderReports,renderClientNotifications} from './workflow-widgets.js?v=workflow1';
 import {showTicketThread} from './business-workspace.js?v=due1';
@@ -8,20 +9,20 @@ const auth=getAuth(initializeApp({apiKey:'AIzaSyDdJTg0SF66ksdSaJnrWH8dd0ei15M6yo
 const $=id=>document.getElementById(id);
 const modules=['Dashboard','Customers','Firms','Services & Masters','Filing & Task Management','Documents & Vault','Invoices & Payments','Notifications','Support / Queries','Reports & Analytics','Firm Operations','Settings'];
 const icons=['house','users','shield-check','layers-3','list-checks','folder-open','receipt-text','bell','message-circle','chart-column','briefcase-business','settings'];
-let data=null,currentUser=null,generation=0;
+let data=null,currentUser=null,generation=0,activePage='Dashboard';
 function icon(name){const i=document.createElement('i');i.dataset.lucide=name;return i;}
 function refresh(){window.lucide?.createIcons();}
 function narrow(){return matchMedia('(max-width:750px)').matches;}
 function sync(){const open=narrow()?$('sidebar').classList.contains('open'):!$('layout').classList.contains('sidebar-collapsed');$('menu').setAttribute('aria-expanded',String(open));}
 function closeSidebar(){$('sidebar').classList.remove('open');$('backdrop').classList.remove('open');sync();}
 function closeProfile(){$('profile-menu').hidden=true;$('profile-toggle').setAttribute('aria-expanded','false');}
-function showPage(name){if(!data)return;const content=$('content');content.replaceChildren();for(const b of $('nav').children)b.classList.toggle('active',b.dataset.page===name);closeSidebar();closeProfile();
+function showPage(name){if(!data)return;activePage=name;const content=$('content');content.replaceChildren();for(const b of $('nav').children)b.classList.toggle('active',b.dataset.page===name);closeSidebar();closeProfile();
 if(name==='Dashboard'){
  const welcome=document.createElement('section');welcome.className='welcome';const copy=document.createElement('div');const h=document.createElement('h1');h.append('Welcome, ');const strong=document.createElement('span');strong.id='welcome-name';strong.textContent=data.name;h.append(strong);const p=document.createElement('p');p.textContent='Manage customers, GST services, filings and administrative operations.';copy.append(h,p);welcome.append(copy);content.append(welcome);
  const grid=document.createElement('section');grid.className='stats admin-stats';const fields=[['Total Customers','customers','users'],['Active Services','services','layers-3'],['Pending Tasks','tasks','triangle-alert'],['Filed This Month','filings','calendar-days'],['Pending Invoices','invoices','receipt-text'],['Total Revenue','revenue','wallet']];for(const [label,key,glyph] of fields){const el=document.createElement('article');el.className='stat';const ico=document.createElement('div');ico.className='stat-icon'+(key==='tasks'?' danger':'');ico.append(icon(glyph));const info=document.createElement('div');const title=document.createElement('div');title.className='stat-label';title.textContent=label;const value=document.createElement('div');value.className='stat-number';value.textContent=data.metrics[key]??'—';const note=document.createElement('div');note.className='stat-note';note.textContent=key==='filings'?'Filing dates not connected':'Admin register';info.append(title,value,note);el.append(ico,info);grid.append(el);}content.append(grid);
 }else{const panel=document.createElement('section');panel.className='panel';const h=document.createElement('h2');h.textContent=name;panel.append(h);if(name==='My Profile'){const dl=document.createElement('dl');dl.className='profile-grid';for(const [k,v] of [['Name',data.name],['Email',currentUser?.email||''],['Role','Administrator']]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v;dl.append(dt,dd);}panel.append(dl);}else{renderModule(panel,name);}content.append(panel);}refresh();}
-modules.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.className='nav-item';b.dataset.page=name;const span=document.createElement('span');span.className='nav-icon';span.append(icon(icons[i]));b.append(span,document.createTextNode(name));b.onclick=async()=>{if(name==='Dashboard'){try{data=await api({action:'dashboard'});}catch(e){alert(e.message);return;}}showPage(name);};$('nav').append(b);});
-function clear(){data=null;currentUser=null;$('app').hidden=true;$('loading').hidden=false;$('content').replaceChildren();}
+modules.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.className='nav-item';b.dataset.page=name;const span=document.createElement('span');span.className='nav-icon';span.append(icon(icons[i]));b.append(span,document.createTextNode(name));b.onclick=()=>{showPage(name);if(name==='Dashboard'){void api({action:'dashboard'}).then(updated=>{data=updated;if(activePage==='Dashboard'&&currentUser)showPage('Dashboard');}).catch(e=>{console.warn('Dashboard metrics refresh unavailable',{name:e?.name||'Error'});});}};$('nav').append(b);});
+function clear(){clearPortalApiCache();data=null;currentUser=null;$('app').hidden=true;$('loading').hidden=false;$('content').replaceChildren();}
 async function authorize(user){const current=++generation;clear();if(!user){location.replace('/login.html');return;}try{const r=await fetch('/api/admin',{method:'POST',headers:{Authorization:'Bearer '+await user.getIdToken()},cache:'no-store',signal:AbortSignal.timeout(15000)});const result=await r.json();if(!r.ok||result.authorized!==true)throw new Error('Access denied');if(current!==generation)return;data=result;currentUser=user;$('admin-name').textContent=result.name;$('menu-name').textContent=result.name;$('menu-email').textContent=user.email||'';$('avatar').textContent=(result.name||'A').charAt(0).toUpperCase();showPage('Dashboard');$('loading').hidden=true;$('app').hidden=false;sync();}catch{if(current===generation)location.replace('/login.html?adminDenied=1');}}
 onAuthStateChanged(auth,authorize,()=>location.replace('/login.html'));
 async function logout(){try{await signOut(auth);clear();location.replace('/login.html');}catch{alert('Could not log out. Please try again.');}}
@@ -30,7 +31,8 @@ $('menu').onclick=()=>{closeProfile();if(narrow()){const open=$('sidebar').class
 $('backdrop').onclick=closeSidebar;$('profile-toggle').onclick=()=>{const open=$('profile-menu').hidden;$('profile-menu').hidden=!open;$('profile-toggle').setAttribute('aria-expanded',String(open));};
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-container'))closeProfile();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeProfile();closeSidebar();}});window.addEventListener('resize',()=>{if(!narrow())closeSidebar();sync();});window.addEventListener('load',refresh,{once:true});
 
-async function api(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store',signal:AbortSignal.timeout(15000)});const result=await r.json();if(!r.ok)throw Error(result.error||'Request failed');return result;}
+async function rawAdminApi(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store',signal:AbortSignal.timeout(15000)});const result=await r.json();if(!r.ok)throw Error(result.error||'Request failed');return result;}
+function api(payload){return portalCachedRequest('admin',auth.currentUser?.uid,payload,()=>rawAdminApi(payload));}
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const schemas={
  'Customers':['Customer name','Email / customer reference','Customer notes'],
@@ -128,7 +130,8 @@ async function renderWebsiteContactEnquiries(panel){
  search.oninput=draw;filter.onchange=draw;reload.onclick=load;await load();
 }
 
-async function roleApi(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Role request failed');return j;}
+async function rawRoleApi(payload){const user=auth.currentUser;if(!user)throw Error('Please sign in again');const r=await fetch('/api/roles',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(payload),cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Role request failed');return j;}
+function roleApi(payload){return portalCachedRequest('roles',auth.currentUser?.uid,payload,()=>rawRoleApi(payload));}
 async function showAdminAccountDetails(panel,account){
  panel.querySelector('.admin-account-details')?.remove();
  const box=make('section',undefined,'admin-account-details');box.style.cssText='border:1px solid #dbe5f0;border-radius:12px;padding:18px;margin:16px 0;background:#fff';
