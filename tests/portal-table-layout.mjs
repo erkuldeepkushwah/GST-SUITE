@@ -10,7 +10,7 @@ for(const file of paths){
  assert.ok(source.includes('portal-table-scroll'),'Missing scrollable wrapper: '+file);
  assert.ok(source.includes('portal-data-table'),'Missing horizontal grid table: '+file);
 }
-for(const file of ['landing/dashboard.html','landing/admin.html'])assert.ok(read(file).includes('dashboard.css?v=table-reference1'),'Cache-busted shared styles missing in '+file);
+for(const file of ['landing/dashboard.html','landing/admin.html'])assert.ok(read(file).includes('dashboard.css?v=actionmenu1'),'Cache-busted shared styles missing in '+file);
 assert.ok(read('landing/admin.js').includes("e.setAttribute('role','region')"),'Admin tables must be keyboard scrollable');
 for(const selector of ['border-right:1px solid #d5dde5','background:#edf1f4!important','background:#f4f6f8','background:#0758bb','height:60px'])assert.ok(css.includes(selector),'Reference table styling missing: '+selector);
 assert.ok(css.includes('background:#fff5f5'),'Danger buttons should remain distinguishable');

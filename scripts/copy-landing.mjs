@@ -39,7 +39,7 @@ if (!files.length) {
 
 // Parse portal entry points as real ES modules (package.json has type=module).
 // Reject duplicate top-level declarations and invalid imports before deployment.
-for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','business-workspace.js','firm-workspace.js','document-upload.js','filing-periods.js','workflow-widgets.js','workflow-export.js','portal-fast-cache.js']) {
+for (const file of ['dashboard.js','dashboard-start.js','auth.js','admin.js','business-workspace.js','firm-workspace.js','document-upload.js','filing-periods.js','workflow-widgets.js','workflow-export.js','portal-fast-cache.js','portal-action-menu.js']) {
   if (existsSync(join(SRC,file))) execFileSync(process.execPath,['--check',join(SRC,file)],{stdio:'inherit'});
 }
 
@@ -52,6 +52,7 @@ execFileSync(process.execPath,['tests/portal-ui-regression.mjs'],{stdio:'inherit
 execFileSync(process.execPath,['tests/workspace-fast-regression.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['tests/firebase-service-oauth.mjs'],{stdio:'inherit'});
 execFileSync(process.execPath,['tests/portal-table-layout.mjs'],{stdio:'inherit'});
+execFileSync(process.execPath,['tests/portal-action-menu.mjs'],{stdio:'inherit'});
 
 // 1. keep a browsable copy at /landing/
 mkdirSync(join(DIST, 'landing'), { recursive: true });
