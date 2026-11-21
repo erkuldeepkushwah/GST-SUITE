@@ -38,16 +38,17 @@ async function accessible(db,id,u,firm,admin){
  return null;
 }
 async function detail(db,order){
- const [quotes,payments,documents,events,history,firmAccount,clientAccount]=await Promise.all([
+ const [quotes,payments,documents,events,history,firmAccount,clientAccount,catalog]=await Promise.all([
   many(db,'SELECT id,version,amount_paise,created_at FROM workflow_quote_versions WHERE order_id=? ORDER BY version DESC LIMIT 50',order.id),
   many(db,'SELECT id,quote_version,amount_paise,method,transaction_ref,status,submitted_at,verified_at,receipt_note FROM workflow_payments WHERE order_id=? ORDER BY submitted_at DESC LIMIT 50',order.id),
   many(db,"SELECT f.id,f.name,f.kind,f.size,f.created_at,COALESCE(r.status,'Pending') AS review_status,COALESCE(r.note,'') AS review_note,r.reviewed_at FROM firm_order_files f LEFT JOIN workflow_document_reviews r ON r.file_id=f.id WHERE f.order_id=? ORDER BY f.created_at DESC LIMIT 200",order.id),
   many(db,'SELECT id,status,created_at FROM portal_order_events WHERE order_id=? ORDER BY created_at ASC LIMIT 500',order.id),
   many(db,'SELECT action,from_status,to_status,detail,created_at FROM workflow_audit WHERE order_id=? ORDER BY created_at ASC LIMIT 500',order.id),
   one(db,'SELECT email,name FROM portal_accounts WHERE uid=?',order.firm_uid),
-  one(db,'SELECT email,name FROM portal_accounts WHERE uid=?',order.client_uid)
+  one(db,'SELECT email,name FROM portal_accounts WHERE uid=?',order.client_uid),
+  one(db,'SELECT category,active,frequencies,document_requirements FROM workflow_service_catalog WHERE service=?',order.service)
  ]);
- return {order,quote:quotes[0]||null,quotes,payments,documents,events,history,assignedFirm:order.firm_uid!==order.client_uid?firmAccount:null,client:clientAccount};
+ return {order,quote:quotes[0]||null,quotes,payments,documents,events,history,assignedFirm:order.firm_uid!==order.client_uid?firmAccount:null,client:clientAccount,catalog};
 }
 function requireAssigned(order,uid,firm){return firm&&order.firm_uid===uid&&order.firm_uid!==order.client_uid;}
 export async function workflow({db,b,u,firm,admin}){
